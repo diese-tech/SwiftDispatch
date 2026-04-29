@@ -31,12 +31,10 @@ export default async function DashboardPage() {
 
   if (jobsResult.error) throw new Error(jobsResult.error.message);
   if (techsResult.error) throw new Error(techsResult.error.message);
-  if (companyResult.error) throw new Error(companyResult.error.message);
-
   const company = companyResult.data as {
     close_status: CloseStatus;
     demo_mode_enabled: boolean;
-  };
+  } | null;
 
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
@@ -50,8 +48,10 @@ export default async function DashboardPage() {
           </h1>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <CloseStatusSelect initialStatus={company.close_status} />
-          <DemoModeToggle enabled={company.demo_mode_enabled} />
+          <CloseStatusSelect
+            initialStatus={company?.close_status ?? "not_contacted"}
+          />
+          <DemoModeToggle enabled={company?.demo_mode_enabled ?? false} />
           <Link
             className="rounded-md border border-slate-300 bg-white px-4 py-3 text-center text-base font-semibold"
             href="/roi"
