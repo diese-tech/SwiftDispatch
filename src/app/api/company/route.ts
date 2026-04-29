@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentProfile } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireApiProfile } from "@/lib/auth";
 import type { CloseStatus } from "@/types/db";
 
 const closeStatuses: CloseStatus[] = [
@@ -13,7 +12,8 @@ const closeStatuses: CloseStatus[] = [
 ];
 
 export async function PATCH(request: Request) {
-  const profile = await getCurrentProfile();
+  const { profile, response, supabase } = await requireApiProfile();
+  if (response || !profile) return response;
   const { close_status } = (await request.json()) as {
     close_status?: CloseStatus;
   };
@@ -22,7 +22,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("companies")
     .update({ close_status })

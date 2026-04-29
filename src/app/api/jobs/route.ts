@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { getCurrentProfile } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireApiProfile } from "@/lib/auth";
 
 export async function POST(request: Request) {
-  const profile = await getCurrentProfile();
+  const { profile, response, supabase } = await requireApiProfile();
+  if (response || !profile) return response;
   const body = await request.json();
-  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("jobs")

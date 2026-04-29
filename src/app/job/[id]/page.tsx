@@ -5,7 +5,11 @@ import TechnicianDropdown from "@/components/TechnicianDropdown";
 import WorkflowComparison from "@/components/WorkflowComparison";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { JobWithTechnician, Technician } from "@/types/db";
+import type {
+  JobWithTechnician,
+  QuoteWithLineItems,
+  Technician,
+} from "@/types/db";
 
 export default async function JobPage({
   params,
@@ -16,7 +20,7 @@ export default async function JobPage({
   const profile = await getCurrentProfile();
   const supabase = await createSupabaseServerClient();
 
-  const [jobResult, techsResult] = await Promise.all([
+  const [jobResult, techsResult, quoteResult] = await Promise.all([
     supabase
       .from("jobs")
       .select("*, technicians(id,name,phone)")
@@ -28,12 +32,24 @@ export default async function JobPage({
       .select("*")
       .eq("company_id", profile.company_id)
       .order("name"),
+    supabase
+      .from("quotes")
+      .select(
+        "id,job_id,total,status,created_at,quote_sent_at,accepted_at,rejected_at,quote_line_items(id,quote_id,name,price,quantity),jobs!inner(company_id)",
+      )
+      .eq("job_id", id)
+      .eq("jobs.company_id", profile.company_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (jobResult.error || !jobResult.data) notFound();
   if (techsResult.error) throw new Error(techsResult.error.message);
+  if (quoteResult.error) throw new Error(quoteResult.error.message);
 
   const job = jobResult.data as JobWithTechnician;
+  const quote = quoteResult.data as QuoteWithLineItems | null;
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-4 py-6 sm:px-6">
@@ -77,7 +93,7 @@ export default async function JobPage({
           </div>
           <WorkflowComparison />
         </section>
-        <QuoteBuilder jobId={job.id} />
+        <QuoteBuilder initialQuote={quote} jobId={job.id} />
       </div>
     </main>
   );

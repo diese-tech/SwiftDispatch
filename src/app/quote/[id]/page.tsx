@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import AcceptQuoteButton from "@/components/AcceptQuoteButton";
+import { getCurrentProfile } from "@/lib/auth";
 import { money } from "@/lib/format";
-import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { QuoteWithItems } from "@/types/db";
 
 export default async function PublicQuotePage({
@@ -10,13 +11,15 @@ export default async function PublicQuotePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createSupabaseAdminClient();
+  const profile = await getCurrentProfile();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("quotes")
     .select(
-      "*, quote_line_items(id,quote_id,name,price,quantity), jobs(id,customer_name,phone,address,issue)",
+      "*, quote_line_items(id,quote_id,name,price,quantity), jobs!inner(id,customer_name,phone,address,issue,company_id)",
     )
     .eq("id", id)
+    .eq("jobs.company_id", profile.company_id)
     .single();
 
   if (error || !data) notFound();

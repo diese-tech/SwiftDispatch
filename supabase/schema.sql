@@ -63,6 +63,13 @@ alter table public.jobs enable row level security;
 alter table public.quotes enable row level security;
 alter table public.quote_line_items enable row level security;
 
+alter table public.companies force row level security;
+alter table public.users force row level security;
+alter table public.technicians force row level security;
+alter table public.jobs force row level security;
+alter table public.quotes force row level security;
+alter table public.quote_line_items force row level security;
+
 create or replace function public.current_company_id()
 returns uuid
 language sql
@@ -76,6 +83,11 @@ $$;
 create policy "users can read own profile"
 on public.users for select
 using (id = auth.uid());
+
+create policy "users can update own profile"
+on public.users for update
+using (id = auth.uid() and company_id = public.current_company_id())
+with check (id = auth.uid() and company_id = public.current_company_id());
 
 create policy "users can read own company"
 on public.companies for select
@@ -164,6 +176,39 @@ using (
 create policy "company users can insert quote line items"
 on public.quote_line_items for insert
 with check (
+  exists (
+    select 1
+    from public.quotes
+    join public.jobs on jobs.id = quotes.job_id
+    where quotes.id = quote_line_items.quote_id
+    and jobs.company_id = public.current_company_id()
+  )
+);
+
+create policy "company users can update quote line items"
+on public.quote_line_items for update
+using (
+  exists (
+    select 1
+    from public.quotes
+    join public.jobs on jobs.id = quotes.job_id
+    where quotes.id = quote_line_items.quote_id
+    and jobs.company_id = public.current_company_id()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.quotes
+    join public.jobs on jobs.id = quotes.job_id
+    where quotes.id = quote_line_items.quote_id
+    and jobs.company_id = public.current_company_id()
+  )
+);
+
+create policy "company users can delete quote line items"
+on public.quote_line_items for delete
+using (
   exists (
     select 1
     from public.quotes

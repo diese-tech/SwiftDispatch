@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentProfile } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireApiProfile } from "@/lib/auth";
 import type { JobStatus } from "@/types/db";
 
 const statuses: JobStatus[] = ["New", "Assigned", "En Route", "Completed"];
@@ -10,9 +9,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const profile = await getCurrentProfile();
+  const { profile, response, supabase } = await requireApiProfile();
+  if (response || !profile) return response;
   const body = await request.json();
-  const supabase = await createSupabaseServerClient();
 
   const patch: {
     status?: JobStatus;

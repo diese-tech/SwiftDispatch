@@ -64,6 +64,10 @@ export type QuoteLineItem = {
   quantity: number;
 };
 
+export type QuoteWithLineItems = Quote & {
+  quote_line_items: QuoteLineItem[];
+};
+
 export type JobWithTechnician = Job & {
   technicians?: Pick<Technician, "id" | "name" | "phone"> | null;
 };

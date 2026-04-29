@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { getCurrentProfile } from "@/lib/auth";
+import { requireApiProfile } from "@/lib/auth";
 import { demoJobs, demoTechnicians } from "@/lib/demo-data";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { JobStatus } from "@/types/db";
 
 export async function POST(request: Request) {
-  const profile = await getCurrentProfile();
+  const { profile, response, supabase } = await requireApiProfile();
+  if (response || !profile) return response;
   const { enabled } = (await request.json()) as { enabled: boolean };
-  const supabase = await createSupabaseServerClient();
 
   const companyPatch = enabled
     ? { name: "Summit Air Demo Co", demo_mode_enabled: true }
