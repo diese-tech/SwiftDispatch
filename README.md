@@ -6,28 +6,42 @@ Emergency HVAC dispatch and quoting MVP.
 
 ```txt
 src/app
+  analytics/page.tsx
+  roi/page.tsx
+  api/company/route.ts
+  api/demo-mode/route.ts
   api/jobs/route.ts
   api/jobs/[id]/route.ts
   api/quotes/route.ts
+  api/quotes/[id]/accept/route.ts
   api/send-sms/route.ts
   dashboard/page.tsx
   job/[id]/page.tsx
   quote/[id]/page.tsx
   page.tsx
 src/components
+  AcceptQuoteButton.tsx
+  CloseStatusSelect.tsx
+  DemoModeToggle.tsx
   JobCard.tsx
   KanbanBoard.tsx
   KanbanColumn.tsx
   LoginForm.tsx
   QuoteBuilder.tsx
+  RoiSimulator.tsx
+  SalesBadges.tsx
   TechnicianDropdown.tsx
+  WorkflowComparison.tsx
 src/lib
   auth.ts
+  demo-data.ts
   format.ts
   twilio.ts
   supabase/browser.ts
   supabase/server.ts
 src/types/db.ts
+supabase/migrations/202604280001_revenue_validation.sql
+supabase/migrations/202604280002_sales_roi_demo.sql
 supabase/schema.sql
 .env.example
 ```

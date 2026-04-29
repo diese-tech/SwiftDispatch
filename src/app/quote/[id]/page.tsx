@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import AcceptQuoteButton from "@/components/AcceptQuoteButton";
 import { money } from "@/lib/format";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { QuoteWithItems } from "@/types/db";
@@ -53,6 +54,7 @@ export default async function PublicQuotePage({
             <span>{money(quote.total)}</span>
           </div>
         </div>
+        <AcceptQuoteButton quoteId={quote.id} initialStatus={quote.status} />
       </section>
     </main>
   );

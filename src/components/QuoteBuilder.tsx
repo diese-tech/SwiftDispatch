@@ -73,7 +73,7 @@ export default function QuoteBuilder({ jobId }: { jobId: string }) {
   }
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold">Create Quote</h2>
         <p className="font-semibold">{money(total)}</p>
@@ -140,7 +140,7 @@ export default function QuoteBuilder({ jobId }: { jobId: string }) {
       </button>
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
         <button
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="rounded-md bg-slate-900 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
           disabled={saving || total <= 0}
           onClick={saveQuote}
           type="button"
@@ -148,7 +148,7 @@ export default function QuoteBuilder({ jobId }: { jobId: string }) {
           {saving ? "Saving..." : "Save Quote"}
         </button>
         <button
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-teal-700 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
           disabled={sending || !quoteId}
           onClick={sendSms}
           type="button"

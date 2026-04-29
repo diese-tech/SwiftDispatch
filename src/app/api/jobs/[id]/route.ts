@@ -14,7 +14,11 @@ export async function PATCH(
   const body = await request.json();
   const supabase = await createSupabaseServerClient();
 
-  const patch: { status?: JobStatus; technician_id?: string | null } = {};
+  const patch: {
+    status?: JobStatus;
+    technician_id?: string | null;
+    technician_assigned_at?: string;
+  } = {};
 
   if (body.status && statuses.includes(body.status)) {
     patch.status = body.status;
@@ -22,6 +26,18 @@ export async function PATCH(
 
   if ("technician_id" in body) {
     patch.technician_id = body.technician_id || null;
+    if (body.technician_id) {
+      const { data: currentJob } = await supabase
+        .from("jobs")
+        .select("technician_assigned_at")
+        .eq("id", id)
+        .eq("company_id", profile.company_id)
+        .single();
+
+      if (!currentJob?.technician_assigned_at) {
+        patch.technician_assigned_at = new Date().toISOString();
+      }
+    }
   }
 
   const { data, error } = await supabase

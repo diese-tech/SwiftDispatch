@@ -1,8 +1,12 @@
 create extension if not exists "pgcrypto";
 
+create type public.quote_status as enum ('draft', 'sent', 'accepted', 'rejected');
+
 create table public.companies (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  close_status text not null default 'not_contacted' check (close_status in ('not_contacted', 'contacted', 'demo_done', 'interested', 'closed_won', 'closed_lost')),
+  demo_mode_enabled boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -29,15 +33,19 @@ create table public.jobs (
   status text not null default 'New' check (status in ('New', 'Assigned', 'En Route', 'Completed')),
   technician_id uuid references public.technicians(id) on delete set null,
   company_id uuid not null references public.companies(id) on delete cascade,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  technician_assigned_at timestamptz
 );
 
 create table public.quotes (
   id uuid primary key default gen_random_uuid(),
   job_id uuid not null references public.jobs(id) on delete cascade,
   total numeric(10,2) not null default 0,
-  status text not null default 'draft',
-  created_at timestamptz not null default now()
+  status public.quote_status not null default 'draft',
+  created_at timestamptz not null default now(),
+  quote_sent_at timestamptz,
+  accepted_at timestamptz,
+  rejected_at timestamptz
 );
 
 create table public.quote_line_items (
@@ -72,6 +80,11 @@ using (id = auth.uid());
 create policy "users can read own company"
 on public.companies for select
 using (id = public.current_company_id());
+
+create policy "users can update own company sales fields"
+on public.companies for update
+using (id = public.current_company_id())
+with check (id = public.current_company_id());
 
 create policy "company users can read technicians"
 on public.technicians for select

@@ -15,7 +15,7 @@ export default function KanbanColumn({ status, jobs, technicians }: Props) {
 
   return (
     <section
-      className={`min-h-96 rounded-lg border p-3 ${
+      className={`min-h-64 rounded-lg border p-3 sm:min-h-96 ${
         isOver ? "border-teal-500 bg-teal-50" : "border-slate-200 bg-slate-100"
       }`}
       ref={setNodeRef}

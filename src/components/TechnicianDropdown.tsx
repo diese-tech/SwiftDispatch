@@ -29,17 +29,22 @@ export default function TechnicianDropdown({
   }
 
   return (
-    <select
-      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-      value={value}
-      onChange={(event) => assign(event.target.value)}
-    >
-      <option value="">Unassigned</option>
-      {technicians.map((tech) => (
-        <option key={tech.id} value={tech.id}>
-          {tech.name}
-        </option>
-      ))}
-    </select>
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold uppercase text-slate-500">
+        Assign Tech
+      </span>
+      <select
+        className="w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-base"
+        value={value}
+        onChange={(event) => assign(event.target.value)}
+      >
+        <option value="">Unassigned</option>
+        {technicians.map((tech) => (
+          <option key={tech.id} value={tech.id}>
+            {tech.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

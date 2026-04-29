@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import QuoteBuilder from "@/components/QuoteBuilder";
 import TechnicianDropdown from "@/components/TechnicianDropdown";
+import WorkflowComparison from "@/components/WorkflowComparison";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { JobWithTechnician, Technician } from "@/types/db";
@@ -67,9 +68,6 @@ export default async function JobPage({
               <p className="whitespace-pre-wrap">{job.issue}</p>
             </div>
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase text-slate-500">
-                Technician
-              </p>
               <TechnicianDropdown
                 jobId={job.id}
                 selectedId={job.technician_id}
@@ -77,6 +75,7 @@ export default async function JobPage({
               />
             </div>
           </div>
+          <WorkflowComparison />
         </section>
         <QuoteBuilder jobId={job.id} />
       </div>

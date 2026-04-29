@@ -94,7 +94,7 @@ export default function KanbanBoard({ initialJobs, technicians }: Props) {
     <div className="space-y-4">
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <button
-          className="inline-flex items-center gap-2 rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-teal-700 px-4 py-3 text-base font-semibold text-white sm:w-auto"
           onClick={() => setFormOpen((current) => !current)}
           type="button"
         >
@@ -127,7 +127,7 @@ export default function KanbanBoard({ initialJobs, technicians }: Props) {
               required
             />
             <button
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              className="rounded-md bg-slate-900 px-4 py-3 text-base font-semibold text-white disabled:opacity-60"
               disabled={saving}
             >
               {saving ? "Saving..." : "Create Job"}
@@ -137,7 +137,7 @@ export default function KanbanBoard({ initialJobs, technicians }: Props) {
       </div>
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <div className="grid gap-4 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {statuses.map((status) => (
             <KanbanColumn
               jobs={jobsByStatus[status]}

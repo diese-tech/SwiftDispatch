@@ -3,8 +3,18 @@ export type JobStatus = "New" | "Assigned" | "En Route" | "Completed";
 export type Company = {
   id: string;
   name: string;
+  close_status: CloseStatus;
+  demo_mode_enabled: boolean;
   created_at: string;
 };
+
+export type CloseStatus =
+  | "not_contacted"
+  | "contacted"
+  | "demo_done"
+  | "interested"
+  | "closed_won"
+  | "closed_lost";
 
 export type AppUser = {
   id: string;
@@ -30,14 +40,20 @@ export type Job = {
   technician_id: string | null;
   company_id: string;
   created_at: string;
+  technician_assigned_at: string | null;
 };
+
+export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected";
 
 export type Quote = {
   id: string;
   job_id: string;
   total: number;
-  status: string;
+  status: QuoteStatus;
   created_at: string;
+  quote_sent_at: string | null;
+  accepted_at: string | null;
+  rejected_at: string | null;
 };
 
 export type QuoteLineItem = {

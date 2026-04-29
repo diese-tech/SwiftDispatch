@@ -29,7 +29,10 @@ export async function POST(request: Request) {
     body: `Your HVAC quote is ready: ${quoteUrl}`,
   });
 
-  await supabase.from("quotes").update({ status: "sent" }).eq("id", quote_id);
+  await supabase
+    .from("quotes")
+    .update({ status: "sent", quote_sent_at: new Date().toISOString() })
+    .eq("id", quote_id);
 
   return NextResponse.json({ ok: true });
 }
