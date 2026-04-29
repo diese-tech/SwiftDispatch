@@ -3,6 +3,8 @@ export type JobStatus = "New" | "Assigned" | "En Route" | "Completed";
 export type Company = {
   id: string;
   name: string;
+  email: string | null;
+  phone: string | null;
   close_status: CloseStatus;
   demo_mode_enabled: boolean;
   created_at: string;
@@ -41,6 +43,7 @@ export type Job = {
   company_id: string;
   created_at: string;
   technician_assigned_at: string | null;
+  is_demo: boolean;
 };
 
 export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected";
@@ -54,6 +57,7 @@ export type Quote = {
   quote_sent_at: string | null;
   accepted_at: string | null;
   rejected_at: string | null;
+  is_demo: boolean;
 };
 
 export type QuoteLineItem = {

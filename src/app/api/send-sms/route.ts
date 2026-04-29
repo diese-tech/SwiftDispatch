@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     .from("quotes")
     .select("id, jobs!inner(id,phone,company_id)")
     .eq("id", quote_id)
+    .eq("is_demo", false)
     .eq("jobs.company_id", profile.company_id)
     .single();
 

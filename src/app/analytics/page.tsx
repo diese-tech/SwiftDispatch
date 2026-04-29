@@ -72,6 +72,7 @@ export default async function AnalyticsPage() {
       .from("jobs")
       .select("id,created_at,technician_assigned_at")
       .eq("company_id", profile.company_id)
+      .eq("is_demo", false)
       .gte("created_at", sevenDaysAgo.toISOString()),
     supabase
       .from("quotes")
@@ -79,6 +80,7 @@ export default async function AnalyticsPage() {
         "id,total,status,created_at,quote_sent_at,accepted_at,jobs!inner(created_at,technician_assigned_at,company_id)",
       )
       .eq("jobs.company_id", profile.company_id)
+      .eq("is_demo", false)
       .gte("created_at", sevenDaysAgo.toISOString()),
   ]);
 

@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     .from("quotes")
     .select("id,total,status,created_at,quote_sent_at,accepted_at,rejected_at,quote_line_items(id,quote_id,name,price,quantity)")
     .eq("job_id", body.job_id)
+    .eq("is_demo", false)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -26,6 +26,7 @@ export default async function JobPage({
       .select("*, technicians(id,name,phone)")
       .eq("id", id)
       .eq("company_id", profile.company_id)
+      .eq("is_demo", false)
       .single(),
     supabase
       .from("technicians")
@@ -39,6 +40,7 @@ export default async function JobPage({
       )
       .eq("job_id", id)
       .eq("jobs.company_id", profile.company_id)
+      .eq("is_demo", false)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),

@@ -10,6 +10,7 @@ async function assertQuoteOwnership(
     .from("quotes")
     .select("id,jobs!inner(company_id)")
     .eq("id", quoteId)
+    .eq("is_demo", false)
     .eq("jobs.company_id", companyId)
     .single();
 }

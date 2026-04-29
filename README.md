@@ -6,14 +6,18 @@ Emergency HVAC dispatch and quoting MVP.
 
 ```txt
 src/app
+  admin/page.tsx
+  admin/actions.ts
+  admin/seed-demo/page.tsx
   analytics/page.tsx
   roi/page.tsx
   api/company/route.ts
-  api/demo-mode/route.ts
   api/jobs/route.ts
   api/jobs/[id]/route.ts
   api/quotes/route.ts
   api/quotes/[id]/accept/route.ts
+  api/quotes/[id]/line-items/route.ts
+  api/quotes/[id]/line-items/[itemId]/route.ts
   api/send-sms/route.ts
   dashboard/page.tsx
   job/[id]/page.tsx
@@ -21,8 +25,6 @@ src/app
   page.tsx
 src/components
   AcceptQuoteButton.tsx
-  CloseStatusSelect.tsx
-  DemoModeToggle.tsx
   JobCard.tsx
   KanbanBoard.tsx
   KanbanColumn.tsx
@@ -37,11 +39,14 @@ src/lib
   demo-data.ts
   format.ts
   twilio.ts
+  supabase/admin.ts
   supabase/browser.ts
   supabase/server.ts
 src/types/db.ts
 supabase/migrations/202604280001_revenue_validation.sql
 supabase/migrations/202604280002_sales_roi_demo.sql
+supabase/migrations/202604290001_rls_and_quote_persistence.sql
+supabase/migrations/202604290002_internal_admin.sql
 supabase/schema.sql
 .env.example
 ```

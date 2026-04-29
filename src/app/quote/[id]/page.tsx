@@ -19,6 +19,7 @@ export default async function PublicQuotePage({
       "*, quote_line_items(id,quote_id,name,price,quantity), jobs!inner(id,customer_name,phone,address,issue,company_id)",
     )
     .eq("id", id)
+    .eq("is_demo", false)
     .eq("jobs.company_id", profile.company_id)
     .single();
 

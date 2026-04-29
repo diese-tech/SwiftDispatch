@@ -14,6 +14,9 @@ const closeStatuses: CloseStatus[] = [
 export async function PATCH(request: Request) {
   const { profile, response, supabase } = await requireApiProfile();
   if (response || !profile) return response;
+  if (profile.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const { close_status } = (await request.json()) as {
     close_status?: CloseStatus;
   };

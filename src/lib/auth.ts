@@ -56,3 +56,13 @@ export async function requireApiProfile() {
     response: null,
   };
 }
+
+export async function requireAdminProfile() {
+  const profile = await getCurrentProfile();
+
+  if (profile.role !== "admin") {
+    redirect("/dashboard");
+  }
+
+  return profile;
+}
