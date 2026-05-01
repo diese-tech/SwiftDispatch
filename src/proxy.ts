@@ -42,11 +42,11 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // /dispatch/* routes: must be dispatcher or admin
+  // /dispatch/* routes: must be dispatcher, admin, or super_admin (impersonation)
   if (path.startsWith('/dispatch')) {
     if (!user) return NextResponse.redirect(new URL('/login', request.url))
     const { data } = await supabase.from('users').select('role').eq('id', user.id).single()
-    if (!data || !['dispatcher', 'admin'].includes(data.role)) {
+    if (!data || !['dispatcher', 'admin', 'super_admin'].includes(data.role)) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
   }
@@ -60,9 +60,18 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // /superadmin/* routes: must be super_admin
+  if (path.startsWith('/superadmin')) {
+    if (!user) return NextResponse.redirect(new URL('/login', request.url))
+    const { data } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!data || data.role !== 'super_admin') {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+  }
+
   return response
 }
 
 export const config = {
-  matcher: ['/tech/:path*', '/admin/:path*', '/dispatch/:path*', '/invoice/:path*'],
+  matcher: ['/tech/:path*', '/admin/:path*', '/dispatch/:path*', '/invoice/:path*', '/superadmin/:path*'],
 }

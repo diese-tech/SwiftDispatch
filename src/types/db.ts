@@ -43,7 +43,7 @@ export type Company = {
 export type AppUser = {
   id: string
   email: string
-  company_id: string
+  company_id: string | null
   role: string
 }
 

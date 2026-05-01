@@ -66,3 +66,13 @@ export async function requireAdminProfile() {
 
   return profile;
 }
+
+export async function requireSuperAdminProfile() {
+  const profile = await getCurrentProfile();
+
+  if (profile.role !== "super_admin") {
+    redirect("/login");
+  }
+
+  return profile;
+}

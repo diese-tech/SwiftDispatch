@@ -46,6 +46,7 @@ export async function PATCH(
   const { id, itemId } = await params;
   const { profile, response, supabase } = await requireApiProfile();
   if (response || !profile) return response;
+  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: quote, error: quoteError } = await assertQuoteOwnership(
     supabase,
@@ -90,6 +91,7 @@ export async function DELETE(
   const { id, itemId } = await params;
   const { profile, response, supabase } = await requireApiProfile();
   if (response || !profile) return response;
+  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: quote, error: quoteError } = await assertQuoteOwnership(
     supabase,

@@ -8,7 +8,8 @@ export default async function LoginPage() {
 
   if (user) {
     const { data } = await supabase.from('users').select('role').eq('id', user.id).single()
-    if (data?.role === 'admin') redirect('/admin')
+    if (data?.role === 'super_admin') redirect('/superadmin')
+    else if (data?.role === 'admin') redirect('/admin')
     else if (data?.role === 'technician') redirect('/tech')
     else redirect('/dispatch')
   }
