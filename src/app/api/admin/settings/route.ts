@@ -63,13 +63,13 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'slug cannot be empty' }, { status: 400 })
     }
 
-    // Check slug uniqueness
+    // Check slug uniqueness — maybeSingle() returns null (not an error) when no conflict found
     const { data: conflict } = await supabase
       .from('companies')
       .select('id')
       .eq('slug', slug)
       .neq('id', caller.companyId)
-      .single()
+      .maybeSingle()
 
     if (conflict) {
       return NextResponse.json(
@@ -93,10 +93,13 @@ export async function PATCH(request: Request) {
     .update(patch)
     .eq('id', caller.companyId)
     .select('id, name, slug, timezone, sms_sender_name, payment_provider')
-    .single()
+    .maybeSingle()
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+  if (!data) {
+    return NextResponse.json({ error: 'Company not found' }, { status: 404 })
   }
 
   return NextResponse.json({ company: data })
