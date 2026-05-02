@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "vitest run --reporter=verbose src/e2e"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
