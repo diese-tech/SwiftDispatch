@@ -29,6 +29,7 @@ export async function requireRole(
 
   if (!data) throw new Error('User not found')
   if (!allowed.includes(data.role)) throw new Error(`Role '${data.role}' not permitted`)
+  if (!data.company_id) throw new Error('No company associated with this account')
 
   return { userId: user.id, companyId: data.company_id, role: data.role }
 }

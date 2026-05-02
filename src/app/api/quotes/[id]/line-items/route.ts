@@ -32,6 +32,7 @@ export async function POST(
   const { id } = await params;
   const { profile, response, supabase } = await requireApiProfile();
   if (response || !profile) return response;
+  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await request.json().catch(() => ({}));
 
   const { data: quote, error: quoteError } = await supabase

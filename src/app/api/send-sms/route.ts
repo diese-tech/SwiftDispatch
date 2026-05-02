@@ -5,6 +5,7 @@ import { getTwilioClient } from "@/lib/twilio";
 export async function POST(request: Request) {
   const { profile, response, supabase } = await requireApiProfile();
   if (response || !profile) return response;
+  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { quote_id } = await request.json();
 
   const { data, error } = await supabase

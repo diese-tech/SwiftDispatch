@@ -25,6 +25,7 @@ export async function PATCH(
   const { id } = await params
   const { profile, response, supabase } = await requireApiProfile()
   if (response || !profile) return response
+  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let body: unknown
   try { body = await request.json() } catch {

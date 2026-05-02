@@ -1,9 +1,14 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { seedDemoAction } from "@/app/admin/actions";
 import { requireAdminProfile } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export default async function SeedDemoPage() {
+  // Only available when ENABLE_SEED_DEMO=true is explicitly set.
+  // Never enable in production without a deliberate override.
+  if (!process.env.ENABLE_SEED_DEMO) notFound();
+
   await requireAdminProfile();
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase

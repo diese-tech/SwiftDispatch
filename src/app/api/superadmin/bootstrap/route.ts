@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { z } from 'zod'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
@@ -9,9 +10,9 @@ const Schema = z.object({
 })
 
 // POST /api/superadmin/bootstrap
-// One-shot endpoint to create the first super_admin account.
-// Requires SUPER_ADMIN_BOOTSTRAP_SECRET env var to match the request body secret.
-// Once a super_admin user exists, this endpoint should be disabled by unsetting the env var.
+// One-shot setup endpoint — creates the first super_admin account.
+// Gated behind SUPER_ADMIN_BOOTSTRAP_SECRET env var.
+// DELETE THIS FILE once the super_admin account is confirmed in Supabase Auth.
 export async function POST(request: Request) {
   const secret = process.env.SUPER_ADMIN_BOOTSTRAP_SECRET
   if (!secret) {
@@ -30,16 +31,24 @@ export async function POST(request: Request) {
 
   const { email, password, bootstrapSecret } = parsed.data
 
-  if (bootstrapSecret !== secret) {
-    return NextResponse.json({ error: 'Invalid bootstrap secret' }, { status: 403 })
+  // Constant-time comparison to prevent timing attacks on the secret
+  const secretBuf = Buffer.from(secret)
+  const inputBuf = Buffer.from(bootstrapSecret)
+  const secretMatch =
+    secretBuf.length === inputBuf.length &&
+    timingSafeEqual(secretBuf, inputBuf)
+
+  if (!secretMatch) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const supabase = createSupabaseAdminClient()
 
-  // Ensure no super_admin already exists
+  // Return identical Forbidden response whether secret is wrong or super_admin already exists,
+  // so callers cannot determine if the endpoint has been used.
   const { data: existing } = await supabase.from('users').select('id').eq('role', 'super_admin').limit(1).single()
   if (existing) {
-    return NextResponse.json({ error: 'A super admin account already exists. Disable bootstrap by unsetting SUPER_ADMIN_BOOTSTRAP_SECRET.' }, { status: 409 })
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -64,5 +73,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: profileError.message }, { status: 500 })
   }
 
-  return NextResponse.json({ message: 'Super admin created. Unset SUPER_ADMIN_BOOTSTRAP_SECRET now.' })
+  return NextResponse.json({
+    message: 'Super admin created. Immediately: unset SUPER_ADMIN_BOOTSTRAP_SECRET and delete src/app/api/superadmin/bootstrap/route.ts',
+  })
 }

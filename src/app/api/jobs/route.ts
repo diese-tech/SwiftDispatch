@@ -18,6 +18,7 @@ const CreateJobSchema = z.object({
 export async function POST(request: Request) {
   const { profile, response, supabase } = await requireApiProfile()
   if (response || !profile) return response
+  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let body: unknown
   try { body = await request.json() } catch {
