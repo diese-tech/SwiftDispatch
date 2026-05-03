@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   const { data: job, error } = await supabase
     .from('jobs')
     .select(
-      'id, status, urgency, customer_name, address, created_at, technician_id, companies(name, phone, email), technicians(name)'
+      'id, status, urgency, customer_name, address, created_at, technician_id, companies(name, phone, email), technicians!jobs_technician_id_fkey(name)'
     )
     .eq('id', jobId)
     .single()
