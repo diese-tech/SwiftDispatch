@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireSuperAdminProfile } from '@/lib/auth'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { generatePin, generateTechHandle, resolveUniqueHandle, techEmail } from '@/lib/techAuth'
 
 function str(fd: FormData, key: string) {
   return String(fd.get(key) ?? '').trim()
@@ -62,6 +63,38 @@ export async function createDispatcherForCompanyAction(formData: FormData) {
   revalidatePath(`/superadmin/companies/${companyId}`)
 }
 
+export async function createAdminForCompanyAction(formData: FormData) {
+  await requireSuperAdminProfile()
+  const companyId = str(formData, 'company_id')
+  const email = str(formData, 'email')
+  const password = str(formData, 'password')
+  if (!companyId || !email || !password) return
+
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+
+  if (error || !data.user) throw new Error(error?.message ?? 'Failed to create user')
+
+  const { error: profileError } = await supabase.from('users').insert({
+    id: data.user.id,
+    email,
+    company_id: companyId,
+    role: 'admin',
+  })
+
+  if (profileError) {
+    await supabase.auth.admin.deleteUser(data.user.id)
+    throw new Error(profileError.message)
+  }
+
+  revalidatePath(`/superadmin/companies/${companyId}`)
+}
+
 export async function addTechnicianToCompanyAction(formData: FormData) {
   await requireSuperAdminProfile()
   const companyId = str(formData, 'company_id')
@@ -71,9 +104,13 @@ export async function addTechnicianToCompanyAction(formData: FormData) {
 
   const supabase = createSupabaseAdminClient()
 
-  const handle = name.toLowerCase().replace(/\s+/g, '')
-  const pin = String(Math.floor(1000 + Math.random() * 9000))
-  const syntheticEmail = `${handle}@internal.swiftdispatch.app`
+  const nameParts = name.split(/\s+/).filter(Boolean)
+  const firstName = nameParts[0] ?? name
+  const lastName = nameParts.slice(1).join(' ') || firstName
+  const baseHandle = generateTechHandle(firstName, lastName)
+  const handle = await resolveUniqueHandle(baseHandle, supabase)
+  const pin = generatePin()
+  const syntheticEmail = techEmail(handle)
   const password = pin
 
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -90,7 +127,6 @@ export async function addTechnicianToCompanyAction(formData: FormData) {
     phone: phone || null,
     handle,
     auth_user_id: authUserId,
-    pin_hash: pin,
     availability_status: 'available',
   })
 

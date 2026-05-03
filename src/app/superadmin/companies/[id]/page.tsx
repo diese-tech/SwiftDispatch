@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { AppPageIntro, MetricTile, StatusPill, SurfaceCard } from "@/components/DesignSystem";
 import { requireSuperAdminProfile } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { addTechnicianToCompanyAction, createDispatcherForCompanyAction, suspendCompanyAction, unsuspendCompanyAction } from "./actions";
+import { addTechnicianToCompanyAction, createAdminForCompanyAction, createDispatcherForCompanyAction, suspendCompanyAction, unsuspendCompanyAction } from "./actions";
 
 function Field({ label, name, type = "text", required = false }: { label: string; name: string; type?: string; required?: boolean }) {
   return (
@@ -105,6 +105,17 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
               </div>
             ))}
           </div>
+        </SurfaceCard>
+
+        <SurfaceCard accent>
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Create company admin</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-500">Give the company a real owner/operator account so they can configure settings, invite dispatchers, and manage templates themselves.</p>
+          <form action={createAdminForCompanyAction} className="mt-5 grid gap-3">
+            <input name="company_id" type="hidden" value={company.id} />
+            <Field label="Email" name="email" required type="email" />
+            <Field label="Password" name="password" required type="password" />
+            <button className="rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800" type="submit">Create admin</button>
+          </form>
         </SurfaceCard>
 
         <SurfaceCard accent>

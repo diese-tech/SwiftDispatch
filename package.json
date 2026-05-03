@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "seed:live-qa": "node scripts/seed-live-qa.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run --reporter=verbose src/e2e"
