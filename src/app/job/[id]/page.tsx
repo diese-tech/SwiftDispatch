@@ -54,7 +54,7 @@ export default async function JobPage({
   const quote = quoteResult.data as QuoteWithLineItems | null;
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-4 py-6 sm:px-6">
+    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
       <Link className="text-sm font-semibold text-teal-700" href="/dashboard">
         Back to board
       </Link>
@@ -100,3 +100,4 @@ export default async function JobPage({
     </main>
   );
 }
+

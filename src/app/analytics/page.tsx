@@ -17,7 +17,6 @@ export default async function AnalyticsPage() {
   const companyId = profile.company_id
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  // 1. Average Response Time (created_at → en_route_at)
   const { data: responseTimes } = await supabase
     .from('jobs')
     .select('created_at, en_route_at')
@@ -35,7 +34,6 @@ export default async function AnalyticsPage() {
     return Math.round(sum / valid.length)
   })()
 
-  // 2. Jobs Completed last 30 days
   const { count: completedCount } = await supabase
     .from('jobs')
     .select('*', { count: 'exact', head: true })
@@ -43,7 +41,6 @@ export default async function AnalyticsPage() {
     .eq('status', 'completed')
     .gte('completed_at', thirtyDaysAgo)
 
-  // 3. Quote Acceptance Rate
   const { data: quotesForRate } = await supabase
     .from('quotes')
     .select('status, jobs!inner(company_id)')
@@ -57,7 +54,6 @@ export default async function AnalyticsPage() {
     return Math.round((accepted / all.length) * 100)
   })()
 
-  // 4. Average Job Duration (arrived_at → completed_at)
   const { data: durations } = await supabase
     .from('jobs')
     .select('arrived_at, completed_at')
@@ -76,7 +72,6 @@ export default async function AnalyticsPage() {
     return Math.round(sum / valid.length)
   })()
 
-  // 5. Revenue Per Tech
   const { data: revenueData } = await supabase
     .from('jobs')
     .select('technician_id, quotes!inner(total_amount, total, status), technicians(name)')
@@ -102,7 +97,6 @@ export default async function AnalyticsPage() {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5)
 
-  // 6. No-Access Rate
   const { count: totalJobs } = await supabase
     .from('jobs')
     .select('*', { count: 'exact', head: true })
@@ -122,68 +116,62 @@ export default async function AnalyticsPage() {
     v != null ? `${v}${suffix}` : 'No data yet'
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-teal-700">SwiftDispatch</p>
-          <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
-          <p className="text-sm text-slate-500">Last 30 days</p>
-        </div>
-        <a href="/dispatch" className="text-sm text-teal-700 hover:underline">← Dispatch</a>
+    <div className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mb-8">
+        <p className="text-xs font-bold uppercase tracking-widest text-teal-700">SwiftDispatch</p>
+        <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
+        <p className="text-sm text-slate-500">Last 30 days</p>
       </div>
 
-      <div className="mx-auto max-w-5xl px-6 py-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-          <MetricCard
-            label="Avg Response Time"
-            value={fmt(avgResponseMinutes, ' min')}
-            sub="Time from job created to tech en route. Target: under 20 min"
-          />
-          <MetricCard
-            label="Jobs Completed"
-            value={fmt(completedCount)}
-            sub="Completed in the last 30 days"
-          />
-          <MetricCard
-            label="Quote Acceptance Rate"
-            value={fmt(acceptanceRate, '%')}
-            sub="Industry benchmark: above 75% is healthy"
-          />
-          <MetricCard
-            label="Avg Job Duration"
-            value={fmt(avgDurationMinutes, ' min')}
-            sub="Time from arrival to completion"
-          />
-          <MetricCard
-            label="No-Access Rate"
-            value={fmt(noAccessRate, '%')}
-            sub="Above 10% signals scheduling or address issues"
-          />
-          <MetricCard
-            label="Total Jobs Created"
-            value={fmt(totalJobs)}
-            sub="All jobs opened in the last 30 days"
-          />
-        </div>
+      <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <MetricCard
+          label="Avg Response Time"
+          value={fmt(avgResponseMinutes, ' min')}
+          sub="Time from job created to tech en route. Target: under 20 min"
+        />
+        <MetricCard
+          label="Jobs Completed"
+          value={fmt(completedCount)}
+          sub="Completed in the last 30 days"
+        />
+        <MetricCard
+          label="Quote Acceptance Rate"
+          value={fmt(acceptanceRate, '%')}
+          sub="Industry benchmark: above 75% is healthy"
+        />
+        <MetricCard
+          label="Avg Job Duration"
+          value={fmt(avgDurationMinutes, ' min')}
+          sub="Time from arrival to completion"
+        />
+        <MetricCard
+          label="No-Access Rate"
+          value={fmt(noAccessRate, '%')}
+          sub="Above 10% signals scheduling or address issues"
+        />
+        <MetricCard
+          label="Total Jobs Created"
+          value={fmt(totalJobs)}
+          sub="All jobs opened in the last 30 days"
+        />
+      </div>
 
-        {/* Revenue Per Tech */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Revenue Per Technician (last 30 days)</h2>
-          {topTechs.length === 0 ? (
-            <p className="text-slate-400 text-sm">No revenue data yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {topTechs.map(({ name, revenue }) => (
-                <div key={name} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">{name}</span>
-                  <span className="text-sm font-bold text-teal-700">
-                    ${revenue.toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="rounded-xl border border-slate-200 bg-white p-6">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">Revenue Per Technician (last 30 days)</h2>
+        {topTechs.length === 0 ? (
+          <p className="text-sm text-slate-400">No revenue data yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {topTechs.map(({ name, revenue }) => (
+              <div key={name} className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-700">{name}</span>
+                <span className="text-sm font-bold text-teal-700">
+                  ${revenue.toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

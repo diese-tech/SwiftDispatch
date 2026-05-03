@@ -27,7 +27,7 @@ export default async function PublicQuotePage({
   const quote = data as QuoteWithItems;
 
   return (
-    <main className="min-h-screen bg-white px-4 py-8">
+    <main className="px-4 py-8">
       <section className="mx-auto max-w-2xl">
         <div className="mb-8 border-b border-slate-200 pb-5">
           <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
@@ -63,3 +63,4 @@ export default async function PublicQuotePage({
     </main>
   );
 }
+

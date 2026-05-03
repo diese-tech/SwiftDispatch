@@ -1,6 +1,5 @@
 import KanbanBoard from "@/components/KanbanBoard";
 import SalesBadges from "@/components/SalesBadges";
-import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { JobWithTechnician, Technician } from "@/types/db";
@@ -27,8 +26,8 @@ export default async function DashboardPage() {
   if (techsResult.error) throw new Error(techsResult.error.message);
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <main className="px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-6">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
             SwiftDispatch
@@ -36,20 +35,6 @@ export default async function DashboardPage() {
           <h1 className="text-3xl font-semibold tracking-tight">
             Dispatch Board
           </h1>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <Link
-            className="rounded-md border border-slate-300 bg-white px-4 py-3 text-center text-base font-semibold"
-            href="/roi"
-          >
-            ROI
-          </Link>
-          <Link
-            className="rounded-md border border-slate-300 bg-white px-4 py-3 text-center text-base font-semibold"
-            href="/analytics"
-          >
-            Analytics
-          </Link>
         </div>
       </div>
       <div className="mb-4">

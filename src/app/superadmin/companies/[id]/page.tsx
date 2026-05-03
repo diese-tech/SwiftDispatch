@@ -44,7 +44,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
         {/* Breadcrumb */}
         <div className="mb-6 flex items-center gap-2 text-sm">
@@ -209,3 +209,4 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
     </main>
   )
 }
+

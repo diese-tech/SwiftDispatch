@@ -20,32 +20,19 @@ export default async function SuperAdminDashboard() {
 
   const activeJobs = jobs.filter(j => !['completed', 'cancelled'].includes(j.status))
   const totalTechs = techs.length
-  const totalJobs = jobs.length
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const newJobsThisMonth = jobs.filter(j => j.created_at > thirtyDaysAgo).length
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-teal-700">SwiftDispatch</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Platform Overview</h1>
-            <p className="mt-1 text-sm text-slate-500">Super admin — all tenants</p>
-          </div>
-          <form action="/api/auth/signout" method="POST">
-            <button
-              type="submit"
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Sign out
-            </button>
-          </form>
+        <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-widest text-teal-700">SwiftDispatch</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Platform Overview</h1>
+          <p className="mt-1 text-sm text-slate-500">Super admin - all tenants</p>
         </div>
 
-        {/* Stats */}
         <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
             { label: 'Total companies', value: companies.length },
@@ -60,9 +47,8 @@ export default async function SuperAdminDashboard() {
           ))}
         </div>
 
-        {/* Company table */}
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
             <h2 className="font-semibold text-slate-900">All Companies</h2>
             <Link
               href="/superadmin/companies/new"
@@ -93,9 +79,9 @@ export default async function SuperAdminDashboard() {
                     <tr key={company.id} className={company.suspended ? 'bg-red-50' : ''}>
                       <td className="px-5 py-3">
                         <p className="font-medium text-slate-900">{company.name}</p>
-                        <p className="text-xs text-slate-400 font-mono">{company.id.slice(0, 8)}</p>
+                        <p className="font-mono text-xs text-slate-400">{company.id.slice(0, 8)}</p>
                       </td>
-                      <td className="px-5 py-3 font-mono text-xs text-slate-600">{company.slug ?? '—'}</td>
+                      <td className="px-5 py-3 font-mono text-xs text-slate-600">{company.slug ?? '-'}</td>
                       <td className="px-5 py-3 text-slate-700">{companyJobs.length}</td>
                       <td className="px-5 py-3 text-slate-700">{companyTechs.length}</td>
                       <td className="px-5 py-3 text-slate-700">{companyUsers.length}</td>
@@ -109,9 +95,9 @@ export default async function SuperAdminDashboard() {
                       <td className="px-5 py-3">
                         <Link
                           href={`/superadmin/companies/${company.id}`}
-                          className="text-teal-700 hover:underline text-sm font-semibold"
+                          className="text-sm font-semibold text-teal-700 hover:underline"
                         >
-                          Manage →
+                          Manage
                         </Link>
                       </td>
                     </tr>
@@ -125,3 +111,4 @@ export default async function SuperAdminDashboard() {
     </main>
   )
 }
+

@@ -116,7 +116,7 @@ export default async function AdminPage({
   ).length;
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+    <main className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
@@ -290,3 +290,4 @@ export default async function AdminPage({
     </main>
   );
 }
+

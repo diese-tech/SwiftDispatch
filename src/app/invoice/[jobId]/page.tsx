@@ -58,7 +58,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ jobId:
         }
       `}</style>
 
-      <div className="min-h-screen bg-slate-50 py-10 px-4">
+      <div className="px-4 py-10">
         <div className="mx-auto max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-8">
           {/* Header */}
           <div className="flex justify-between items-start border-b border-slate-100 pb-6 mb-6">
@@ -164,3 +164,4 @@ export default async function InvoicePage({ params }: { params: Promise<{ jobId:
     </>
   )
 }
+

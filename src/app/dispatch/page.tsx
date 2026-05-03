@@ -14,7 +14,6 @@ export default async function DispatchPage({
   const profile = await getCurrentProfile()
   const { impersonate } = await searchParams
 
-  // super_admin may impersonate any company; others must use their own company
   let companyId: string
   let impersonating = false
 
@@ -22,14 +21,12 @@ export default async function DispatchPage({
     companyId = impersonate
     impersonating = true
   } else if (profile.role === 'super_admin') {
-    // super_admin without impersonate param — send to platform dashboard
     redirect('/superadmin')
   } else {
     if (!profile.company_id) redirect('/login')
     companyId = profile.company_id
   }
 
-  // Use admin client when impersonating so RLS doesn't block cross-tenant reads
   const supabase = impersonating
     ? createSupabaseAdminClient()
     : await createSupabaseServerClient()
@@ -51,29 +48,25 @@ export default async function DispatchPage({
   ])
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
+    <div className="px-6 py-6">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Dispatch Board</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Dispatch Board</h1>
           {impersonating && (
-            <p className="text-xs font-semibold text-amber-600 mt-0.5">
-              Viewing as: {(companyRes as { data: { name: string } | null }).data?.name ?? companyId} — read-only context
+            <p className="mt-1 text-sm font-semibold text-amber-600">
+              Viewing as: {(companyRes as { data: { name: string } | null }).data?.name ?? companyId} - read-only context
             </p>
           )}
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {!impersonating && (
             <a href="/dispatch/jobs/new" className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">
               + New Job
             </a>
           )}
-          {!impersonating && <a href="/analytics" className="text-sm text-slate-600 hover:underline">Analytics</a>}
-          {profile.role === 'admin' && !impersonating && (
-            <a href="/admin" className="text-sm text-slate-600 hover:underline">Admin</a>
-          )}
           {impersonating && (
             <Link href="/superadmin" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              ← Back to platform
+              Back to platform
             </Link>
           )}
         </div>
@@ -85,3 +78,4 @@ export default async function DispatchPage({
     </div>
   )
 }
+

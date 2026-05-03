@@ -27,7 +27,7 @@ export default async function NewCompanyPage() {
   await requireSuperAdminProfile()
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6">
+    <main className="px-4 py-6 sm:px-6">
       <div className="mx-auto max-w-lg">
         <div className="mb-6 flex items-center gap-2 text-sm">
           <Link href="/superadmin" className="text-teal-700 hover:underline">Platform</Link>
@@ -63,3 +63,4 @@ export default async function NewCompanyPage() {
     </main>
   )
 }
+
