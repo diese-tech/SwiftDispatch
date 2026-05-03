@@ -16,9 +16,10 @@ type AppHeaderProps = {
 };
 
 function getNavItems(section: HeaderSection, role: string): NavItem[] {
+  const dispatchHref = role === "super_admin" ? "/superadmin/dispatch" : "/dispatch";
   if (section === "admin") {
     return [
-      { href: "/dispatch", label: "Dispatch" },
+      { href: dispatchHref, label: "Dispatch" },
       { href: "/admin", label: "Admin" },
       { href: "/admin/settings", label: "Settings" },
       { href: "/admin/technicians", label: "Technicians" },
@@ -38,13 +39,13 @@ function getNavItems(section: HeaderSection, role: string): NavItem[] {
       { href: "/dashboard", label: "Dashboard" },
       { href: "/analytics", label: "Analytics" },
       { href: "/roi", label: "ROI" },
-      { href: "/dispatch", label: "Dispatch" },
+      { href: dispatchHref, label: "Dispatch" },
     ];
     if (role === "admin") items.push({ href: "/admin", label: "Admin" });
     return items;
   }
   const items: NavItem[] = [
-    { href: "/dispatch", label: "Dispatch" },
+    { href: dispatchHref, label: "Dispatch" },
     { href: "/analytics", label: "Analytics" },
     { href: "/roi", label: "ROI" },
   ];
@@ -58,6 +59,7 @@ export default function AppHeader({ section, user }: AppHeaderProps) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const navItems = useMemo(() => getNavItems(section, user.role), [section, user.role]);
+  const homeHref = user.role === "super_admin" ? "/superadmin" : "/dispatch";
   const formattedRole = user.role.replace(/_/g, " ");
 
   async function handleSignOut() {
@@ -73,7 +75,7 @@ export default function AppHeader({ section, user }: AppHeaderProps) {
       <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <BrandMark href="/dispatch" inverse />
+            <BrandMark href={homeHref} inverse />
             <p className="mt-4 text-sm leading-6 text-slate-300">A calmer operating shell for dispatch, quoting, and team coordination.</p>
           </div>
           <div className="flex flex-col items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/5 px-4 py-4 sm:min-w-[280px] sm:items-end">

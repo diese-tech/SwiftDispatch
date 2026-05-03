@@ -11,10 +11,11 @@ const statuses: JobStatus[] = ["New", "Assigned", "En Route", "Completed"];
 
 type Props = {
   initialJobs: JobWithTechnician[];
+  readOnly?: boolean;
   technicians: Technician[];
 };
 
-export default function KanbanBoard({ initialJobs, technicians }: Props) {
+export default function KanbanBoard({ initialJobs, readOnly = false, technicians }: Props) {
   const [jobs, setJobs] = useState(initialJobs);
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -26,6 +27,7 @@ export default function KanbanBoard({ initialJobs, technicians }: Props) {
   }, [jobs]);
 
   async function onDragEnd(event: DragEndEvent) {
+    if (readOnly) return;
     const jobId = event.active.id.toString();
     const nextStatus = event.over?.id?.toString() as JobStatus | undefined;
     const job = jobs.find((item) => item.id === jobId);
@@ -82,15 +84,25 @@ export default function KanbanBoard({ initialJobs, technicians }: Props) {
       <SurfaceCard accent className="p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Quick action</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Create and route a new job without leaving the board.</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{readOnly ? "Platform view" : "Quick action"}</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+              {readOnly ? "This board is intentionally view-only in superadmin impersonation mode." : "Create and route a new job without leaving the board."}
+            </h2>
           </div>
-          <button className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-300" onClick={() => setFormOpen((current) => !current)} type="button">
-            <Plus size={16} /> {formOpen ? "Close form" : "New Job"}
-          </button>
+          {readOnly ? (
+            <StatusPill tone="warm">Read only</StatusPill>
+          ) : (
+            <button className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-300" onClick={() => setFormOpen((current) => !current)} type="button">
+              <Plus size={16} /> {formOpen ? "Close form" : "New Job"}
+            </button>
+          )}
         </div>
 
-        {formOpen ? (
+        {readOnly ? (
+          <p className="mt-4 text-sm leading-7 text-slate-500">
+            Open job detail and board state for review, but leave creation, assignment, and status changes to the tenant workspace itself.
+          </p>
+        ) : formOpen ? (
           <form className="mt-6 grid gap-3 md:grid-cols-2" onSubmit={createJob}>
             <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" name="customer_name" placeholder="Customer name" required />
             <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" name="phone" placeholder="Phone" required />
@@ -129,12 +141,12 @@ export default function KanbanBoard({ initialJobs, technicians }: Props) {
               ))}
             </div>
 
-            <KanbanColumn jobs={mobileJobs} status={mobileStatus} technicians={technicians} compact />
+            <KanbanColumn jobs={mobileJobs} readOnly={readOnly} status={mobileStatus} technicians={technicians} compact />
           </div>
         </SurfaceCard>
 
         <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
-          {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} status={status} technicians={technicians} />)}
+          {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} readOnly={readOnly} status={status} technicians={technicians} />)}
         </div>
       </DndContext>
     </div>

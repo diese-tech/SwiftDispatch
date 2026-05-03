@@ -26,7 +26,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
 
   const supabase = impersonating ? createSupabaseAdminClient() : await createSupabaseServerClient();
   const [{ data: jobs }, { data: technicians }, companyRes] = await Promise.all([
-    supabase.from("jobs").select("*, technicians(id,name,phone)").eq("company_id", companyId).not("status", "in", '("completed","cancelled")').order("created_at", { ascending: false }),
+    supabase.from("jobs").select("*, technicians!jobs_technician_id_fkey(id,name,phone)").eq("company_id", companyId).not("status", "in", '("completed","cancelled")').order("created_at", { ascending: false }),
     supabase.from("technicians").select("id,name,phone").eq("company_id", companyId),
     impersonating ? supabase.from("companies").select("name").eq("id", companyId).single() : Promise.resolve({ data: null }),
   ]);
@@ -59,7 +59,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
         <MetricTile label="Context" value={impersonating ? companyName : "Live company"} detail={impersonating ? "Platform-side read-only view" : "Direct operational view"} />
       </div>
 
-      <KanbanBoard initialJobs={activeJobs} technicians={techList} />
+      <KanbanBoard initialJobs={activeJobs} readOnly={impersonating} technicians={techList} />
     </div>
   );
 }

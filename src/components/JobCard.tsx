@@ -9,6 +9,7 @@ import type { JobWithTechnician, Technician } from "@/types/db";
 
 type Props = {
   job: JobWithTechnician;
+  readOnly?: boolean;
   technicians: Technician[];
 };
 
@@ -18,7 +19,7 @@ function getTone(issue: string) {
   return "teal" as const;
 }
 
-export default function JobCard({ job, technicians }: Props) {
+export default function JobCard({ job, readOnly = false, technicians }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: job.id });
   const initials = job.technicians?.name
     ?.split(" ")
@@ -38,7 +39,7 @@ export default function JobCard({ job, technicians }: Props) {
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{job.id.slice(0, 8)}</span>
       </div>
 
-      <button className="w-full cursor-grab text-left active:cursor-grabbing" type="button" {...listeners} {...attributes}>
+      <button className={`w-full text-left ${readOnly ? "cursor-default" : "cursor-grab active:cursor-grabbing"}`} type="button" {...(!readOnly ? listeners : {})} {...(!readOnly ? attributes : {})}>
         <h3 className="font-semibold leading-tight text-slate-950">{job.customer_name}</h3>
         <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{job.issue}</p>
       </button>
@@ -58,9 +59,15 @@ export default function JobCard({ job, technicians }: Props) {
         </div>
       </div>
 
-      <div className="mt-4">
-        <TechnicianDropdown jobId={job.id} selectedId={job.technician_id} technicians={technicians} />
-      </div>
+      {readOnly ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+          Assignment locked in read-only platform view
+        </div>
+      ) : (
+        <div className="mt-4">
+          <TechnicianDropdown jobId={job.id} selectedId={job.technician_id} technicians={technicians} />
+        </div>
+      )}
 
       <Link className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50" href={`/job/${job.id}`}>
         Open job

@@ -8,6 +8,7 @@ import type { JobStatus, JobWithTechnician, Technician } from "@/types/db";
 type Props = {
   status: JobStatus;
   jobs: JobWithTechnician[];
+  readOnly?: boolean;
   technicians: Technician[];
   compact?: boolean;
 };
@@ -18,7 +19,7 @@ function getTone(status: string) {
   return "teal" as const;
 }
 
-export default function KanbanColumn({ status, jobs, technicians, compact = false }: Props) {
+export default function KanbanColumn({ status, jobs, readOnly = false, technicians, compact = false }: Props) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
 
   return (
@@ -31,7 +32,7 @@ export default function KanbanColumn({ status, jobs, technicians, compact = fals
         <span className="rounded-full bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white">{jobs.length}</span>
       </div>
       <div className={`${compact ? "space-y-3" : "space-y-4"}`}>
-        {jobs.map((job) => <JobCard job={job} key={job.id} technicians={technicians} />)}
+        {jobs.map((job) => <JobCard job={job} key={job.id} readOnly={readOnly} technicians={technicians} />)}
         {jobs.length === 0 ? (
           <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50/80 px-4 py-6 text-sm leading-6 text-slate-500">
             No jobs are sitting in this lane right now.
