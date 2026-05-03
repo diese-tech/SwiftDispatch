@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
-import { VALID_TRANSITIONS } from '@/lib/stateMachine'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import type { JobStatus } from '@/lib/stateMachine'
+import { VALID_TRANSITIONS } from '@/lib/stateMachine'
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 function canTransition(current: string, target: JobStatus): boolean {
   const transitions = VALID_TRANSITIONS[current as JobStatus]
@@ -27,12 +27,12 @@ export function SignOutButtonClient() {
 
   return (
     <button
-      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+      className="inline-flex items-center justify-center rounded-full border border-white/14 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/15 disabled:opacity-60"
       disabled={pending}
       onClick={handleSignOut}
       type="button"
     >
-      {pending ? 'Signing out…' : 'Sign out'}
+      {pending ? 'Signing out...' : 'Sign out'}
     </button>
   )
 }
@@ -73,28 +73,25 @@ export function TechJobActionsClient({
   }
 
   const btnBase =
-    'inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:opacity-40'
+    'inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40'
   const primaryCls = `${btnBase} bg-teal-700 text-white hover:bg-teal-800`
-  const secondaryCls = `${btnBase} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`
+  const secondaryCls = `${btnBase} border border-white/12 bg-white/10 text-white hover:bg-white/15`
 
   const enRouteEnabled = canTransition(status, 'en_route')
   const arrivedEnabled = canTransition(status, 'in_progress')
-  // Build Quote — link button, enabled when status = 'in_progress'
   const buildQuoteEnabled = status === 'in_progress'
-  // Mark Complete — enabled when status = 'quote_pending' AND accepted quote
-  const markCompleteEnabled =
-    canTransition(status, 'completed') && hasAcceptedQuote
+  const markCompleteEnabled = canTransition(status, 'completed') && hasAcceptedQuote
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-2">
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
         <button
           className={enRouteEnabled ? primaryCls : secondaryCls}
           disabled={!enRouteEnabled || loading !== null}
           onClick={() => postStatus('en_route')}
           type="button"
         >
-          {loading === 'en_route' ? 'Updating…' : 'En Route'}
+          {loading === 'en_route' ? 'Updating...' : 'En Route'}
         </button>
 
         <button
@@ -103,22 +100,15 @@ export function TechJobActionsClient({
           onClick={() => postStatus('in_progress')}
           type="button"
         >
-          {loading === 'in_progress' ? 'Updating…' : 'Arrived'}
+          {loading === 'in_progress' ? 'Updating...' : 'Arrived'}
         </button>
 
         {buildQuoteEnabled ? (
-          <Link
-            className={`${primaryCls} col-span-1`}
-            href={`/tech/job/${jobId}`}
-          >
+          <Link className={primaryCls} href={`/tech/job/${jobId}`}>
             Build Quote
           </Link>
         ) : (
-          <button
-            className={secondaryCls}
-            disabled
-            type="button"
-          >
+          <button className={secondaryCls} disabled type="button">
             Build Quote
           </button>
         )}
@@ -129,12 +119,12 @@ export function TechJobActionsClient({
           onClick={() => postStatus('completed')}
           type="button"
         >
-          {loading === 'completed' ? 'Updating…' : 'Mark Complete'}
+          {loading === 'completed' ? 'Updating...' : 'Mark Complete'}
         </button>
       </div>
 
       {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+        <p className="rounded-2xl border border-red-200/70 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">
           {error}
         </p>
       ) : null}

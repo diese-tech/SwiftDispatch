@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { StatusPill, SurfaceCard } from '@/components/DesignSystem'
 
 type Company = {
   id: string
@@ -17,7 +18,7 @@ type SuccessData = {
 
 function FieldError({ errors }: { errors?: string[] }) {
   if (!errors?.length) return null
-  return <p className="mt-1 text-xs font-medium text-red-600">{errors[0]}</p>
+  return <p className="mt-2 text-xs font-medium text-red-600">{errors[0]}</p>
 }
 
 export default function IntakeForm({ company }: { company: Company }) {
@@ -72,82 +73,95 @@ export default function IntakeForm({ company }: { company: Company }) {
     }
   }
 
+  const inputCls = (field: string) =>
+    `w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-4 ${
+      fieldErrors[field]?.length
+        ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+        : 'border-slate-200 focus:border-teal-500 focus:ring-teal-100'
+    }`
+
   if (success) {
     const statusUrl = `${window.location.origin}/intake/status/${success.statusToken}`
     return (
-      <section className="rounded-xl border border-green-200 bg-green-50 p-6 text-center">
-        <div className="mb-3 text-4xl">✓</div>
-        <h2 className="text-xl font-semibold text-green-900">Request Received!</h2>
-        <p className="mt-2 text-sm text-green-800">
-          Your service request has been submitted. A dispatcher will contact you shortly.
+      <SurfaceCard accent className="p-8 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-2xl font-semibold text-emerald-700">
+          OK
+        </div>
+        <StatusPill tone="success" >
+          Request received
+        </StatusPill>
+        <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">You are on the board.</h2>
+        <p className="mt-3 text-sm leading-7 text-slate-600">
+          Your service request has been submitted. The office team can now route it cleanly, and someone will contact you shortly.
         </p>
-        <div className="mt-4 rounded-lg border border-green-200 bg-white p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reference Number</p>
-          <p className="mt-1 text-2xl font-bold tracking-widest text-slate-900">#{success.jobRef}</p>
+        <div className="mt-6 rounded-[1.5rem] border border-emerald-200 bg-emerald-50/70 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Reference number</p>
+          <p className="mt-3 text-3xl font-semibold tracking-[0.18em] text-slate-950">#{success.jobRef}</p>
         </div>
         <a
           href={statusUrl}
-          className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-teal-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-800"
+          className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-          Track My Request
+          Track my request
         </a>
-      </section>
+      </SurfaceCard>
     )
   }
 
-  const inputCls = (field: string) =>
-    `w-full rounded-lg border px-3 py-2.5 text-base outline-none transition focus:ring-1 ${
-      fieldErrors[field]?.length
-        ? 'border-red-400 focus:border-red-500 focus:ring-red-400'
-        : 'border-slate-300 focus:border-teal-600 focus:ring-teal-600'
-    }`
-
   return (
-    <form
-      onSubmit={onSubmit}
-      className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-    >
-      <div className="space-y-5">
-        {/* Full name */}
+    <SurfaceCard accent className="p-6 sm:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <label htmlFor="name" className="mb-1 block text-sm font-medium text-slate-700">
-            Full Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="name"
-            type="text"
-            required
-            autoComplete="name"
-            className={inputCls('name')}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Jane Smith"
-          />
-          <FieldError errors={fieldErrors.name} />
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Service request
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+            Tell {company.name} what is going on
+          </h2>
+        </div>
+        <StatusPill tone="teal">Customer intake</StatusPill>
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-6 space-y-5">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label htmlFor="name" className="mb-2 block text-sm font-medium text-slate-700">
+              Full name <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="name"
+              type="text"
+              required
+              autoComplete="name"
+              className={inputCls('name')}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jane Smith"
+            />
+            <FieldError errors={fieldErrors.name} />
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="mb-2 block text-sm font-medium text-slate-700">
+              Phone number <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              required
+              autoComplete="tel"
+              className={inputCls('phone')}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(555) 000-0000"
+            />
+            <FieldError errors={fieldErrors.phone} />
+          </div>
         </div>
 
-        {/* Phone */}
         <div>
-          <label htmlFor="phone" className="mb-1 block text-sm font-medium text-slate-700">
-            Phone Number <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="phone"
-            type="tel"
-            required
-            autoComplete="tel"
-            className={inputCls('phone')}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="(555) 000-0000"
-          />
-          <FieldError errors={fieldErrors.phone} />
-        </div>
-
-        {/* Service address */}
-        <div>
-          <label htmlFor="address" className="mb-1 block text-sm font-medium text-slate-700">
-            Service Address <span className="text-red-500">*</span>
+          <label htmlFor="address" className="mb-2 block text-sm font-medium text-slate-700">
+            Service address <span className="text-red-500">*</span>
           </label>
           <input
             id="address"
@@ -162,26 +176,24 @@ export default function IntakeForm({ company }: { company: Company }) {
           <FieldError errors={fieldErrors.address} />
         </div>
 
-        {/* Problem description */}
         <div>
-          <label htmlFor="problemDescription" className="mb-1 block text-sm font-medium text-slate-700">
-            Problem Description <span className="text-red-500">*</span>
+          <label htmlFor="problemDescription" className="mb-2 block text-sm font-medium text-slate-700">
+            Problem description <span className="text-red-500">*</span>
           </label>
           <textarea
             id="problemDescription"
             required
-            rows={4}
+            rows={5}
             className={inputCls('problemDescription')}
             value={problemDescription}
             onChange={(e) => setProblemDescription(e.target.value)}
-            placeholder="Describe the issue with your HVAC system…"
+            placeholder="Describe the HVAC issue as clearly as you can."
           />
           <FieldError errors={fieldErrors.problemDescription} />
         </div>
 
-        {/* Urgency */}
         <div>
-          <label htmlFor="urgency" className="mb-1 block text-sm font-medium text-slate-700">
+          <label htmlFor="urgency" className="mb-2 block text-sm font-medium text-slate-700">
             Urgency <span className="text-red-500">*</span>
           </label>
           <select
@@ -191,51 +203,47 @@ export default function IntakeForm({ company }: { company: Company }) {
             value={urgency}
             onChange={(e) => setUrgency(e.target.value)}
           >
-            <option value="">Select urgency…</option>
-            <option value="emergency">Emergency — needs service immediately</option>
-            <option value="same_day">Same Day — today if possible</option>
-            <option value="scheduled">Scheduled — next available appointment</option>
+            <option value="">Select urgency...</option>
+            <option value="emergency">Emergency - needs service immediately</option>
+            <option value="same_day">Same day - today if possible</option>
+            <option value="scheduled">Scheduled - next available appointment</option>
           </select>
           <FieldError errors={fieldErrors.urgency} />
         </div>
 
-        {/* SMS consent */}
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4">
           <label className="flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"
               required
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 accent-teal-600"
+              className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 accent-teal-600"
               checked={smsConsent}
               onChange={(e) => setSmsConsent(e.target.checked)}
             />
-            <span className="text-sm text-slate-600">
-              I agree to receive text message updates about my service request from{' '}
-              <strong>{company.name}</strong>.{' '}
-              <a href="/privacy" className="text-teal-700 underline-offset-2 hover:underline">
-                See our Privacy Policy.
+            <span className="text-sm leading-6 text-slate-600">
+              I agree to receive text message updates about my service request from <strong>{company.name}</strong>.{' '}
+              <a href="/privacy" className="font-medium text-teal-700 underline-offset-4 hover:underline">
+                See the privacy policy.
               </a>
             </span>
           </label>
           <FieldError errors={fieldErrors.smsConsent} />
         </div>
 
-        {/* Submit error */}
-        {submitError && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+        {submitError ? (
+          <p className="rounded-2xl border border-red-200/70 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {submitError}
           </p>
-        )}
+        ) : null}
 
-        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-teal-700 px-4 py-3 text-base font-semibold text-white transition hover:bg-teal-800 disabled:opacity-60"
+          className="w-full rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
         >
-          {loading ? 'Submitting…' : 'Submit Service Request'}
+          {loading ? 'Submitting...' : 'Submit service request'}
         </button>
-      </div>
-    </form>
+      </form>
+    </SurfaceCard>
   )
 }
