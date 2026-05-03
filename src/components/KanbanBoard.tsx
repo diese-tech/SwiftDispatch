@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Plus } from "lucide-react";
 import KanbanColumn from "@/components/KanbanColumn";
-import { MetricTile, SurfaceCard } from "@/components/DesignSystem";
+import { MetricTile, StatusPill, SurfaceCard } from "@/components/DesignSystem";
 import type { JobStatus, JobWithTechnician, Technician } from "@/types/db";
 
 const statuses: JobStatus[] = ["New", "Assigned", "En Route", "Completed"];
@@ -18,6 +18,7 @@ export default function KanbanBoard({ initialJobs, technicians }: Props) {
   const [jobs, setJobs] = useState(initialJobs);
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mobileStatus, setMobileStatus] = useState<JobStatus>("New");
   const sensors = useSensors(useSensor(PointerSensor));
 
   const jobsByStatus = useMemo(() => {
@@ -67,6 +68,7 @@ export default function KanbanBoard({ initialJobs, technicians }: Props) {
 
   const unassignedCount = jobs.filter((job) => !job.technician_id).length;
   const enRouteCount = jobs.filter((job) => job.status === "En Route").length;
+  const mobileJobs = jobsByStatus[mobileStatus];
 
   return (
     <div className="space-y-6">
@@ -100,7 +102,38 @@ export default function KanbanBoard({ initialJobs, technicians }: Props) {
       </SurfaceCard>
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SurfaceCard className="p-4 md:hidden">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Mobile board mode</p>
+                <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">Focus on one lane at a time.</h2>
+              </div>
+              <StatusPill tone="teal">{mobileJobs.length} visible</StatusPill>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {statuses.map((status) => (
+                <button
+                  key={status}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    mobileStatus === status
+                      ? "bg-slate-950 text-white"
+                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  onClick={() => setMobileStatus(status)}
+                  type="button"
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            <KanbanColumn jobs={mobileJobs} status={mobileStatus} technicians={technicians} compact />
+          </div>
+        </SurfaceCard>
+
+        <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
           {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} status={status} technicians={technicians} />)}
         </div>
       </DndContext>

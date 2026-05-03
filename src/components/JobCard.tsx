@@ -44,6 +44,9 @@ export default function JobCard({ job, technicians }: Props) {
       </button>
 
       <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-400">{job.address}</p>
+      <a className="mt-2 inline-flex text-sm font-medium text-teal-700 underline-offset-4 hover:underline" href={`tel:${job.phone}`}>
+        {job.phone}
+      </a>
 
       <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-3">
         <div>

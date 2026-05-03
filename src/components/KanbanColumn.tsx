@@ -9,6 +9,7 @@ type Props = {
   status: JobStatus;
   jobs: JobWithTechnician[];
   technicians: Technician[];
+  compact?: boolean;
 };
 
 function getTone(status: string) {
@@ -17,11 +18,11 @@ function getTone(status: string) {
   return "teal" as const;
 }
 
-export default function KanbanColumn({ status, jobs, technicians }: Props) {
+export default function KanbanColumn({ status, jobs, technicians, compact = false }: Props) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
 
   return (
-    <section className={`min-h-64 rounded-[1.8rem] border p-4 shadow-[var(--shadow-sm)] sm:min-h-96 ${isOver ? "border-teal-400 bg-teal-50/80" : "border-slate-200 bg-[rgba(255,255,255,0.72)] backdrop-blur-sm"}`} ref={setNodeRef}>
+    <section className={`${compact ? "min-h-0" : "min-h-64 sm:min-h-96"} rounded-[1.8rem] border p-4 shadow-[var(--shadow-sm)] ${isOver ? "border-teal-400 bg-teal-50/80" : "border-slate-200 bg-[rgba(255,255,255,0.72)] backdrop-blur-sm"}`} ref={setNodeRef}>
       <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="flex items-center gap-3">
           <StatusPill tone={getTone(String(status))}>{status}</StatusPill>
@@ -29,8 +30,13 @@ export default function KanbanColumn({ status, jobs, technicians }: Props) {
         </div>
         <span className="rounded-full bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white">{jobs.length}</span>
       </div>
-      <div className="space-y-4">
+      <div className={`${compact ? "space-y-3" : "space-y-4"}`}>
         {jobs.map((job) => <JobCard job={job} key={job.id} technicians={technicians} />)}
+        {jobs.length === 0 ? (
+          <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50/80 px-4 py-6 text-sm leading-6 text-slate-500">
+            No jobs are sitting in this lane right now.
+          </div>
+        ) : null}
       </div>
     </section>
   );
