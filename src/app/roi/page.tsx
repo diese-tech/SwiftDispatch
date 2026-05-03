@@ -1,21 +1,18 @@
+import Link from "next/link";
+import { AppPageIntro } from "@/components/DesignSystem";
 import RoiSimulator from "@/components/RoiSimulator";
 import { getCurrentProfile } from "@/lib/auth";
 
 export default async function RoiPage() {
   await getCurrentProfile();
-
   return (
-    <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
-            SwiftDispatch
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            ROI Simulator
-          </h1>
-        </div>
-      </div>
+    <main>
+      <AppPageIntro
+        eyebrow="ROI simulator"
+        title="Pressure-test the business case with your own numbers."
+        description="Use the simulator to frame time savings, quote velocity, and revenue impact in terms that make operational sense."
+        actions={<Link className="inline-flex items-center rounded-full border border-white/14 bg-white/8 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/12" href="/dashboard">Dispatch Board</Link>}
+      />
       <RoiSimulator />
     </main>
   );

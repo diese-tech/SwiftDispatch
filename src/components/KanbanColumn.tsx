@@ -2,6 +2,7 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import JobCard from "@/components/JobCard";
+import { StatusPill } from "@/components/DesignSystem";
 import type { JobStatus, JobWithTechnician, Technician } from "@/types/db";
 
 type Props = {
@@ -10,26 +11,26 @@ type Props = {
   technicians: Technician[];
 };
 
+function getTone(status: string) {
+  if (status === "Completed") return "success" as const;
+  if (status === "En Route") return "warm" as const;
+  return "teal" as const;
+}
+
 export default function KanbanColumn({ status, jobs, technicians }: Props) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
 
   return (
-    <section
-      className={`min-h-64 rounded-lg border p-3 sm:min-h-96 ${
-        isOver ? "border-teal-500 bg-teal-50" : "border-slate-200 bg-slate-100"
-      }`}
-      ref={setNodeRef}
-    >
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-semibold">{status}</h2>
-        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-600">
-          {jobs.length}
-        </span>
+    <section className={`min-h-64 rounded-[1.8rem] border p-4 shadow-[var(--shadow-sm)] sm:min-h-96 ${isOver ? "border-teal-400 bg-teal-50/80" : "border-slate-200 bg-[rgba(255,255,255,0.72)] backdrop-blur-sm"}`} ref={setNodeRef}>
+      <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
+        <div className="flex items-center gap-3">
+          <StatusPill tone={getTone(String(status))}>{status}</StatusPill>
+          <span className="text-sm font-medium text-slate-500">{jobs.length} jobs</span>
+        </div>
+        <span className="rounded-full bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white">{jobs.length}</span>
       </div>
-      <div className="space-y-3">
-        {jobs.map((job) => (
-          <JobCard job={job} key={job.id} technicians={technicians} />
-        ))}
+      <div className="space-y-4">
+        {jobs.map((job) => <JobCard job={job} key={job.id} technicians={technicians} />)}
       </div>
     </section>
   );
