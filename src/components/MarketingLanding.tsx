@@ -164,7 +164,7 @@ export default function MarketingLanding() {
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-teal-700">Features</p>
               <h2 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">Everything your dispatch flow actually needs</h2>
               <p className="mt-4 text-lg text-slate-600">
-                The strongest part of the Kimi concept was the clean value framing, so that is what belongs here on the public homepage.
+                SwiftDispatch brings dispatch, communication, and visibility into one place so your team can move faster with less friction.
               </p>
             </div>
 
@@ -193,7 +193,7 @@ export default function MarketingLanding() {
                 <p className="text-sm font-semibold uppercase tracking-[0.22em] text-teal-700">How It Works</p>
                 <h2 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">From incoming call to completed job without the usual mess</h2>
                 <p className="mt-4 text-lg leading-8 text-slate-600">
-                  This is where the generated page was directionally right: SwiftDispatch wins by reducing coordination friction, not by sounding like generic field-service software.
+                  SwiftDispatch helps your team respond faster, coordinate cleanly, and keep jobs moving without adding more operational overhead.
                 </p>
               </div>
 
