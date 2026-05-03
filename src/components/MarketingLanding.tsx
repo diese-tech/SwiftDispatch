@@ -43,13 +43,13 @@ const features = [
 const trustCards = [
   {
     eyebrow: "Built for",
-    title: "Small HVAC teams that are growing past calls, texts, and memory.",
+    title: "Small HVAC teams with 3 to 15 techs that are growing past calls, texts, and memory.",
     description:
-      "SwiftDispatch is strongest when the work is increasing and the old coordination habits are starting to create drag.",
+      "SwiftDispatch is strongest when the work is increasing, the office is stretched, and coordination has started living in too many places at once.",
   },
   {
     eyebrow: "Designed for",
-    title: "Dispatchers, admins, technicians, and customers in one operating flow.",
+    title: "Owner-operators, office managers, dispatchers, and techs in one operating flow.",
     description:
       "The office gets a clearer command surface while the field team and customer side keep moving with less friction.",
   },
@@ -65,17 +65,20 @@ const proofCards = [
   {
     image: "/images/landing-dashboard.jpg",
     title: "Dispatch board with live job ownership",
-    description: "See what is open, who owns it, and what is at risk without hunting across tabs or text threads.",
+    audience: "For the office",
+    outcome: "Know what is open, who owns it, and what is slipping before it turns into another callback chain.",
   },
   {
     image: "/images/landing-mobile.jpg",
     title: "Field workflow that stays lightweight",
-    description: "Keep technicians responsive from the field with a cleaner mobile-first communication loop.",
+    audience: "For technicians",
+    outcome: "Keep the field responsive without betting adoption on another complicated mobile app rollout.",
   },
   {
     image: "/images/landing-hero.jpg",
     title: "Customer communication and closeout clarity",
-    description: "Move from intake to quote to completion in a flow that looks like one product instead of five stitched together.",
+    audience: "For revenue follow-through",
+    outcome: "Move from intake to quote to completion in a flow that feels like one product instead of five stitched together.",
   },
 ];
 
@@ -119,6 +122,12 @@ const plans = [
   },
 ];
 
+const fitSignals = [
+  "You dispatch from calls, texts, and a whiteboard or spreadsheet.",
+  "You have enough job volume that follow-through is starting to break down.",
+  "You want technicians, office staff, and customers in a cleaner loop without adding operational clutter.",
+];
+
 export default function MarketingLanding() {
   return (
     <main id="top">
@@ -127,10 +136,10 @@ export default function MarketingLanding() {
           <div>
             <StatusPill tone="warm">HVAC Dispatch Platform</StatusPill>
             <h1 className="mt-6 max-w-4xl text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl">
-              Run your HVAC operation with a calmer, tighter dispatch system.
+              Built for small HVAC shops that are outgrowing calls, texts, and whiteboards.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-              SwiftDispatch helps growing HVAC teams coordinate jobs, track technician progress, move quotes faster, and keep customers informed without bouncing between disconnected tools.
+              SwiftDispatch helps 3 to 15 technician HVAC teams coordinate jobs, track field progress, move quotes faster, and keep customers informed without bouncing between disconnected tools.
             </p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -144,7 +153,11 @@ export default function MarketingLanding() {
             </div>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              {["No extra app for technicians", "Quote approvals by text", "Built for small HVAC teams"].map((item) => (
+              {[
+                "No extra app for technicians",
+                "Quote approvals by text",
+                "Best fit for 3 to 15 tech teams",
+              ].map((item) => (
                 <SurfaceCard key={item} className="p-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
@@ -165,6 +178,7 @@ export default function MarketingLanding() {
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <StatusPill tone="teal">Dispatch clarity</StatusPill>
                 <StatusPill tone="warm">Quote follow-through</StatusPill>
+                <StatusPill tone="neutral">Built for HVAC operators</StatusPill>
               </div>
             </SurfaceCard>
           </div>
@@ -214,6 +228,27 @@ export default function MarketingLanding() {
         </div>
       </section>
 
+      <section className="bg-white px-6 py-20">
+        <div className="mx-auto max-w-7xl">
+          <SectionEyebrow>If This Sounds Familiar</SectionEyebrow>
+          <SectionHeading
+            title="The product tends to click fast when the shop already feels a little too manual."
+            description="You do not need enterprise complexity. You need a tighter operating rhythm for the stage of growth you are already in."
+          />
+
+          <div className="mt-12 grid gap-4 lg:grid-cols-3">
+            {fitSignals.map((item) => (
+              <SurfaceCard accent className="p-5" key={item}>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" />
+                  <p className="text-sm leading-7 text-slate-700">{item}</p>
+                </div>
+              </SurfaceCard>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="bg-white px-6 py-20" id="product">
         <div className="mx-auto max-w-7xl">
           <SectionEyebrow>See The Product</SectionEyebrow>
@@ -229,8 +264,9 @@ export default function MarketingLanding() {
                   <img alt={card.title} className="h-64 w-full object-cover" src={card.image} />
                 </div>
                 <div className="mt-5 px-2 pb-2">
-                  <h3 className="text-xl font-semibold tracking-tight text-slate-950">{card.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">{card.description}</p>
+                  <StatusPill tone="teal">{card.audience}</StatusPill>
+                  <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{card.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">{card.outcome}</p>
                 </div>
               </SurfaceCard>
             ))}
@@ -334,7 +370,7 @@ export default function MarketingLanding() {
             </div>
             <div className="mt-4 flex items-center gap-3 text-sm text-slate-300">
               <ClipboardList className="h-4 w-4 text-teal-300" />
-              Dispatch, technician updates, and quote communication in one workflow.
+              Built for small HVAC teams that need cleaner dispatch, field coordination, and quote follow-through.
             </div>
           </SurfaceCard>
         </div>
