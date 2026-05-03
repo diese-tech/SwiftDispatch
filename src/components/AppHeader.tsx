@@ -30,7 +30,7 @@ function getNavItems(section: HeaderSection, role: string): NavItem[] {
     return [
       { href: "/superadmin", label: "Platform" },
       { href: "/superadmin/companies/new", label: "New Company" },
-      { href: "/dispatch", label: "Dispatch" },
+      { href: "/superadmin/dispatch", label: "Dispatch" },
     ];
   }
   if (section === "dashboard") {

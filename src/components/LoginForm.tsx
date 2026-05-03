@@ -1,28 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-export default function LoginForm() {
+export default function LoginForm({
+  nextPath,
+  reauth = false,
+}: {
+  nextPath?: string;
+  reauth?: boolean;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!reauth) return;
+
+    const supabase = createSupabaseBrowserClient();
+    void supabase.auth.signOut();
+  }, [reauth]);
+
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError("");
     const supabase = createSupabaseBrowserClient();
+    if (reauth) {
+      await supabase.auth.signOut();
+    }
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (signInError) {
       setError(signInError.message);
       return;
     }
-    router.push("/dashboard");
+    router.push(nextPath || "/dashboard");
     router.refresh();
   }
 

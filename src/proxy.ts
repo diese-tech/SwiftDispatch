@@ -62,10 +62,10 @@ export async function proxy(request: NextRequest) {
 
   // /superadmin/* routes: must be super_admin
   if (path.startsWith('/superadmin')) {
-    if (!user) return NextResponse.redirect(new URL('/login', request.url))
+    if (!user) return NextResponse.redirect(new URL('/login?next=/superadmin', request.url))
     const { data } = await supabase.from('users').select('role').eq('id', user.id).single()
     if (!data || data.role !== 'super_admin') {
-      return NextResponse.redirect(new URL('/login', request.url))
+      return NextResponse.redirect(new URL('/login?reauth=1&next=/superadmin', request.url))
     }
   }
 
