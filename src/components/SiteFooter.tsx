@@ -18,6 +18,9 @@ export default function SiteFooter({ compact = false }: SiteFooterProps) {
 
         <div className="flex flex-col gap-3 text-sm text-slate-500 sm:items-end">
           <div className="flex flex-wrap items-center gap-5">
+            <Link className="transition hover:text-slate-900" href="/demo">
+              Book a Demo
+            </Link>
             <Link className="transition hover:text-slate-900" href="/privacy">
               Privacy
             </Link>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   ArrowRight,
   BarChart3,
@@ -34,6 +35,27 @@ const features = [
     title: "Operational visibility",
     description:
       "Track response times, completion flow, quote acceptance, and revenue trends without stitching together spreadsheets.",
+  },
+];
+
+const trustCards = [
+  {
+    eyebrow: "Built for",
+    title: "Small HVAC teams that are outgrowing calls, texts, and memory.",
+    description:
+      "SwiftDispatch is aimed at the stage where jobs are increasing, coordination is getting messy, and the office needs one cleaner operating view.",
+  },
+  {
+    eyebrow: "Designed for",
+    title: "Dispatchers, admins, technicians, and customers in the same workflow.",
+    description:
+      "The system is not just a board for the office. It keeps the field team responsive and the customer loop moving too.",
+  },
+  {
+    eyebrow: "Helps replace",
+    title: "Whiteboards, callback chains, spreadsheet handoffs, and lost quote follow-up.",
+    description:
+      "The point is not more software for its own sake. It is less friction in the parts of the day that usually create confusion.",
   },
 ];
 
@@ -97,9 +119,9 @@ export default function MarketingLanding() {
             </p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <a className="inline-flex items-center justify-center rounded-full bg-teal-700 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-teal-800" href="mailto:hello@swiftdispatch.app?subject=SwiftDispatch%20Demo%20Request">
+              <Link className="inline-flex items-center justify-center rounded-full bg-teal-700 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-teal-800" href="/demo">
                 Request a Demo
-              </a>
+              </Link>
               <a className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 transition hover:bg-slate-50" href="#pricing">
                 See Pricing
                 <ArrowRight className="h-4 w-4" />
@@ -123,6 +145,31 @@ export default function MarketingLanding() {
             <div className="absolute -bottom-8 right-0 h-40 w-40 rounded-full bg-sky-200/50 blur-3xl" />
             <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-3 shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
               <img alt="SwiftDispatch marketing hero" className="h-full w-full rounded-[1.4rem] object-cover" src="/images/landing-hero.jpg" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 pb-6" id="proof">
+        <div className="mx-auto max-w-7xl">
+          <div className="rounded-[2.5rem] bg-slate-950 p-6 text-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:p-8 lg:p-10">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-teal-300">Why Teams Pay Attention</p>
+              <h2 className="mt-4 text-4xl font-semibold tracking-tight">A tighter operating system for the part of HVAC work that usually turns into noise.</h2>
+              <p className="mt-4 text-lg leading-8 text-slate-300">
+                SwiftDispatch is strongest when the work is steady, the team is growing, and the old coordination habits are starting to cost time, clarity, and follow-through.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-5 lg:grid-cols-3">
+              {trustCards.map((card, index) => (
+                <article className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm" key={card.title}>
+                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-400 via-cyan-400 to-sky-400" />
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">0{index + 1} {card.eyebrow}</p>
+                  <h3 className="mt-4 text-2xl font-semibold tracking-tight text-white">{card.title}</h3>
+                  <p className="mt-4 text-sm leading-7 text-slate-300">{card.description}</p>
+                </article>
+              ))}
             </div>
           </div>
         </div>
@@ -224,9 +271,9 @@ export default function MarketingLanding() {
                   ))}
                 </ul>
 
-                <a className={plan.featured ? "mt-8 inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-teal-800 transition hover:bg-slate-100" : "mt-8 inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"} href={"mailto:hello@swiftdispatch.app?subject=" + encodeURIComponent("SwiftDispatch " + plan.name + " Plan")}>
+                <Link className={plan.featured ? "mt-8 inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-teal-800 transition hover:bg-slate-100" : "mt-8 inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"} href="/demo">
                   Talk to Sales
-                </a>
+                </Link>
               </article>
             ))}
           </div>
@@ -242,12 +289,12 @@ export default function MarketingLanding() {
               Get a live look at how SwiftDispatch can tighten response times, reduce coordination drag, and help your team close jobs cleanly.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <a className="inline-flex items-center justify-center rounded-full bg-teal-500 px-7 py-3.5 text-base font-semibold text-slate-950 transition hover:bg-teal-400" href="mailto:hello@swiftdispatch.app?subject=SwiftDispatch%20Demo%20Request">
+              <Link className="inline-flex items-center justify-center rounded-full bg-teal-500 px-7 py-3.5 text-base font-semibold text-slate-950 transition hover:bg-teal-400" href="/demo">
                 Schedule a Demo
-              </a>
-              <a className="inline-flex items-center justify-center rounded-full border border-white/20 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-white/10" href="/login">
+              </Link>
+              <Link className="inline-flex items-center justify-center rounded-full border border-white/20 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-white/10" href="/login">
                 Sign In
-              </a>
+              </Link>
             </div>
           </div>
 

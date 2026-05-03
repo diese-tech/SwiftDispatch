@@ -5,6 +5,7 @@ const navItems = [
   { href: "/#features", label: "Features" },
   { href: "/#workflow", label: "How It Works" },
   { href: "/#pricing", label: "Pricing" },
+  { href: "/demo", label: "Demo" },
 ];
 
 export default function SiteHeader() {
@@ -32,12 +33,12 @@ export default function SiteHeader() {
           >
             Sign In
           </Link>
-          <a
+          <Link
             className="inline-flex items-center rounded-full bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800"
-            href="mailto:hello@swiftdispatch.app?subject=SwiftDispatch%20Demo"
+            href="/demo"
           >
             Book Demo
-          </a>
+          </Link>
         </div>
       </div>
     </header>
