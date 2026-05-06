@@ -80,7 +80,18 @@ async function listAllAuthUsers() {
 
 async function ensureAuthUser(email, password) {
   const existing = (await listAllAuthUsers()).find((user) => user.email === email);
-  if (existing) return existing;
+  if (existing) {
+    const { data, error } = await supabase.auth.admin.updateUserById(existing.id, {
+      password,
+      email_confirm: true,
+    });
+
+    if (error || !data.user) {
+      throw error ?? new Error(`Failed to refresh auth user for ${email}`);
+    }
+
+    return data.user;
+  }
 
   const { data, error } = await supabase.auth.admin.createUser({
     email,

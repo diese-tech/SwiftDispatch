@@ -3,6 +3,9 @@ import { createServerClient } from '@supabase/ssr'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
+  const path = request.nextUrl.pathname
+  const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`
+  const encodedNextPath = encodeURIComponent(nextPath)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,7 +25,6 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const path = request.nextUrl.pathname
 
   // /tech/* routes: must be authenticated technician
   if (path.startsWith('/tech') && !path.startsWith('/tech/login')) {
@@ -62,10 +64,10 @@ export async function proxy(request: NextRequest) {
 
   // /superadmin/* routes: must be super_admin
   if (path.startsWith('/superadmin')) {
-    if (!user) return NextResponse.redirect(new URL('/login?next=/superadmin', request.url))
+    if (!user) return NextResponse.redirect(new URL(`/login?next=${encodedNextPath}`, request.url))
     const { data } = await supabase.from('users').select('role').eq('id', user.id).single()
     if (!data || data.role !== 'super_admin') {
-      return NextResponse.redirect(new URL('/login?reauth=1&next=/superadmin', request.url))
+      return NextResponse.redirect(new URL(`/login?reauth=1&next=${encodedNextPath}`, request.url))
     }
   }
 
