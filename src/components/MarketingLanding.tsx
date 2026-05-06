@@ -143,7 +143,7 @@ export default function MarketingLanding() {
             </p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Link className="inline-flex items-center justify-center rounded-full bg-teal-700 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-teal-800" href="/demo">
+              <Link className="inline-flex items-center justify-center rounded-full bg-teal-700 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-teal-800" href="/demo">
                 Request a Demo
               </Link>
               <a className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 transition hover:bg-slate-50" href="#product">
@@ -337,7 +337,7 @@ export default function MarketingLanding() {
                   ))}
                 </ul>
 
-                <Link className={plan.featured ? "mt-8 inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-teal-800 transition hover:bg-slate-100" : "mt-8 inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"} href="/demo">
+                <Link className={plan.featured ? "mt-8 inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold !text-teal-800 transition hover:bg-slate-100" : "mt-8 inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold !text-slate-900 transition hover:bg-slate-50"} href="/demo">
                   Talk to Sales
                 </Link>
               </SurfaceCard>
@@ -355,10 +355,10 @@ export default function MarketingLanding() {
               Get a focused walkthrough of how SwiftDispatch can tighten response times, reduce coordination drag, and help your team close jobs with more consistency.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Link className="inline-flex items-center justify-center rounded-full bg-orange-400 px-7 py-3.5 text-base font-semibold text-slate-950 transition hover:bg-orange-300" href="/demo">
+              <Link className="inline-flex items-center justify-center rounded-full bg-orange-400 px-7 py-3.5 text-base font-semibold !text-slate-950 transition hover:bg-orange-300" href="/demo">
                 Schedule a Demo
               </Link>
-              <Link className="inline-flex items-center justify-center rounded-full border border-white/18 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-white/10" href="/login">
+              <Link className="inline-flex items-center justify-center rounded-full border border-white/18 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-white/10" href="/login">
                 Sign In
               </Link>
             </div>

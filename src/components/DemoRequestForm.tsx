@@ -79,7 +79,7 @@ export default function DemoRequestForm() {
 
       <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
         <p>This opens your email app with a structured demo request. No external form backend needed yet.</p>
-        <button className="inline-flex items-center justify-center rounded-full bg-teal-700 px-6 py-3 font-semibold text-white transition hover:bg-teal-800" type="submit">
+        <button className="inline-flex items-center justify-center rounded-full bg-teal-700 px-6 py-3 font-semibold !text-white transition hover:bg-teal-800" type="submit">
           Start demo request
         </button>
       </div>

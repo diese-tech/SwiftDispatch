@@ -33,7 +33,7 @@ export default function AcceptQuoteButton({ quoteId, initialStatus }: Props) {
 
   return (
     <button
-      className="mt-5 w-full rounded-md bg-teal-700 px-5 py-4 text-base font-semibold text-white disabled:opacity-60"
+      className="mt-5 w-full rounded-md bg-teal-700 px-5 py-4 text-base font-semibold !text-white disabled:opacity-60"
       disabled={loading}
       onClick={acceptQuote}
       type="button"

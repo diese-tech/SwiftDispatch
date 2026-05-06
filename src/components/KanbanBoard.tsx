@@ -92,7 +92,7 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
           {readOnly ? (
             <StatusPill tone="warm">Read only</StatusPill>
           ) : (
-            <button className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-300" onClick={() => setFormOpen((current) => !current)} type="button">
+            <button className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-400 px-5 py-3 text-sm font-semibold !text-slate-950 transition hover:bg-orange-300" onClick={() => setFormOpen((current) => !current)} type="button">
               <Plus size={16} /> {formOpen ? "Close form" : "New Job"}
             </button>
           )}
@@ -108,7 +108,7 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
             <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" name="phone" placeholder="Phone" required />
             <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100 md:col-span-2" name="address" placeholder="Address" required />
             <textarea className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100 md:col-span-2" name="issue" placeholder="Issue" required />
-            <button className="rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60" disabled={saving}>{saving ? "Saving..." : "Create Job"}</button>
+            <button className="rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold !text-white disabled:opacity-60" disabled={saving}>{saving ? "Saving..." : "Create Job"}</button>
           </form>
         ) : null}
       </SurfaceCard>
@@ -130,8 +130,8 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
                   key={status}
                   className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
                     mobileStatus === status
-                      ? "bg-slate-950 text-white"
-                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      ? "bg-slate-950 !text-white"
+                      : "border border-slate-200 bg-white !text-slate-700 hover:bg-slate-50"
                   }`}
                   onClick={() => setMobileStatus(status)}
                   type="button"

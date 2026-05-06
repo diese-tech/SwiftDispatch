@@ -127,7 +127,7 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
       </button>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-        <button className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-orange-400 px-4 py-3 text-base font-semibold text-slate-950 disabled:opacity-60" disabled={sending || !quoteId || !items.length || total <= 0} onClick={sendSms} type="button">
+        <button className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-orange-400 px-4 py-3 text-base font-semibold !text-slate-950 disabled:opacity-60" disabled={sending || !quoteId || !items.length || total <= 0} onClick={sendSms} type="button">
           <Send size={16} /> {sending ? "Sending..." : "Send SMS"}
         </button>
         {quoteId ? <a className="text-sm font-semibold text-teal-700" href={`/quote/${quoteId}`} target="_blank">View quote</a> : null}

@@ -53,7 +53,7 @@ export default function LoginForm({
         <input className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" required type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
       </label>
       {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p> : null}
-      <button className="w-full rounded-full bg-slate-950 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60" disabled={loading}>
+      <button className="w-full rounded-full bg-slate-950 px-4 py-3 font-semibold !text-white transition hover:bg-slate-800 disabled:opacity-60" disabled={loading}>
         {loading ? "Signing in..." : "Sign in"}
       </button>
     </form>

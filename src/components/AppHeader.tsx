@@ -84,7 +84,7 @@ export default function AppHeader({ section, user }: AppHeaderProps) {
               <p className="font-semibold text-white">{user.email}</p>
               <p className="mt-1 text-slate-300">Signed into the internal workspace</p>
             </div>
-            <button className="rounded-full border border-white/14 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/14 disabled:cursor-not-allowed disabled:opacity-60" disabled={signingOut} onClick={handleSignOut} type="button">
+            <button className="rounded-full border border-white/14 bg-white/8 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-white/14 disabled:cursor-not-allowed disabled:opacity-60" disabled={signingOut} onClick={handleSignOut} type="button">
               {signingOut ? "Signing out..." : "Sign out"}
             </button>
           </div>
@@ -93,7 +93,7 @@ export default function AppHeader({ section, user }: AppHeaderProps) {
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
-              <Link className={isActive ? "rounded-full bg-orange-400 px-4 py-2 text-sm font-semibold text-slate-950 transition" : "rounded-full border border-white/12 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10"} href={item.href} key={item.href}>
+              <Link className={isActive ? "rounded-full bg-orange-400 px-4 py-2 text-sm font-semibold !text-slate-950 transition" : "rounded-full border border-white/12 bg-white/5 px-4 py-2 text-sm font-semibold !text-slate-200 transition hover:bg-white/10"} href={item.href} key={item.href}>
                 {item.label}
               </Link>
             );
