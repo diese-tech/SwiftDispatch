@@ -20,6 +20,7 @@ export interface PaymentStatus {
 export interface PaymentProvider {
   createInvoice(params: {
     job: { id: string; ref: string }
+    company?: { id: string; paymentConfig?: Record<string, unknown> | null }
     customer: { name: string; phone: string; email?: string }
     lineItems: LineItem[]
     totalAmount: number

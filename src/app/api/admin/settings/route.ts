@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getPublicSquareConnection } from '@/lib/square'
 import { requireRole } from '@/lib/supabase/withCompany'
 
 export async function GET() {
@@ -14,7 +15,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, slug, timezone, sms_sender_name, payment_provider')
+    .select('id, name, slug, timezone, sms_sender_name, payment_provider, payment_config')
     .eq('id', caller.companyId)
     .single()
 
@@ -22,7 +23,12 @@ export async function GET() {
     return NextResponse.json({ error: 'Company not found' }, { status: 404 })
   }
 
-  return NextResponse.json({ company: data })
+  return NextResponse.json({
+    company: {
+      ...data,
+      square: getPublicSquareConnection(data.payment_config),
+    },
+  })
 }
 
 export async function PATCH(request: Request) {
@@ -92,7 +98,7 @@ export async function PATCH(request: Request) {
     .from('companies')
     .update(patch)
     .eq('id', caller.companyId)
-    .select('id, name, slug, timezone, sms_sender_name, payment_provider')
+    .select('id, name, slug, timezone, sms_sender_name, payment_provider, payment_config')
     .maybeSingle()
 
   if (error) {
@@ -102,5 +108,10 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Company not found' }, { status: 404 })
   }
 
-  return NextResponse.json({ company: data })
+  return NextResponse.json({
+    company: {
+      ...data,
+      square: getPublicSquareConnection(data.payment_config),
+    },
+  })
 }

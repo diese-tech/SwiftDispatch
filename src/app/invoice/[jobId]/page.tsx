@@ -8,12 +8,12 @@ export default async function InvoicePage({ params }: { params: Promise<{ jobId:
   const profile = await getCurrentProfile();
   const supabase = await createSupabaseServerClient();
 
-  const { data: job, error } = await supabase.from("jobs").select("*, technicians(id,name,phone), companies(name,phone,email)").eq("id", jobId).eq("company_id", profile.company_id).single();
+  const { data: job, error } = await supabase.from("jobs").select("*, technicians!jobs_technician_id_fkey(id,name,phone), companies(name,phone,email)").eq("id", jobId).eq("company_id", profile.company_id).single();
   if (error || !job) notFound();
 
   const { data: quote } = await supabase.from("quotes").select("*, quote_line_items(*)").eq("job_id", jobId).eq("status", "accepted").order("created_at", { ascending: false }).limit(1).single();
   const { data: events } = await supabase.from("status_events").select("from_status, to_status, created_at, actor_role").eq("job_id", jobId).order("created_at", { ascending: true });
-  const { data: invoice } = await supabase.from("invoices").select("invoice_number, created_at, total_amount, status").eq("job_id", jobId).limit(1).single();
+  const { data: invoice } = await supabase.from("invoices").select("invoice_number, created_at, total_amount, status, invoice_url, external_invoice_id").eq("job_id", jobId).limit(1).single();
 
   const techData = Array.isArray(job.technicians) ? job.technicians[0] : job.technicians;
   const companyData = Array.isArray(job.companies) ? job.companies[0] : job.companies;
@@ -36,7 +36,21 @@ export default async function InvoicePage({ params }: { params: Promise<{ jobId:
           eyebrow="Invoice"
           title={companyData?.name ?? "SwiftDispatch"}
           description={`Invoice ${invoiceNumber} for ${job.customer_name}`}
-          actions={<StatusPill tone={invoice?.status === "paid" ? "success" : "warm"}>{invoice?.status ?? "pending"}</StatusPill>}
+          actions={
+            <>
+              <StatusPill tone={invoice?.status === "paid" ? "success" : "warm"}>{invoice?.status ?? "pending"}</StatusPill>
+              {invoice?.invoice_url ? (
+                <a
+                  className="inline-flex items-center rounded-full bg-orange-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-300"
+                  href={invoice.invoice_url}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Open Payment Link
+                </a>
+              ) : null}
+            </>
+          }
         />
 
         <div className="mx-auto max-w-4xl">
@@ -108,6 +122,24 @@ export default async function InvoicePage({ params }: { params: Promise<{ jobId:
                 </div>
               </div>
             </div>
+
+            {invoice?.invoice_url ? (
+              <div className="mt-6 rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-4 no-print">
+                <p className="text-sm font-semibold text-emerald-900">Online payment is available for this invoice.</p>
+                <p className="mt-2 text-sm text-emerald-800">Use the hosted Square payment page to collect card payment, including supported wallet methods on eligible devices.</p>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <a
+                    className="inline-flex items-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                    href={invoice.invoice_url}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Open Hosted Payment Page
+                  </a>
+                  {invoice.external_invoice_id ? <span className="text-xs text-emerald-900">Square invoice: {invoice.external_invoice_id}</span> : null}
+                </div>
+              </div>
+            ) : null}
 
             {events && events.length > 0 ? (
               <div className="mt-8 border-t border-slate-200 pt-6">

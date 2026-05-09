@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { sendSms, firstSms } from '@/lib/twilio'
+import { firstSms } from '@/lib/twilio'
+import { checkRateLimit } from '@/lib/rateLimit'
+import { getClientIp } from '@/lib/requestIp'
+import { enqueueSms } from '@/lib/smsOutbox'
+import { envNumber } from '@/lib/envNumbers'
 import jwt from 'jsonwebtoken'
 
 const IntakeSchema = z.object({
@@ -17,6 +21,10 @@ const IntakeSchema = z.object({
 function generateStatusToken(jobId: string): string {
   return jwt.sign({ jobId }, process.env.TECH_TOKEN_SECRET!, { expiresIn: '90d' })
 }
+
+const INTAKE_IP_LIMIT = envNumber('INTAKE_RATE_LIMIT_PER_IP', 60)
+const INTAKE_COMPANY_LIMIT = envNumber('INTAKE_RATE_LIMIT_PER_COMPANY', 180)
+const INTAKE_WINDOW_MS = envNumber('INTAKE_RATE_LIMIT_WINDOW_MS', 60_000)
 
 export async function POST(request: Request) {
   let body: unknown
@@ -35,6 +43,21 @@ export async function POST(request: Request) {
   }
 
   const { name, phone, address, problemDescription, urgency, companySlug } = parsed.data
+  const clientIp = getClientIp(request)
+
+  if (!(await checkRateLimit(`intake:ip:${clientIp}`, INTAKE_IP_LIMIT, INTAKE_WINDOW_MS))) {
+    return NextResponse.json(
+      { error: 'Too many intake requests. Please try again shortly.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(INTAKE_WINDOW_MS / 1000)) } }
+    )
+  }
+
+  if (!(await checkRateLimit(`intake:company:${companySlug}`, INTAKE_COMPANY_LIMIT, INTAKE_WINDOW_MS))) {
+    return NextResponse.json(
+      { error: 'Intake is temporarily busy. Please try again shortly.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(INTAKE_WINDOW_MS / 1000)) } }
+    )
+  }
 
   const supabase = createSupabaseAdminClient()
 
@@ -102,16 +125,20 @@ export async function POST(request: Request) {
   const senderName = company.sms_sender_name ?? company.name
 
   try {
-    await sendSms(
-      phone,
-      firstSms(
+    await enqueueSms({
+      companyId: company.id,
+      jobId: job.id,
+      to: phone,
+      messageType: 'intake_confirmation',
+      dedupeKey: `intake-confirmation:${job.id}`,
+      body: firstSms(
         senderName,
         `We received your service request. A dispatcher will contact you shortly.\nReference: #${shortId}\nTrack your request: ${appUrl}/intake/status/${statusToken}`
-      )
-    )
+      ),
+    })
   } catch (smsError) {
-    // SMS failure is non-fatal — job was created successfully
-    console.error('Intake confirmation SMS failed:', smsError)
+    // Enqueue failure is non-fatal — job was created successfully
+    console.error('Intake confirmation SMS enqueue failed:', smsError)
   }
 
   return NextResponse.json({

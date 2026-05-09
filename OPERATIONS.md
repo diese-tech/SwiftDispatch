@@ -143,7 +143,7 @@ The tech taps "Complete" and updates the status to **No Access** from the tech p
 
 These are known gaps in the current version:
 
-- **Payments are manual.** Invoices are generated but there is no online payment link. You collect payment offline and mark it manually.
+- **Online payments require Square setup first.** If the company has not connected Square in Admin Settings, invoices stay manual.
 - **No PDF invoices.** Use browser Print → Save as PDF as a workaround.
 - **No email notifications.** All customer communication is SMS only.
 - **No customer accounts.** Customers track jobs via a token link in their SMS — they cannot log in or see job history.

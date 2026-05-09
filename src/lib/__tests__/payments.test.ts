@@ -55,6 +55,20 @@ describe('StripePaymentProvider stubs', () => {
   })
 })
 
+describe('SquarePaymentProvider', () => {
+  const provider = new SquarePaymentProvider()
+
+  it('createInvoice throws when Square is not connected for the company', async () => {
+    await expect(provider.createInvoice({
+      job: { id: 'j1', ref: 'ref1' },
+      company: { id: 'company-1', paymentConfig: {} },
+      customer: { name: 'Test', phone: '555-0001' },
+      lineItems: [],
+      totalAmount: 100,
+    })).rejects.toThrow('Square is not connected for this company')
+  })
+})
+
 describe('ManualPaymentProvider', () => {
   it('returns internal invoice URL pattern on DB error (fallback)', async () => {
     const provider = new ManualPaymentProvider()

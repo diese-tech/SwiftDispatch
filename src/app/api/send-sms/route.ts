@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/auth";
-import { getTwilioClient } from "@/lib/twilio";
+import { sendSms } from "@/lib/twilio";
 
 export async function POST(request: Request) {
   const { profile, response, supabase } = await requireApiProfile();
@@ -24,11 +24,7 @@ export async function POST(request: Request) {
   const quoteUrl = `${appUrl}/quote/${quote_id}`;
   const jobs = Array.isArray(data.jobs) ? data.jobs[0] : data.jobs;
 
-  await getTwilioClient().messages.create({
-    to: jobs.phone,
-    from: process.env.TWILIO_PHONE_NUMBER!,
-    body: `Your HVAC quote is ready: ${quoteUrl}`,
-  });
+  await sendSms(jobs.phone, `Your HVAC quote is ready: ${quoteUrl}`);
 
   await supabase
     .from("quotes")

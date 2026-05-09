@@ -43,7 +43,7 @@ export async function PATCH(
 
   const { data: job, error: jobError } = await supabase
     .from('jobs')
-    .select('id, status, company_id, technician_id, customer_name, phone, address, companies(payment_provider)')
+    .select('id, status, company_id, technician_id, customer_name, phone, address, companies(payment_provider,payment_config)')
     .eq('id', quote.job_id)
     .single()
 
@@ -108,6 +108,10 @@ export async function PATCH(
     const provider = getPaymentProvider(paymentProvider)
     await provider.createInvoice({
       job: { id: job.id, ref: job.id.slice(0, 8).toUpperCase() },
+      company: {
+        id: job.company_id,
+        paymentConfig: companyData?.payment_config ?? null,
+      },
       customer: { name: job.customer_name, phone: job.phone },
       lineItems: (lineItems ?? []).map(li => ({
         description: li.name ?? '',

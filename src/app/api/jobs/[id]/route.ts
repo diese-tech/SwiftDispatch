@@ -113,7 +113,7 @@ export async function PATCH(
     .update(patch)
     .eq('id', id)
     .eq('company_id', profile.company_id)
-    .select('*, technicians(id,name,phone)')
+    .select('*, technicians!jobs_technician_id_fkey(id,name,phone)')
     .single()
 
   if (error) {

@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppPageIntro, StatusPill, SurfaceCard } from "@/components/DesignSystem";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-type User = { id: string; email: string; role: string; created_at: string };
+type User = { id: string; email: string; role: string };
 const fieldClass = "flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100";
 
 export default function UsersPage() {
@@ -18,11 +17,10 @@ export default function UsersPage() {
   const [success, setSuccess] = useState("");
 
   async function load() {
-    const supabase = createSupabaseBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    setCurrentUserId(user?.id ?? null);
-    const { data } = await supabase.from("users").select("id,email,role,created_at").eq("role", "dispatcher").order("created_at", { ascending: false });
-    setUsers(data ?? []);
+    const res = await fetch("/api/admin/users");
+    const data = await res.json();
+    setCurrentUserId(data.currentUserId ?? null);
+    setUsers(data.users ?? []);
     setLoading(false);
   }
 
@@ -52,9 +50,9 @@ export default function UsersPage() {
   return (
     <main>
       <AppPageIntro
-        eyebrow="Dispatcher users"
+        eyebrow="Company users"
         title="Invite and manage the internal people running the board."
-        description="Keep dispatcher access simple, visible, and aligned with the rest of the admin workspace."
+        description="This roster is scoped to your company only and shows both admins and dispatchers."
         actions={<Link className="inline-flex items-center rounded-full border border-white/14 bg-white/8 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/12" href="/admin">Back to admin</Link>}
       />
 
@@ -76,27 +74,29 @@ export default function UsersPage() {
 
         <SurfaceCard accent className="overflow-hidden p-0">
           <div className="border-b border-slate-200 px-6 py-5">
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Dispatcher roster</h2>
-            <p className="mt-2 text-sm text-slate-500">All dispatcher accounts for this company, newest first.</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Company user roster</h2>
+            <p className="mt-2 text-sm text-slate-500">Admins and dispatchers for this company, newest first.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Email</th>
+                  <th className="px-4 py-3 text-left font-medium">Role</th>
                   <th className="px-4 py-3 text-left font-medium">Joined</th>
                   <th className="px-4 py-3 text-left font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td className="px-4 py-6 text-center text-slate-400" colSpan={3}>Loading...</td></tr>
+                  <tr><td className="px-4 py-6 text-center text-slate-400" colSpan={4}>Loading...</td></tr>
                 ) : users.length === 0 ? (
-                  <tr><td className="px-4 py-6 text-center text-slate-400" colSpan={3}>No dispatchers yet.</td></tr>
+                  <tr><td className="px-4 py-6 text-center text-slate-400" colSpan={4}>No company users yet.</td></tr>
                 ) : users.map((u) => (
                   <tr key={u.id}>
                     <td className="px-4 py-3 font-medium text-slate-900">{u.email}</td>
-                    <td className="px-4 py-3 text-slate-500">{new Date(u.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3"><StatusPill tone={u.role === "admin" ? "teal" : "neutral"}>{u.role}</StatusPill></td>
+                    <td className="px-4 py-3 text-slate-500">-</td>
                     <td className="px-4 py-3">{u.id === currentUserId ? <StatusPill tone="teal">You</StatusPill> : <span className="text-xs text-slate-400">-</span>}</td>
                   </tr>
                 ))}

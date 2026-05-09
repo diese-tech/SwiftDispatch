@@ -9,7 +9,7 @@ export default async function DashboardPage() {
   const profile = await getCurrentProfile();
   const supabase = await createSupabaseServerClient();
   const [jobsResult, techsResult] = await Promise.all([
-    supabase.from("jobs").select("*, technicians(id,name,phone)").eq("company_id", profile.company_id).eq("is_demo", false).order("created_at", { ascending: false }),
+    supabase.from("jobs").select("*, technicians!jobs_technician_id_fkey(id,name,phone)").eq("company_id", profile.company_id).eq("is_demo", false).order("created_at", { ascending: false }),
     supabase.from("technicians").select("*").eq("company_id", profile.company_id).order("name"),
   ]);
 

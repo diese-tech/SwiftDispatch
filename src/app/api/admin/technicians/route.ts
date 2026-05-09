@@ -11,6 +11,29 @@ import {
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
+export async function GET() {
+  const supabase = await createSupabaseServerClient()
+
+  let caller: { companyId: string }
+  try {
+    caller = await requireRole(supabase, ['admin'])
+  } catch {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const { data, error } = await supabase
+    .from('technicians')
+    .select('id,name,phone,handle,availability_status,current_job_id,auth_user_id')
+    .eq('company_id', caller.companyId)
+    .order('name')
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ technicians: data ?? [] })
+}
+
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient()
 

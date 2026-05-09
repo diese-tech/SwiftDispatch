@@ -1,16 +1,24 @@
 import Link from "next/link";
-import { addTechniciansAction, createCompanyAction, createDispatcherAction, resetCompanyDataAction, seedDemoAction } from "@/app/admin/actions";
+import { addTechniciansAction, createDispatcherAction } from "@/app/admin/actions";
 import { AppPageIntro, MetricTile, SurfaceCard, StatusPill } from "@/components/DesignSystem";
 import { requireAdminProfile } from "@/lib/auth";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type CompanyRow = {
   id: string;
   name: string;
   email: string | null;
   phone: string | null;
-  close_status: string;
-  demo_mode_enabled: boolean;
+  slug: string | null;
+  timezone: string;
+  sms_sender_name: string | null;
+  payment_provider: string;
+};
+
+type UserRow = {
+  id: string;
+  email: string;
+  role: string;
 };
 
 function AdminSection({ id, title, description, children }: { id: string; title: string; description: string; children: React.ReactNode }) {
@@ -34,75 +42,70 @@ function Field({ label, name, type = "text", required = false }: { label: string
   );
 }
 
-function CompanySelect({ companies }: { companies: CompanyRow[] }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">Company</span>
-      <select className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" name="company_id" required>
-        <option value="">Select company</option>
-        {companies.map((company) => <option key={company.id} value={company.id}>{company.name} - {company.id}</option>)}
-      </select>
-    </label>
-  );
-}
-
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ created_company_id?: string }> }) {
-  await requireAdminProfile();
-  const { created_company_id } = await searchParams;
-  const supabase = createSupabaseAdminClient();
-  const [companiesResult, jobsResult, techsResult] = await Promise.all([
-    supabase.from("companies").select("id,name,email,phone,close_status,demo_mode_enabled").order("created_at", { ascending: false }),
-    supabase.from("jobs").select("company_id,is_demo"),
-    supabase.from("technicians").select("company_id"),
+export default async function AdminPage() {
+  const profile = await requireAdminProfile();
+  const supabase = await createSupabaseServerClient();
+  const [companyResult, jobsResult, techsResult, usersResult] = await Promise.all([
+    supabase.from("companies").select("id,name,email,phone,slug,timezone,sms_sender_name,payment_provider").eq("id", profile.company_id).single(),
+    supabase.from("jobs").select("id,status").eq("company_id", profile.company_id).eq("is_demo", false).order("created_at", { ascending: false }),
+    supabase.from("technicians").select("id,name,availability_status").eq("company_id", profile.company_id).order("name"),
+    supabase.from("users").select("id,email,role").eq("company_id", profile.company_id).order("email"),
   ]);
 
-  if (companiesResult.error) throw new Error(companiesResult.error.message);
+  if (companyResult.error || !companyResult.data) throw new Error(companyResult.error?.message ?? "Company not found");
   if (jobsResult.error) throw new Error(jobsResult.error.message);
   if (techsResult.error) throw new Error(techsResult.error.message);
+  if (usersResult.error) throw new Error(usersResult.error.message);
 
-  const companies = (companiesResult.data ?? []) as CompanyRow[];
+  const company = companyResult.data as CompanyRow;
   const jobs = jobsResult.data ?? [];
   const techs = techsResult.data ?? [];
-  const activePilots = companies.filter((company) => ["contacted", "demo_done", "interested"].includes(company.close_status)).length;
+  const users = (usersResult.data ?? []) as UserRow[];
+  const activeJobs = jobs.filter((job) => !["completed", "cancelled"].includes(job.status)).length;
+  const availableTechs = techs.filter((tech) => tech.availability_status === "available").length;
 
   return (
     <main>
       <AppPageIntro
-        eyebrow="Admin operations"
-        title="Manage companies, demo environments, and dispatch users."
-        description="This workspace keeps internal setup and pilot support organized without breaking the operating feel of the rest of the product."
+        eyebrow="Company admin"
+        title={`Run ${company.name} without leaving the operator workspace.`}
+        description="Company admins stay scoped to their own tenant here: team setup, settings, templates, and dispatch-adjacent operations."
         actions={<Link className="inline-flex items-center rounded-full border border-white/14 bg-white/8 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/12" href="/dashboard">Dispatcher Portal</Link>}
       />
 
-      {created_company_id ? (
-        <div className="mb-6"><StatusPill tone="success">Company created: {created_company_id}</StatusPill></div>
-      ) : null}
-
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <MetricTile label="Total companies" value={companies.length} detail="All company records in the system" />
-        <MetricTile label="Active pilots" value={activePilots} detail="Companies in active contact or demo stages" />
-        <MetricTile label="Demo environments" value={companies.filter((company) => company.demo_mode_enabled).length} detail="Companies with demo mode switched on" />
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricTile label="Open jobs" value={activeJobs} detail="Live jobs still moving through the board" />
+        <MetricTile label="Technicians" value={techs.length} detail={`${availableTechs} currently available`} />
+        <MetricTile label="Internal users" value={users.length} detail="Admins and dispatchers in this company" />
+        <MetricTile label="Payment mode" value={company.payment_provider} detail="Current billing/invoicing posture" />
       </div>
 
-      <nav className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {[["Create Company", "#create-company"], ["Dispatcher User", "#create-dispatcher"], ["Add Technicians", "#add-technicians"], ["Seed Demo", "#seed-demo"], ["Reset Data", "#reset-company"], ["Companies", "#companies-overview"]].map(([label, href]) => (
-          <a className="rounded-full border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50" href={href} key={href}>{label}</a>
+      <nav className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {[["Company Settings", "/admin/settings"], ["Company Users", "/admin/users"], ["Technicians", "/admin/technicians"], ["Templates", "/admin/templates"], ["Dispatch Board", "/dispatch"]].map(([label, href]) => (
+          <Link className="rounded-full border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50" href={href} key={href}>{label}</Link>
         ))}
       </nav>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <AdminSection id="create-company" title="Create Company" description="Start a new company record for onboarding, pilots, or live accounts.">
-          <form action={createCompanyAction} className="grid gap-3">
-            <Field label="Company name" name="company_name" required />
-            <Field label="Email" name="email" required type="email" />
-            <Field label="Phone" name="phone" />
-            <button className="rounded-full bg-slate-950 px-4 py-3 font-semibold text-white">Create Company</button>
-          </form>
+        <AdminSection id="company-overview" title="Company Overview" description="This section is scoped to your company only. Cross-company management now lives in the superadmin workspace.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-[1.4rem] bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Company</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900">{company.name}</p>
+              <p className="mt-1 text-sm text-slate-500">{company.email ?? "No company email set"}</p>
+              <p className="text-sm text-slate-500">{company.phone ?? "No company phone set"}</p>
+            </div>
+            <div className="rounded-[1.4rem] bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Defaults</p>
+              <p className="mt-2 text-sm text-slate-700">Intake slug: <span className="font-mono">{company.slug ?? "not set"}</span></p>
+              <p className="mt-1 text-sm text-slate-700">Timezone: {company.timezone}</p>
+              <p className="mt-1 text-sm text-slate-700">SMS sender: {company.sms_sender_name ?? "not set"}</p>
+            </div>
+          </div>
         </AdminSection>
 
-        <AdminSection id="create-dispatcher" title="Create Dispatcher User" description="Add an internal user with dispatcher access for a selected company.">
+        <AdminSection id="create-dispatcher" title="Create Dispatcher User" description="Add an internal dispatcher for your company only.">
           <form action={createDispatcherAction} className="grid gap-3">
-            <CompanySelect companies={companies} />
             <Field label="Email" name="email" required type="email" />
             <Field label="Password" name="password" required type="password" />
             <button className="rounded-full bg-slate-950 px-4 py-3 font-semibold text-white">Create Dispatcher</button>
@@ -111,7 +114,6 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
         <AdminSection id="add-technicians" title="Add Technicians" description="Create a single technician or bulk import multiple field users at once.">
           <form action={addTechniciansAction} className="grid gap-3">
-            <CompanySelect companies={companies} />
             <Field label="Single technician name" name="name" />
             <Field label="Single technician phone" name="phone" />
             <label className="block">
@@ -121,58 +123,33 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <button className="rounded-full bg-slate-950 px-4 py-3 font-semibold text-white">Add Technicians</button>
           </form>
         </AdminSection>
-
-        <AdminSection id="seed-demo" title="Seed Demo or Pilot Data" description="Populate a selected company with sample operational data for demos or pilot readiness.">
-          <form action={seedDemoAction} className="grid gap-3">
-            <CompanySelect companies={companies} />
-            <button className="rounded-full bg-teal-700 px-4 py-3 font-semibold text-white" id="seed_demo">Seed Demo / Pilot Data</button>
-          </form>
-        </AdminSection>
-
-        <AdminSection id="reset-company" title="Reset Company Data" description="Wipe operational data for a selected company when you need a clean testing state.">
-          <form action={resetCompanyDataAction} className="grid gap-3">
-            <CompanySelect companies={companies} />
-            <button className="rounded-full bg-red-700 px-4 py-3 font-semibold text-white" id="reset_company">Reset Company Data</button>
-          </form>
-        </AdminSection>
       </div>
 
-      <div className="mt-6" id="companies-overview">
+      <div className="mt-6" id="company-team">
         <SurfaceCard accent className="overflow-hidden p-0">
           <div className="border-b border-slate-200 px-6 py-5">
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Companies overview</h2>
-            <p className="mt-2 text-sm text-slate-500">Review usage patterns, demo environments, and company health from one table.</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Company Team</h2>
+            <p className="mt-2 text-sm text-slate-500">Admins and dispatchers currently attached to your company.</p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3">Company</th>
-                  <th className="px-4 py-3">Company ID</th>
-                  <th className="px-4 py-3">Close status</th>
-                  <th className="px-4 py-3">Jobs</th>
-                  <th className="px-4 py-3">Technicians</th>
-                  <th className="px-4 py-3">Usage</th>
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Role</th>
+                  <th className="px-4 py-3">Joined</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {companies.map((company) => {
-                  const companyJobs = jobs.filter((job) => job.company_id === company.id);
-                  const demoJobs = companyJobs.filter((job) => job.is_demo);
-                  return (
-                    <tr key={company.id}>
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-slate-900">{company.name}</p>
-                        <p className="text-xs text-slate-500">{company.email}</p>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">{company.id}</td>
-                      <td className="px-4 py-3">{company.close_status}</td>
-                      <td className="px-4 py-3">{companyJobs.length}</td>
-                      <td className="px-4 py-3">{techs.filter((tech) => tech.company_id === company.id).length}</td>
-                      <td className="px-4 py-3">{demoJobs.length ? "demo/test" : "real"}</td>
-                    </tr>
-                  );
-                })}
+                {users.length === 0 ? (
+                  <tr><td className="px-4 py-6 text-center text-slate-400" colSpan={3}>No internal users yet.</td></tr>
+                ) : users.map((user) => (
+                  <tr key={user.id}>
+                    <td className="px-4 py-3 font-medium text-slate-900">{user.email}</td>
+                    <td className="px-4 py-3"><StatusPill tone={user.role === "admin" ? "teal" : "neutral"}>{user.role}</StatusPill></td>
+                    <td className="px-4 py-3 text-slate-500">-</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

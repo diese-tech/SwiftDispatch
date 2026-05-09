@@ -31,26 +31,7 @@ if (!supabaseUrl || !serviceRoleKey) {
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey);
-
-const COMPANY = {
-  name: "Northwind Comfort Live QA",
-  slug: "northwind-comfort-live-qa",
-  email: "ops@northwind-live-qa.com",
-  phone: "555-0101",
-  timezone: "America/New_York",
-  sms_sender_name: "Northwind",
-  payment_provider: "manual",
-};
-
-const USERS = {
-  admin: { email: "admin@northwind-live-qa.com", password: "serpentine1", role: "admin" },
-  dispatcher: { email: "dispatch@northwind-live-qa.com", password: "serpentine1", role: "dispatcher" },
-};
-
-const TECHNICIANS = [
-  { name: "Olivia Frost", phone: "555-1111", handle: "olifrost", pin: "1111", authPassword: "111111" },
-  { name: "Marcus Wells", phone: "555-2222", handle: "marwells", pin: "2222", authPassword: "222222" },
-];
+const fleetCount = Number.parseInt(process.env.LOAD_FLEET_COMPANY_COUNT ?? "5", 10);
 
 const TEMPLATE = {
   name: "Standard Diagnostic + Repair",
@@ -62,6 +43,12 @@ const TEMPLATE = {
     { description: "Parts allowance", unit_price: 75, qty: 1, optional: true },
   ],
 };
+
+const BASE_TECHNICIANS = [
+  { name: "Olivia Frost", phone: "555-1111", handle: "olifrost", pin: "1111", authPassword: "111111" },
+  { name: "Marcus Wells", phone: "555-2222", handle: "marwells", pin: "2222", authPassword: "222222" },
+  { name: "Nina Hart", phone: "555-3333", handle: "ninahart", pin: "3333", authPassword: "333333" },
+];
 
 async function listAllAuthUsers() {
   const users = [];
@@ -134,11 +121,11 @@ async function ensureUserProfile({ id, email }, companyId, role) {
   if (error) throw error;
 }
 
-async function ensureCompany() {
+async function ensureCompany(company) {
   const { data: existing, error: existingError } = await supabase
     .from("companies")
     .select("id")
-    .eq("slug", COMPANY.slug)
+    .eq("slug", company.slug)
     .maybeSingle();
 
   if (existingError) throw existingError;
@@ -146,7 +133,7 @@ async function ensureCompany() {
   if (existing) {
     const { error } = await supabase
       .from("companies")
-      .update(COMPANY)
+      .update(company)
       .eq("id", existing.id);
     if (error) throw error;
     return existing.id;
@@ -154,11 +141,11 @@ async function ensureCompany() {
 
   const { data, error } = await supabase
     .from("companies")
-    .insert(COMPANY)
+    .insert(company)
     .select("id")
     .single();
 
-  if (error || !data) throw error ?? new Error("Failed to create company");
+  if (error || !data) throw error ?? new Error(`Failed to create company ${company.slug}`);
   return data.id;
 }
 
@@ -237,38 +224,69 @@ async function ensureTemplate(companyId) {
   return data.id;
 }
 
+function fleetCompany(index) {
+  const n = index + 1;
+  return {
+    name: `Load Fleet HVAC ${n}`,
+    slug: `load-fleet-hvac-${n}`,
+    email: `ops+fleet${n}@northwind-live-qa.com`,
+    phone: `555-41${String(n).padStart(2, "0")}`,
+    timezone: "America/New_York",
+    sms_sender_name: `Fleet${n}`,
+    payment_provider: "manual",
+  };
+}
+
+function fleetUsers(index) {
+  const n = index + 1;
+  return [
+    { email: `admin+fleet${n}@northwind-live-qa.com`, password: "serpentine1", role: "admin" },
+    { email: `dispatch+fleet${n}@northwind-live-qa.com`, password: "serpentine1", role: "dispatcher" },
+  ];
+}
+
+function fleetTechnicians(index) {
+  const suffix = `${index + 1}`;
+  return BASE_TECHNICIANS.map((tech, techIndex) => ({
+    ...tech,
+    name: `${tech.name} F${suffix}`,
+    handle: `${tech.handle}f${suffix}`,
+    phone: `555-${index + 4}${techIndex + 4}${techIndex + 4}${techIndex + 4}`,
+  }));
+}
+
 async function main() {
-  const companyId = await ensureCompany();
+  const results = [];
 
-  for (const user of Object.values(USERS)) {
-    const authUser = await ensureAuthUser(user.email, user.password);
-    await ensureUserProfile(authUser, companyId, user.role);
+  for (let index = 0; index < fleetCount; index += 1) {
+    const company = fleetCompany(index);
+    const companyId = await ensureCompany(company);
+
+    for (const user of fleetUsers(index)) {
+      const authUser = await ensureAuthUser(user.email, user.password);
+      await ensureUserProfile(authUser, companyId, user.role);
+    }
+
+    const techIds = [];
+    for (const tech of fleetTechnicians(index)) {
+      techIds.push(await ensureTechnician(companyId, tech));
+    }
+
+    const templateId = await ensureTemplate(companyId);
+
+    results.push({
+      company: { id: companyId, ...company },
+      technicians: fleetTechnicians(index).map((tech, techIndex) => ({
+        id: techIds[techIndex],
+        name: tech.name,
+        handle: tech.handle,
+        pin: tech.pin,
+      })),
+      template: { id: templateId, name: TEMPLATE.name },
+    });
   }
 
-  const technicianIds = [];
-  for (const technician of TECHNICIANS) {
-    technicianIds.push(await ensureTechnician(companyId, technician));
-  }
-
-  const templateId = await ensureTemplate(companyId);
-
-  console.log(
-    JSON.stringify(
-      {
-        company: { id: companyId, ...COMPANY },
-        users: USERS,
-        technicians: TECHNICIANS.map((tech, index) => ({
-          id: technicianIds[index],
-          name: tech.name,
-          handle: tech.handle,
-          pin: tech.pin,
-        })),
-        template: { id: templateId, name: TEMPLATE.name },
-      },
-      null,
-      2,
-    ),
-  );
+  console.log(JSON.stringify({ fleetCount, companies: results }, null, 2));
 }
 
 main().catch((error) => {

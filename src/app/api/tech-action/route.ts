@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
   const { jobId, action } = payload
 
-  if (!checkRateLimit(`tech-action:${jobId}`, 20, 60_000)) {
+  if (!(await checkRateLimit(`tech-action:${jobId}`, 20, 60_000))) {
     return htmlResponse('⚠️ Too Many Requests', '<p>Please wait before trying again.</p>', 429)
   }
 

@@ -4,6 +4,7 @@ import type { PaymentProvider, InvoiceResult, PaymentStatus, LineItem } from './
 export class ManualPaymentProvider implements PaymentProvider {
   async createInvoice(params: {
     job: { id: string; ref: string }
+    company?: { id: string; paymentConfig?: Record<string, unknown> | null }
     customer: { name: string; phone: string; email?: string }
     lineItems: LineItem[]
     totalAmount: number

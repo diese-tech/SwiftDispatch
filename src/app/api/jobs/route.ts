@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       sms_consent_type,
       source,
     })
-    .select('*, technicians(id,name,phone)')
+    .select('*, technicians!jobs_technician_id_fkey(id,name,phone)')
     .single()
 
   if (error) {

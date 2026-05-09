@@ -28,7 +28,7 @@ SwiftDispatch replaces that with a single system: dispatchers see every job on a
 
 1. Clone the repo and run `npm install`
 2. Copy `.env.example` to `.env.local` and add your Supabase, Twilio, and app URL credentials
-3. Run the 6 SQL migrations in Supabase (files in `supabase/migrations/`, run in order)
+3. Run the SQL migrations in `supabase/migrations/` in order, including the new `sms_outbox` migration for background SMS delivery
 4. Create your company and first admin user in Supabase
 5. `npm run dev` → open `http://localhost:3000`
 
@@ -44,12 +44,18 @@ Default behavior: smallest safe change, lowest blast radius, no unrelated file e
 
 ## Deploying
 
+For production traffic, set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` so technician action rate limiting is backed by Redis instead of in-memory process state.
+
+Set `INTERNAL_WORKER_SECRET` and run an SMS worker against `POST /api/internal/sms-outbox` so customer confirmations are processed out of band instead of on the public intake request path. In local development, `npm run worker:sms` will poll that route every few seconds.
+
+Public intake protection is also tunable through `INTAKE_RATE_LIMIT_*` and `INTAKE_STATUS_RATE_LIMIT_*` env vars so you can adjust backpressure without another code deploy.
+
 Standard Vercel deploy. Add all `.env.example` variables in Vercel → Project Settings → Environment Variables. Set `NEXT_PUBLIC_APP_URL` to your Vercel URL.
 
 ---
 
 ## Not yet available
 
-- Online payments (Stripe/Square stubs are in place, not wired up)
+- Online payments are available when a company connects Square; Stripe is still not wired
 - Email notifications
 - Customer accounts

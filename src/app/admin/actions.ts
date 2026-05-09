@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { requireAdminProfile } from "@/lib/auth";
+import { notFound, redirect } from "next/navigation";
+import { requireAdminProfile, requireSuperAdminProfile } from "@/lib/auth";
 import { demoJobs, demoTechnicians } from "@/lib/demo-data";
+import { isSeedDemoEnabled } from "@/lib/featureFlags";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { JobStatus } from "@/types/db";
 
@@ -12,7 +13,7 @@ function stringValue(formData: FormData, key: string) {
 }
 
 export async function createCompanyAction(formData: FormData) {
-  await requireAdminProfile();
+  await requireSuperAdminProfile();
   const supabase = createSupabaseAdminClient();
   const name = stringValue(formData, "company_name");
   const email = stringValue(formData, "email") || null;
@@ -35,11 +36,11 @@ export async function createCompanyAction(formData: FormData) {
 }
 
 export async function createDispatcherAction(formData: FormData) {
-  await requireAdminProfile();
+  const profile = await requireAdminProfile();
   const supabase = createSupabaseAdminClient();
   const email = stringValue(formData, "email");
   const password = stringValue(formData, "password");
-  const companyId = stringValue(formData, "company_id");
+  const companyId = profile.company_id;
 
   if (!email || !password || !companyId) return;
 
@@ -69,9 +70,9 @@ export async function createDispatcherAction(formData: FormData) {
 }
 
 export async function addTechniciansAction(formData: FormData) {
-  await requireAdminProfile();
+  const profile = await requireAdminProfile();
   const supabase = createSupabaseAdminClient();
-  const companyId = stringValue(formData, "company_id");
+  const companyId = profile.company_id;
   const singleName = stringValue(formData, "name");
   const singlePhone = stringValue(formData, "phone");
   const bulk = stringValue(formData, "bulk");
@@ -104,9 +105,11 @@ export async function addTechniciansAction(formData: FormData) {
 }
 
 export async function seedDemoAction(formData: FormData) {
-  await requireAdminProfile();
+  if (!isSeedDemoEnabled()) notFound();
+
+  const profile = await requireAdminProfile();
   const supabase = createSupabaseAdminClient();
-  const companyId = stringValue(formData, "company_id");
+  const companyId = profile.company_id;
 
   if (!companyId) return;
 
@@ -215,9 +218,9 @@ export async function seedDemoAction(formData: FormData) {
 }
 
 export async function resetCompanyDataAction(formData: FormData) {
-  await requireAdminProfile();
+  const profile = await requireAdminProfile();
   const supabase = createSupabaseAdminClient();
-  const companyId = stringValue(formData, "company_id");
+  const companyId = profile.company_id;
 
   if (!companyId) return;
 

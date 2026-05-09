@@ -3,6 +3,29 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { requireRole } from '@/lib/supabase/withCompany'
 
+export async function GET() {
+  const supabase = await createSupabaseServerClient()
+
+  let caller: { userId: string; companyId: string }
+  try {
+    caller = await requireRole(supabase, ['admin'])
+  } catch {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('id,email,role')
+    .eq('company_id', caller.companyId)
+    .order('email')
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ currentUserId: caller.userId, users: data ?? [] })
+}
+
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient()
 

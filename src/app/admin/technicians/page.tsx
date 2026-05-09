@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppPageIntro, StatusPill, SurfaceCard } from "@/components/DesignSystem";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type Technician = {
   id: string;
@@ -29,9 +28,9 @@ export default function TechniciansPage() {
   const [error, setError] = useState("");
 
   async function loadTechnicians() {
-    const supabase = createSupabaseBrowserClient();
-    const { data } = await supabase.from("technicians").select("id,name,phone,handle,availability_status,current_job_id,auth_user_id");
-    setTechnicians(data ?? []);
+    const res = await fetch("/api/admin/technicians");
+    const data = await res.json();
+    setTechnicians(data.technicians ?? []);
     setLoading(false);
   }
 

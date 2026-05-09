@@ -4,6 +4,10 @@ let client: ReturnType<typeof twilio> | null = null
 
 const DISCLOSURE = 'Reply STOP to opt out. Msg & data rates may apply.'
 
+function smsDisabled() {
+  return process.env.DISABLE_OUTBOUND_SMS === 'true'
+}
+
 export function getTwilioClient() {
   if (!client) {
     client = twilio(
@@ -15,6 +19,11 @@ export function getTwilioClient() {
 }
 
 export async function sendSms(to: string, body: string): Promise<string> {
+  if (smsDisabled()) {
+    console.info(`SMS disabled. Skipping outbound message to ${to}.`)
+    return 'sms-disabled'
+  }
+
   try {
     const message = await getTwilioClient().messages.create({
       from: process.env.TWILIO_PHONE_NUMBER!,
