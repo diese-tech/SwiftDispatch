@@ -23,9 +23,11 @@ const securityHeaders = [
       "connect-src 'self' https: wss:",
       "frame-src 'self' https:",
       "upgrade-insecure-requests",
-    ].join('; '),
-  },
-];
+
+const withBundleAnalyzer =
+  process.env.ANALYZE === "true"
+    ? require("@next/bundle-analyzer")({ enabled: true })
+    : (config: NextConfig) => config;
 
 const nextConfig: NextConfig = {
   turbopack: {
@@ -41,4 +43,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

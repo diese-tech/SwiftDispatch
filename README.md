@@ -59,3 +59,13 @@ Standard Vercel deploy. Add all `.env.example` variables in Vercel → Project S
 - Online payments are available when a company connects Square; Stripe is still not wired
 - Email notifications
 - Customer accounts
+
+## Bundle analysis
+
+To compare client bundle composition before/after performance changes:
+
+1. Run a normal production build baseline: `npm run build`
+2. Run analyzer build: `npm run analyze`
+3. Open analyzer output (`.next/analyze/client.html` and server/edge reports when generated) and compare the largest client chunks and shared runtime modules.
+
+If `@next/bundle-analyzer` is blocked by your registry policy, allowlist that package and re-run install.
