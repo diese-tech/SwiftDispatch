@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { getPaymentProvider, ManualPaymentProvider, StripePaymentProvider, SquarePaymentProvider } from '../payments/index'
 
-// Mock the admin Supabase client so ManualPaymentProvider can be tested without a real DB
 vi.mock('@/lib/supabase/admin', () => ({
   createSupabaseAdminClient: () => ({
     rpc: () => ({ single: async () => ({ data: 1001, error: null }) }),
@@ -14,6 +13,11 @@ vi.mock('@/lib/supabase/admin', () => ({
       select: () => ({
         eq: () => ({
           single: async () => ({ data: null, error: null }),
+        }),
+        or: () => ({
+          limit: () => ({
+            maybeSingle: async () => ({ data: null, error: null }),
+          }),
         }),
       }),
     }),
@@ -38,20 +42,23 @@ describe('getPaymentProvider factory', () => {
   })
 })
 
-describe('StripePaymentProvider stubs', () => {
+describe('StripePaymentProvider', () => {
   const provider = new StripePaymentProvider()
 
-  it('createInvoice throws Not implemented', async () => {
-    await expect(provider.createInvoice({
+  it('returns fallback invoice details on DB error', async () => {
+    const result = await provider.createInvoice({
       job: { id: 'j1', ref: 'ref1' },
       customer: { name: 'Test', phone: '555-0001' },
       lineItems: [],
       totalAmount: 100,
-    })).rejects.toThrow('Not implemented')
+    })
+
+    expect(result.invoiceId).toBe('stripe-j1')
+    expect(result.invoiceUrl).toBe('/invoice/j1')
   })
 
-  it('getPaymentStatus throws Not implemented', async () => {
-    await expect(provider.getPaymentStatus('inv-1')).rejects.toThrow('Not implemented')
+  it('returns pending status when invoice is not found', async () => {
+    await expect(provider.getPaymentStatus('inv-1')).resolves.toEqual({ status: 'pending' })
   })
 })
 
