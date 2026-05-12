@@ -3,6 +3,7 @@ node_modules
 .env.local
 .env
 *.log
+worker-sms.log
 vercel
 dist
 build
