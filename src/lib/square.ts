@@ -280,6 +280,21 @@ type SquareConnectionStoredShape = {
   expiresAt?: string | null;
 };
 
+export function mergeSquareIntoPaymentConfig(
+  paymentConfig: unknown,
+  squareConnection: SquareConnectionStoredShape,
+) {
+  const baseConfig =
+    typeof paymentConfig === "object" && paymentConfig !== null && !Array.isArray(paymentConfig)
+      ? (paymentConfig as Record<string, unknown>)
+      : {};
+
+  return {
+    ...baseConfig,
+    square: squareConnection,
+  };
+}
+
 export function getStoredSquareConnection(paymentConfig: unknown) {
   const square = typeof paymentConfig === "object" && paymentConfig !== null && "square" in paymentConfig
     ? (paymentConfig as { square?: SquareConnectionStoredShape }).square

@@ -178,6 +178,7 @@ export default function SettingsPage() {
             {squareStatus === "connected" ? <div className="mt-4"><StatusPill tone="success">Square account connected</StatusPill></div> : null}
             {squareStatus === "denied" ? <div className="mt-4"><StatusPill tone="warm">Square connection was canceled</StatusPill></div> : null}
             {squareStatus === "not-configured" ? <div className="mt-4"><StatusPill tone="danger">Square OAuth is not configured on the server yet</StatusPill></div> : null}
+            {squareStatus === "forbidden" ? <div className="mt-4"><StatusPill tone="danger">Square connection requires an active admin session for this company.</StatusPill></div> : null}
             {squareStatus === "connect-failed" || squareStatus === "missing-code" || squareStatus === "invalid-state" ? (
               <div className="mt-4"><StatusPill tone="danger">Square connection failed. Check server config and try again.</StatusPill></div>
             ) : null}

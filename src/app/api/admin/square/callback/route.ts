@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/supabase/withCompany";
 import {
   buildStoredSquareConnection,
   exchangeSquareAuthorizationCode,
   fetchSquareMerchantContext,
+  mergeSquareIntoPaymentConfig,
   verifySquareOAuthState,
 } from "@/lib/square";
 
@@ -25,7 +28,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/admin/settings?square=missing-code`, request.url));
   }
 
-  let oauthState: { companyId: string; returnTo: string };
+  let oauthState: { companyId: string; userId: string; returnTo: string };
   try {
     oauthState = verifySquareOAuthState(state);
   } catch {
@@ -33,9 +36,24 @@ export async function GET(request: Request) {
   }
 
   try {
+    const serverSupabase = await createSupabaseServerClient();
+    const caller = await requireRole(serverSupabase, ["admin"]);
+    if (caller.userId !== oauthState.userId || caller.companyId !== oauthState.companyId) {
+      return NextResponse.redirect(buildReturnUrl(request, oauthState.returnTo, "forbidden"));
+    }
+
     const tokenResponse = await exchangeSquareAuthorizationCode(code);
     const { merchant, selectedLocation } = await fetchSquareMerchantContext(tokenResponse.access_token);
     const supabase = createSupabaseAdminClient();
+    const { data: company, error: companyError } = await supabase
+      .from("companies")
+      .select("payment_config")
+      .eq("id", oauthState.companyId)
+      .maybeSingle();
+
+    if (companyError || !company) {
+      throw new Error(companyError?.message ?? "Company not found");
+    }
 
     const squareConnection = buildStoredSquareConnection({
       accessToken: tokenResponse.access_token,
@@ -52,7 +70,7 @@ export async function GET(request: Request) {
       .from("companies")
       .update({
         payment_provider: "square",
-        payment_config: { square: squareConnection },
+        payment_config: mergeSquareIntoPaymentConfig(company.payment_config, squareConnection),
       })
       .eq("id", oauthState.companyId);
 
