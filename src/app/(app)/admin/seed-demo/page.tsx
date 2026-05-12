@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { seedDemoAction } from "@/app/admin/actions";
+import { seedDemoAction } from "../actions";
 import { requireAdminProfile } from "@/lib/auth";
 import { isSeedDemoEnabled } from "@/lib/featureFlags";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
