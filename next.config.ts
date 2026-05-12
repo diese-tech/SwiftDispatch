@@ -23,6 +23,9 @@ const securityHeaders = [
       "connect-src 'self' https: wss:",
       "frame-src 'self' https:",
       "upgrade-insecure-requests",
+    ].join("; "),
+  },
+];
 
 const withBundleAnalyzer =
   process.env.ANALYZE === "true"
