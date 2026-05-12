@@ -1,11 +1,7 @@
 import { notFound } from 'next/navigation'
-import jwt from 'jsonwebtoken'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { verifyQuoteApprovalToken } from '@/lib/quoteTokens'
 import QuoteApprovalForm from './QuoteApprovalForm'
-
-function getSecret(): string {
-  return process.env.TECH_TOKEN_SECRET!
-}
 
 type LineItem = { description: string; unit_price: number; qty: number; unit?: string; optional: boolean }
 
@@ -14,7 +10,7 @@ export default async function QuoteApprovalPage({ params }: { params: Promise<{ 
 
   let quoteId: string
   try {
-    const decoded = jwt.verify(token, getSecret()) as { quoteId: string }
+    const decoded = verifyQuoteApprovalToken(token)
     quoteId = decoded.quoteId
   } catch {
     notFound()
@@ -24,7 +20,7 @@ export default async function QuoteApprovalPage({ params }: { params: Promise<{ 
 
   const { data: quote, error } = await supabase
     .from('quotes')
-    .select('id, status, total_amount, estimated_duration_minutes, job_id, jobs(id, customer_name, address, issue, company_id, companies(name), technicians(name))')
+    .select('id, status, total_amount, estimated_duration_minutes, job_id, jobs(id, customer_name, address, issue, company_id, companies(name), technicians!jobs_technician_id_fkey(name))')
     .eq('id', quoteId)
     .single()
 

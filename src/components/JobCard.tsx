@@ -19,6 +19,21 @@ function getTone(issue: string) {
   return "teal" as const;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  new: "New",
+  assigned: "Assigned",
+  en_route: "En Route",
+  in_progress: "In Progress",
+  quote_pending: "Quote Pending",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  no_access: "No Access",
+  New: "New",
+  Assigned: "Assigned",
+  "En Route": "En Route",
+  Completed: "Completed",
+};
+
 export default function JobCard({ job, readOnly = false, technicians }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: job.id });
   const initials = job.technicians?.name
@@ -35,7 +50,9 @@ export default function JobCard({ job, readOnly = false, technicians }: Props) {
       style={{ transform: CSS.Translate.toString(transform) }}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <StatusPill tone={getTone(job.issue)}>{job.status}</StatusPill>
+        <StatusPill tone={getTone(job.issue)}>
+          {STATUS_LABELS[job.status] ?? job.status}
+        </StatusPill>
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{job.id.slice(0, 8)}</span>
       </div>
 

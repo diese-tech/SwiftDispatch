@@ -1,13 +1,46 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Plus } from "lucide-react";
 import KanbanColumn from "@/components/KanbanColumn";
 import { MetricTile, StatusPill, SurfaceCard } from "@/components/DesignSystem";
 import type { JobStatus, JobWithTechnician, Technician } from "@/types/db";
 
-const statuses: JobStatus[] = ["New", "Assigned", "En Route", "Completed"];
+const statuses: JobStatus[] = [
+  "new",
+  "assigned",
+  "en_route",
+  "in_progress",
+  "quote_pending",
+  "no_access",
+];
+
+const LEGACY_STATUS_MAP: Record<string, JobStatus> = {
+  New: "new",
+  Assigned: "assigned",
+  "En Route": "en_route",
+  Completed: "completed",
+};
+
+const STATUS_LABELS: Record<JobStatus, string> = {
+  new: "New",
+  assigned: "Assigned",
+  en_route: "En Route",
+  in_progress: "In Progress",
+  quote_pending: "Quote Pending",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  no_access: "No Access",
+  New: "New",
+  Assigned: "Assigned",
+  "En Route": "En Route",
+  Completed: "Completed",
+};
+
+function normalizeStatus(status: string): JobStatus {
+  return (LEGACY_STATUS_MAP[status] ?? status) as JobStatus;
+}
 
 type Props = {
   initialJobs: JobWithTechnician[];
@@ -16,14 +49,62 @@ type Props = {
 };
 
 export default function KanbanBoard({ initialJobs, readOnly = false, technicians }: Props) {
-  const [jobs, setJobs] = useState(initialJobs);
+  const [jobs, setJobs] = useState(
+    initialJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })),
+  );
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [mobileStatus, setMobileStatus] = useState<JobStatus>("New");
+  const [syncing, setSyncing] = useState(false);
+  const [mobileStatus, setMobileStatus] = useState<JobStatus>("new");
   const sensors = useSensors(useSensor(PointerSensor));
 
+  useEffect(() => {
+    setJobs(initialJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })));
+  }, [initialJobs]);
+
+  useEffect(() => {
+    if (readOnly) return;
+
+    let cancelled = false;
+
+    async function refreshBoard() {
+      try {
+        setSyncing(true);
+        const response = await fetch("/api/jobs", {
+          method: "GET",
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const { jobs: latestJobs } = (await response.json()) as { jobs: JobWithTechnician[] };
+        if (cancelled) return;
+        startTransition(() => {
+          setJobs(latestJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })));
+        });
+      } finally {
+        if (!cancelled) setSyncing(false);
+      }
+    }
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void refreshBoard();
+      }
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [readOnly]);
+
   const jobsByStatus = useMemo(() => {
-    return statuses.reduce((acc, status) => ({ ...acc, [status]: jobs.filter((job) => job.status === status) }), {} as Record<JobStatus, JobWithTechnician[]>);
+    return statuses.reduce(
+      (acc, status) => ({
+        ...acc,
+        [status]: jobs.filter((job) => normalizeStatus(job.status) === status),
+      }),
+      {} as Record<JobStatus, JobWithTechnician[]>,
+    );
   }, [jobs]);
 
   async function onDragEnd(event: DragEndEvent) {
@@ -69,7 +150,7 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
   }
 
   const unassignedCount = jobs.filter((job) => !job.technician_id).length;
-  const enRouteCount = jobs.filter((job) => job.status === "En Route").length;
+  const enRouteCount = jobs.filter((job) => normalizeStatus(job.status) === "en_route").length;
   const mobileJobs = jobsByStatus[mobileStatus];
 
   return (
@@ -121,7 +202,9 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Mobile board mode</p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">Focus on one lane at a time.</h2>
               </div>
-              <StatusPill tone="teal">{mobileJobs.length} visible</StatusPill>
+              <StatusPill tone={syncing ? "warm" : "teal"}>
+                {syncing ? "Syncing..." : `${mobileJobs.length} visible`}
+              </StatusPill>
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -136,7 +219,7 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
                   onClick={() => setMobileStatus(status)}
                   type="button"
                 >
-                  {status}
+                  {STATUS_LABELS[status]}
                 </button>
               ))}
             </div>

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireApiProfile } from '@/lib/auth'
 import { assertValidTransition, type JobStatus } from '@/lib/stateMachine'
+import { queueCustomerStatusSms, queueTechnicianAssignmentSms } from '@/lib/jobNotifications'
+import type { SmsConsentType } from '@/lib/smsGate'
 
 const PatchJobSchema = z.object({
   status: z.enum(['new', 'assigned', 'en_route', 'in_progress', 'quote_pending', 'completed', 'cancelled', 'no_access']).optional(),
@@ -45,7 +47,7 @@ export async function PATCH(
   // Fetch current job
   const { data: currentJob, error: fetchError } = await supabase
     .from('jobs')
-    .select('id, status, technician_id, company_id, sms_consent_type')
+    .select('id, status, technician_id, company_id, sms_consent_type, customer_name, phone, address, issue')
     .eq('id', id)
     .eq('company_id', profile.company_id)
     .single()
@@ -56,6 +58,7 @@ export async function PATCH(
 
   const patch: Record<string, unknown> = {}
   const now = new Date().toISOString()
+  let shouldSendAssignmentSms = false
 
   // Handle status change with state machine validation
   if (newStatus && newStatus !== currentJob.status) {
@@ -95,6 +98,21 @@ export async function PATCH(
         .from('technicians')
         .update({ availability_status: 'on_job', current_job_id: id })
         .eq('id', technician_id)
+      shouldSendAssignmentSms = true
+    } else if (
+      technician_id &&
+      currentJob.technician_id &&
+      technician_id !== currentJob.technician_id
+    ) {
+      await supabase
+        .from('technicians')
+        .update({ availability_status: 'available', current_job_id: null })
+        .eq('id', currentJob.technician_id)
+      await supabase
+        .from('technicians')
+        .update({ availability_status: 'on_job', current_job_id: id })
+        .eq('id', technician_id)
+      shouldSendAssignmentSms = true
     } else if (!technician_id && currentJob.technician_id) {
       // Unassignment
       await supabase
@@ -130,6 +148,56 @@ export async function PATCH(
       actor_role: profile.role === 'admin' ? 'admin' : 'dispatcher',
       note: note ?? null,
     })
+  }
+
+  const finalStatus = (data.status ?? currentJob.status) as JobStatus
+
+  const needsNotifications = shouldSendAssignmentSms || (patch.status && patch.status !== currentJob.status)
+  if (needsNotifications) {
+    const [{ data: company }, { data: technician }] = await Promise.all([
+      supabase
+        .from('companies')
+        .select('name, sms_sender_name')
+        .eq('id', profile.company_id)
+        .single(),
+      data.technician_id
+        ? supabase
+            .from('technicians')
+            .select('id, name, phone')
+            .eq('id', data.technician_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
+
+    if (shouldSendAssignmentSms && technician?.phone) {
+      await queueTechnicianAssignmentSms({
+        companyId: profile.company_id,
+        senderName: company?.sms_sender_name,
+        companyName: company?.name,
+        technicianId: technician.id,
+        technicianPhone: technician.phone,
+        jobId: id,
+        customerName: currentJob.customer_name,
+        address: currentJob.address,
+        issue: currentJob.issue,
+      })
+    }
+
+    if (
+      currentJob.phone &&
+      (finalStatus === 'assigned' || finalStatus === 'cancelled')
+    ) {
+      await queueCustomerStatusSms({
+        companyId: profile.company_id,
+        senderName: company?.sms_sender_name,
+        companyName: company?.name,
+        customerPhone: currentJob.phone,
+        smsConsentType: currentJob.sms_consent_type as SmsConsentType,
+        status: finalStatus,
+        jobId: id,
+        technicianName: technician?.name,
+      })
+    }
   }
 
   return NextResponse.json({ job: data })

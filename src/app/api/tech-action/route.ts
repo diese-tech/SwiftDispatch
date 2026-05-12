@@ -4,6 +4,8 @@ import { verifyTechToken } from '@/lib/techToken'
 import { assertValidTransition, type JobStatus } from '@/lib/stateMachine'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit } from '@/lib/rateLimit'
+import { queueCustomerStatusSms } from '@/lib/jobNotifications'
+import type { SmsConsentType } from '@/lib/smsGate'
 
 const ACTION_TO_TRANSITION: Record<string, { from: JobStatus; to: JobStatus }> = {
   en_route: { from: 'assigned', to: 'en_route' },
@@ -17,10 +19,9 @@ const ACTION_LABELS: Record<string, string> = {
   complete: 'Job Complete — Quote Pending',
 }
 
-const TIMESTAMP_COLUMNS: Record<string, string> = {
+const TIMESTAMP_COLUMNS: Partial<Record<string, string>> = {
   en_route: 'en_route_at',
   arrived:  'arrived_at',
-  complete: 'completed_at',
 }
 
 function htmlResponse(title: string, body: string, statusCode = 200): Response {
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
 
   const { data: job, error: fetchError } = await supabase
     .from('jobs')
-    .select('id, status, technician_id, company_id')
+    .select('id, status, technician_id, company_id, customer_name, phone, sms_consent_type')
     .eq('id', jobId)
     .single()
 
@@ -102,8 +103,9 @@ export async function GET(request: NextRequest) {
   const now = new Date().toISOString()
   const updatePayload: Record<string, unknown> = {
     status: transition.to,
-    [TIMESTAMP_COLUMNS[action]]: now,
   }
+  const timestampColumn = TIMESTAMP_COLUMNS[action]
+  if (timestampColumn) updatePayload[timestampColumn] = now
 
   const { error: updateError } = await supabase
     .from('jobs')
@@ -126,14 +128,41 @@ export async function GET(request: NextRequest) {
 
   // Update technician availability
   if (job.technician_id) {
-    const isComplete = action === 'complete'
     await supabase
       .from('technicians')
       .update({
-        availability_status: isComplete ? 'available' : 'on_job',
-        current_job_id: isComplete ? null : jobId,
+        availability_status: 'on_job',
+        current_job_id: jobId,
       })
       .eq('id', job.technician_id)
+  }
+
+  const [{ data: companyData }, { data: techData }] = await Promise.all([
+    supabase
+      .from('companies')
+      .select('name, sms_sender_name')
+      .eq('id', job.company_id)
+      .maybeSingle(),
+    job.technician_id
+      ? supabase
+          .from('technicians')
+          .select('name')
+          .eq('id', job.technician_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+
+  if (job.phone) {
+    await queueCustomerStatusSms({
+      companyId: job.company_id,
+      senderName: companyData?.sms_sender_name,
+      companyName: companyData?.name,
+      customerPhone: job.phone,
+      smsConsentType: job.sms_consent_type as SmsConsentType,
+      status: transition.to,
+      jobId,
+      technicianName: techData?.name,
+    })
   }
 
   const label = ACTION_LABELS[action] ?? action

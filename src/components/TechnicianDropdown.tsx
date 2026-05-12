@@ -17,7 +17,7 @@ export default function TechnicianDropdown({ jobId, selectedId, technicians }: P
     await fetch(`/api/jobs/${jobId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ technician_id: nextValue || null, status: nextValue ? "Assigned" : undefined }),
+      body: JSON.stringify({ technician_id: nextValue || null, status: nextValue ? "assigned" : undefined }),
     });
   }
 

@@ -53,13 +53,16 @@ export async function POST(request: Request) {
   const { data: quote, error: quoteError } = existingQuote
     ? await supabase
         .from("quotes")
-        .update({ total: cleanItems.length ? total : existingQuote.total })
+        .update({
+          total: cleanItems.length ? total : existingQuote.total,
+          total_amount: cleanItems.length ? total : existingQuote.total,
+        })
         .eq("id", existingQuote.id)
         .select("id")
         .single()
     : await supabase
         .from("quotes")
-        .insert({ job_id: body.job_id, total, status: "draft" })
+        .insert({ job_id: body.job_id, total, total_amount: total, status: "draft" })
         .select("id")
         .single();
 
@@ -98,7 +101,7 @@ export async function POST(request: Request) {
 
     const { error: quoteTotalError } = await supabase
       .from("quotes")
-      .update({ total: nextTotal })
+      .update({ total: nextTotal, total_amount: nextTotal })
       .eq("id", quote.id);
 
     if (quoteTotalError) {

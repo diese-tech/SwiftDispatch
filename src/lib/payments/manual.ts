@@ -18,6 +18,7 @@ export class ManualPaymentProvider implements PaymentProvider {
       .from('invoices')
       .insert({
         job_id: params.job.id,
+        company_id: params.company?.id ?? null,
         invoice_number: invoiceNumber,
         customer_name: params.customer.name,
         customer_phone: params.customer.phone,

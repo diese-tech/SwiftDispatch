@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit } from '@/lib/rateLimit'
 import { getClientIp } from '@/lib/requestIp'
 import { envNumber } from '@/lib/envNumbers'
+import { generateQuoteApprovalToken } from '@/lib/quoteTokens'
 
 function getSecret(): string {
   const secret = process.env.TECH_TOKEN_SECRET
@@ -83,7 +84,7 @@ export async function GET(request: Request) {
       .single()
 
     if (quote) {
-      quoteToken = jwt.sign({ quoteId: quote.id }, getSecret(), { expiresIn: '7d' })
+      quoteToken = generateQuoteApprovalToken(quote.id)
     }
   }
 

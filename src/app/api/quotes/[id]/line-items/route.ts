@@ -19,7 +19,7 @@ async function recomputeQuoteTotal(
 
   const { error: updateError } = await supabase
     .from("quotes")
-    .update({ total })
+    .update({ total, total_amount: total })
     .eq("id", quoteId);
 
   return { total, error: updateError };

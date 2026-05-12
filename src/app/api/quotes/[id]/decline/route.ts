@@ -2,16 +2,12 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { assertValidTransition, type JobStatus } from '@/lib/stateMachine'
-import jwt from 'jsonwebtoken'
+import { verifyQuoteApprovalToken } from '@/lib/quoteTokens'
 
 const DeclineSchema = z.object({
   reason: z.string().optional(),
   token: z.string().min(1, 'Token required'),
 })
-
-function verifyQuoteToken(token: string): { quoteId: string } {
-  return jwt.verify(token, process.env.TECH_TOKEN_SECRET!) as { quoteId: string }
-}
 
 export async function POST(
   request: Request,
@@ -38,7 +34,10 @@ export async function POST(
 
   // Verify customer token
   try {
-    verifyQuoteToken(token)
+    const payload = verifyQuoteApprovalToken(token)
+    if (payload.quoteId !== id) {
+      return NextResponse.json({ error: 'Quote token does not match this quote' }, { status: 403 })
+    }
   } catch {
     return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 })
   }

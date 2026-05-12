@@ -13,9 +13,27 @@ type Props = {
   compact?: boolean;
 };
 
+const STATUS_LABELS: Record<JobStatus, string> = {
+  new: "New",
+  assigned: "Assigned",
+  en_route: "En Route",
+  in_progress: "In Progress",
+  quote_pending: "Quote Pending",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  no_access: "No Access",
+  New: "New",
+  Assigned: "Assigned",
+  "En Route": "En Route",
+  Completed: "Completed",
+};
+
 function getTone(status: string) {
-  if (status === "Completed") return "success" as const;
-  if (status === "En Route") return "warm" as const;
+  if (status === "completed") return "success" as const;
+  if (status === "en_route" || status === "in_progress" || status === "quote_pending") {
+    return "warm" as const;
+  }
+  if (status === "no_access" || status === "cancelled") return "danger" as const;
   return "teal" as const;
 }
 
@@ -26,7 +44,7 @@ export default function KanbanColumn({ status, jobs, readOnly = false, technicia
     <section className={`${compact ? "min-h-0" : "min-h-64 sm:min-h-96"} rounded-[1.8rem] border p-4 shadow-[var(--shadow-sm)] ${isOver ? "border-teal-400 bg-teal-50/80" : "border-slate-200 bg-[rgba(255,255,255,0.72)] backdrop-blur-sm"}`} ref={setNodeRef}>
       <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="flex items-center gap-3">
-          <StatusPill tone={getTone(String(status))}>{status}</StatusPill>
+          <StatusPill tone={getTone(String(status))}>{STATUS_LABELS[status]}</StatusPill>
           <span className="text-sm font-medium text-slate-500">{jobs.length} jobs</span>
         </div>
         <span className="rounded-full bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white">{jobs.length}</span>

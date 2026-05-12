@@ -224,12 +224,9 @@ export default async function TechJobDetailPage({
             </div>
 
             {typedJob.status === 'in_progress' ? (
-              <Link
-                href={`/dispatch/jobs/${typedJob.id}`}
-                className="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
-                Open quote builder
-              </Link>
+              <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
+                Quote creation happens in the office workflow today. Finish your diagnosis here, then contact dispatch to send the customer quote from the job board.
+              </div>
             ) : null}
           </SurfaceCard>
         </div>
@@ -256,7 +253,7 @@ export default async function TechJobDetailPage({
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex flex-wrap items-center gap-3">
                         <p className="text-lg font-semibold text-slate-950">
-                          ${(quote.total / 100).toFixed(2)}
+                          ${quote.total.toFixed(2)}
                         </p>
                         <StatusPill tone={getStatusTone(quote.status)}>
                           {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
@@ -284,10 +281,10 @@ export default async function TechJobDetailPage({
                                 <td className="py-3 text-slate-700">{item.description}</td>
                                 <td className="py-3 text-right text-slate-500">{item.quantity}</td>
                                 <td className="py-3 text-right text-slate-500">
-                                  ${(item.unit_price / 100).toFixed(2)}
+                                  ${item.unit_price.toFixed(2)}
                                 </td>
                                 <td className="py-3 text-right font-semibold text-slate-950">
-                                  ${((item.quantity * item.unit_price) / 100).toFixed(2)}
+                                  ${(item.quantity * item.unit_price).toFixed(2)}
                                 </td>
                               </tr>
                             ))}
