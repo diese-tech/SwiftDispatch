@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { addTechniciansAction, createDispatcherAction } from "@/app/admin/actions";
+import { addTechniciansAction, createDispatcherAction } from "./actions";
 import { AppPageIntro, MetricTile, SurfaceCard, StatusPill } from "@/components/DesignSystem";
 import { requireAdminProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
