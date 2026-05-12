@@ -2,8 +2,41 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SwiftDispatch",
-  description: "Emergency HVAC dispatch and quoting",
+  metadataBase: new URL("https://swift-dispatch-xi.vercel.app"),
+  title: {
+    default: "SwiftDispatch | Emergency HVAC Dispatch Software",
+    template: "%s | SwiftDispatch",
+  },
+  description:
+    "SwiftDispatch helps HVAC teams dispatch faster, send quote approvals by SMS, and close jobs in real time.",
+  applicationName: "SwiftDispatch",
+  keywords: [
+    "HVAC dispatch software",
+    "field service management",
+    "emergency dispatch",
+    "SMS quote approval",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "SwiftDispatch | Emergency HVAC Dispatch Software",
+    description:
+      "Dispatch, quote, and collect approvals in one workflow built for HVAC service teams.",
+    url: "https://swift-dispatch-xi.vercel.app",
+    siteName: "SwiftDispatch",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SwiftDispatch | Emergency HVAC Dispatch Software",
+    description:
+      "Dispatch faster, keep technicians moving, and approve quotes by SMS with SwiftDispatch.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
