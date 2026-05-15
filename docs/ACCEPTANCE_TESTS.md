@@ -1,6 +1,48 @@
-# SwiftDispatch — Phase 1 Acceptance Tests
+# SwiftDispatch — Acceptance Tests
 
 These tests describe the complete Phase 1 user journey. They are the definition of "working" for private beta.
+
+---
+
+## Quick Smoke (run before every deploy)
+
+Run these manually after each production deploy. Takes ~10 minutes. Full acceptance tests below.
+
+**Auth / login / logout**
+- [ ] Sign in at `/login` as dispatcher → redirects to dispatch board.
+- [ ] Log out from app header → returns to login. Protected routes reject anonymous access.
+
+**Dispatcher flow**
+- [ ] Create a new job from `/dispatch`. Assign technician, advance status through board.
+- [ ] Job appears in board, assignment persists, status updates render without errors.
+
+**Technician flow**
+- [ ] Sign in at `/tech/login`. Open assigned job, submit status/action updates.
+- [ ] Technician-only access enforced; updates visible to office side.
+
+**Quote flow**
+- [ ] Create quote from active job. Add/edit line items. Send quote link. Approve/decline via intake token route.
+- [ ] Quote totals recalculate correctly; approval/decline state persists in operator views.
+
+**Invoice flow**
+- [ ] Generate invoice from completed job. Verify route access by role.
+- [ ] Authorized roles can view invoice; unauthorized users are redirected.
+
+**Admin flow**
+- [ ] Sign in as admin. Open `/admin` + settings/users/templates/technicians.
+- [ ] Create a dispatcher and add technician(s). Admin routes reject non-admin users.
+
+**Super admin flow**
+- [ ] Sign in as super_admin. Open `/superadmin` and `/superadmin/dispatch`.
+- [ ] Create a company, verify scoped navigation. Super admin routes reject non-super-admin users.
+
+**Demo tenant seed/reset**
+- [ ] Open `/admin/seed-demo` with feature flag enabled. Seed and reset twice.
+- [ ] Repeatable without broken foreign keys or orphan references.
+
+---
+
+## Full Acceptance Tests
 
 An automated smoke test covering the core API path lives at `src/e2e/job-flow.test.ts`. Run it with:
 

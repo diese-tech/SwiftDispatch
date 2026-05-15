@@ -32,7 +32,9 @@ SwiftDispatch replaces that with a single system: dispatchers see every job on a
 4. Create your company and first admin user in Supabase
 5. `npm run dev` → open `http://localhost:3000`
 
-For full setup, onboarding your team, and day-to-day workflows → see [OPERATIONS.md](./OPERATIONS.md)
+For full setup, onboarding your team, and day-to-day workflows → see [OPERATIONS.md](./OPERATIONS.md)  
+For phase scope, launch checklist, analytics events, and mobile roadmap → see [ROADMAP.md](./ROADMAP.md)  
+For open issues and contributing → see [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ---
 
