@@ -18,13 +18,11 @@ const RUN = process.env.TEST_INTEGRATION === 'true'
 
 describe.skipIf(!RUN)('E2E smoke: intake → dispatch → tech → invoice', () => {
   const BASE = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '')
-  const TECH_SECRET = process.env.TECH_TOKEN_SECRET!
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  )
+  // Lazy: describe.skipIf still evaluates this factory during collection — do not
+  // call createClient here or `npm test` fails without Supabase env vars.
+  let supabase: ReturnType<typeof createClient>
+  let TECH_SECRET: string
 
   // Resolved in beforeAll
   let companySlug: string
@@ -39,6 +37,18 @@ describe.skipIf(!RUN)('E2E smoke: intake → dispatch → tech → invoice', () 
   // ── Setup ──────────────────────────────────────────────────────────────────
 
   beforeAll(async () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    TECH_SECRET = process.env.TECH_TOKEN_SECRET!
+    if (!url || !key || !TECH_SECRET) {
+      throw new Error(
+        'E2E: set NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and TECH_TOKEN_SECRET',
+      )
+    }
+    supabase = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+
     const { data: company, error } = await supabase
       .from('companies')
       .select('id, slug')
