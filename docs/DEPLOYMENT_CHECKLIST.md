@@ -6,7 +6,6 @@
 - [ ] `npm run build`
 - [ ] Run route smoke tests from `docs/QA_SMOKE_TESTS.md`
 - [ ] Lighthouse check (public pages)
-- [ ] VibeDoctor rescan
 - [ ] Confirm required env vars are present for target environment
 - [ ] Confirm Supabase/Twilio callback URLs and secrets
 
