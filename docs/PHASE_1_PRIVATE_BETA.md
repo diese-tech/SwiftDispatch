@@ -104,7 +104,7 @@ All transitions are enforced by `src/lib/stateMachine.ts`. The state machine mus
 |---|---|---|
 | Loading, error, and empty states | #12 | Product must feel trustworthy under realistic use. Blank loading screens and unexplained errors hurt demo confidence. |
 | Demo tenant with realistic seeded data | #11 | Private beta demos and onboarding require believable data. Seed/reset process must be documented and repeatable. |
-| Fix malformed `.gitignore` | #7 | Already resolved in the working tree — needs verification committed. |
+| ~~Fix malformed `.gitignore`~~ | #7 | Resolved and committed. `.gitignore` is clean. |
 | Invoice print UX | — | Browser print is the current workaround. Document it clearly in the UI or operations guide. |
 | Quote decline dispatcher notification | — | When a customer declines a quote, the system does not alert the tech. Dispatcher must relay manually. This is an acceptable gap for Phase 1 but should be called out in OPERATIONS.md. |
 
