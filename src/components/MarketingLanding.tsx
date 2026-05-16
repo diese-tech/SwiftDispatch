@@ -12,6 +12,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { SectionEyebrow, SectionHeading, SurfaceCard, StatusPill } from "@/components/DesignSystem";
+import Reveal from "@/components/Reveal";
 
 const features = [
   {
@@ -157,13 +158,15 @@ export default function MarketingLanding() {
                 "No extra app for technicians",
                 "Quote approvals by text",
                 "Best fit for 3 to 15 tech teams",
-              ].map((item) => (
-                <SurfaceCard key={item} className="p-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
-                    <p className="text-sm leading-6 text-slate-700">{item}</p>
-                  </div>
-                </SurfaceCard>
+              ].map((item, index) => (
+                <Reveal key={item} delay={index * 80}>
+                  <SurfaceCard className="p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
+                      <p className="text-sm leading-6 text-slate-700">{item}</p>
+                    </div>
+                  </SurfaceCard>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -196,11 +199,13 @@ export default function MarketingLanding() {
 
           <div className="mt-10 grid gap-5 lg:grid-cols-3">
             {trustCards.map((card, index) => (
-              <SurfaceCard accent dark className="backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">0{index + 1} {card.eyebrow}</p>
-                <h3 className="mt-4 text-2xl font-semibold tracking-tight text-white">{card.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-slate-300">{card.description}</p>
-              </SurfaceCard>
+              <Reveal key={card.eyebrow} delay={index * 100}>
+                <SurfaceCard accent dark className="h-full backdrop-blur-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">0{index + 1} {card.eyebrow}</p>
+                  <h3 className="mt-4 text-2xl font-semibold tracking-tight text-white">{card.title}</h3>
+                  <p className="mt-4 text-sm leading-7 text-slate-300">{card.description}</p>
+                </SurfaceCard>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -216,13 +221,15 @@ export default function MarketingLanding() {
 
           <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {features.map(({ icon: Icon, title, description }, index) => (
-              <SurfaceCard accent className="h-full">
-                <div className="mb-5 inline-flex rounded-2xl bg-teal-50 p-3 text-teal-700">
-                  <Icon className="h-6 w-6" />
-                </div>
-                <h3 className="text-xl font-semibold text-slate-950">{title}</h3>
-                <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
-              </SurfaceCard>
+              <Reveal key={title} delay={index * 80}>
+                <SurfaceCard accent className="h-full">
+                  <div className="mb-5 inline-flex rounded-2xl bg-teal-50 p-3 text-teal-700">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-950">{title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
+                </SurfaceCard>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -238,12 +245,14 @@ export default function MarketingLanding() {
 
           <div className="mt-12 grid gap-4 lg:grid-cols-3">
             {fitSignals.map((item, index) => (
-              <SurfaceCard accent className="p-5">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" />
-                  <p className="text-sm leading-7 text-slate-700">{item}</p>
-                </div>
-              </SurfaceCard>
+              <Reveal key={item} delay={index * 90}>
+                <SurfaceCard accent className="p-5">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" />
+                    <p className="text-sm leading-7 text-slate-700">{item}</p>
+                  </div>
+                </SurfaceCard>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -259,16 +268,18 @@ export default function MarketingLanding() {
 
           <div className="mt-14 grid gap-6 lg:grid-cols-3">
             {proofCards.map((card, index) => (
-              <SurfaceCard accent className="h-full p-4">
-                <div className="overflow-hidden rounded-[1.35rem] border border-slate-200 bg-slate-100">
-                  <img alt={card.title} className="h-64 w-full object-cover" src={card.image} />
-                </div>
-                <div className="mt-5 px-2 pb-2">
-                  <StatusPill tone="teal">{card.audience}</StatusPill>
-                  <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{card.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">{card.outcome}</p>
-                </div>
-              </SurfaceCard>
+              <Reveal key={card.title} delay={index * 100}>
+                <SurfaceCard accent className="h-full p-4">
+                  <div className="overflow-hidden rounded-[1.35rem] border border-slate-200 bg-slate-100">
+                    <img alt={card.title} className="h-64 w-full object-cover" src={card.image} />
+                  </div>
+                  <div className="mt-5 px-2 pb-2">
+                    <StatusPill tone="teal">{card.audience}</StatusPill>
+                    <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{card.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{card.outcome}</p>
+                  </div>
+                </SurfaceCard>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -287,19 +298,21 @@ export default function MarketingLanding() {
 
             <div className="grid gap-6">
               {workflow.map(({ icon: Icon, title, description }, index) => (
-                <SurfaceCard accent className="grid gap-5 bg-slate-50 sm:grid-cols-[auto_1fr]">
-                  <div className="flex items-center gap-4">
-                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-teal-700 shadow-sm">
-                      <Icon className="h-5 w-5" />
+                <Reveal key={title} delay={index * 100}>
+                  <SurfaceCard accent className="grid gap-5 bg-slate-50 sm:grid-cols-[auto_1fr]">
+                    <div className="flex items-center gap-4">
+                      <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-teal-700 shadow-sm">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="text-sm font-semibold text-slate-400 sm:hidden">Step {index + 1}</span>
                     </div>
-                    <span className="text-sm font-semibold text-slate-400 sm:hidden">Step {index + 1}</span>
-                  </div>
-                  <div>
-                    <p className="hidden text-sm font-semibold uppercase tracking-[0.18em] text-slate-400 sm:block">Step {index + 1}</p>
-                    <h3 className="mt-1 text-xl font-semibold text-slate-950">{title}</h3>
-                    <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
-                  </div>
+                    <div>
+                      <p className="hidden text-sm font-semibold uppercase tracking-[0.18em] text-slate-400 sm:block">Step {index + 1}</p>
+                      <h3 className="mt-1 text-xl font-semibold text-slate-950">{title}</h3>
+                      <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
+                    </div>
                   </SurfaceCard>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -317,6 +330,7 @@ export default function MarketingLanding() {
 
           <div className="mt-14 grid gap-6 lg:grid-cols-3">
             {plans.map((plan, index) => (
+              <Reveal key={plan.name} delay={index * 90}>
               <SurfaceCard accent className={plan.featured ? "h-full bg-[linear-gradient(180deg,#0d6f67_0%,#0b5f58_100%)] text-white" : "h-full"}>
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-semibold">{plan.name}</h3>
@@ -341,6 +355,7 @@ export default function MarketingLanding() {
                   Talk to Sales
                 </Link>
               </SurfaceCard>
+              </Reveal>
             ))}
           </div>
         </div>
