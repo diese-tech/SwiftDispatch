@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { StatusPill, SurfaceCard } from "@/components/DesignSystem";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function TechLoginPage() {
   const router = useRouter();
@@ -16,14 +15,27 @@ export default function TechLoginPage() {
     event.preventDefault();
     setError("");
     setLoading(true);
-    const email = `${handle.trim().toLowerCase()}@internal.swiftdispatch.app`;
-    const supabase = createSupabaseBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: pin });
-    setLoading(false);
-    if (signInError) {
-      setError("Invalid username or PIN");
+
+    try {
+      const response = await fetch("/api/tech/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: handle.trim().toLowerCase(), pin }),
+      });
+
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setError(data.error ?? "Invalid username or PIN");
+        return;
+      }
+    } catch {
+      setError("Login failed. Please try again.");
       return;
+    } finally {
+      setLoading(false);
     }
+
     router.push("/tech");
     router.refresh();
   }

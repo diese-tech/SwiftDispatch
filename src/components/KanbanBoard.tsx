@@ -54,6 +54,7 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
   );
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [mobileStatus, setMobileStatus] = useState<JobStatus>("new");
   const sensors = useSensors(useSensor(PointerSensor));
@@ -74,6 +75,11 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
           method: "GET",
           cache: "no-store",
         });
+        // Session expired — stop polling silently; next navigation will redirect to login
+        if (response.status === 401) {
+          window.clearInterval(interval);
+          return;
+        }
         if (!response.ok) return;
         const { jobs: latestJobs } = (await response.json()) as { jobs: JobWithTechnician[] };
         if (cancelled) return;
@@ -130,6 +136,7 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
   async function createJob(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
+    setSaveError("");
     const formData = new FormData(event.currentTarget);
     const response = await fetch("/api/jobs", {
       method: "POST",
@@ -142,10 +149,15 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
       }),
     });
     setSaving(false);
-    if (!response.ok) return;
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      setSaveError(data.error ?? "Failed to create job. Please try again.");
+      return;
+    }
     const { job } = (await response.json()) as { job: JobWithTechnician };
     setJobs((current) => [job, ...current]);
     event.currentTarget.reset();
+    setSaveError("");
     setFormOpen(false);
   }
 
@@ -189,6 +201,9 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
             <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" name="phone" placeholder="Phone" required />
             <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100 md:col-span-2" name="address" placeholder="Address" required />
             <textarea className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100 md:col-span-2" name="issue" placeholder="Issue" required />
+            {saveError ? (
+              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 md:col-span-2">{saveError}</p>
+            ) : null}
             <button className="rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold !text-white disabled:opacity-60" disabled={saving}>{saving ? "Saving..." : "Create Job"}</button>
           </form>
         ) : null}
