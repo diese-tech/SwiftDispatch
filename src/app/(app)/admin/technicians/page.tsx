@@ -21,6 +21,7 @@ const fieldClass = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-
 export default function TechniciansPage() {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [credentials, setCredentials] = useState<Credentials>(null);
   const [regeneratedPin, setRegeneratedPin] = useState<{ id: string; pin: string } | null>(null);
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", preferredLast: "" });
@@ -28,10 +29,17 @@ export default function TechniciansPage() {
   const [error, setError] = useState("");
 
   async function loadTechnicians() {
-    const res = await fetch("/api/admin/technicians");
-    const data = await res.json();
-    setTechnicians(data.technicians ?? []);
-    setLoading(false);
+    setLoadError(false);
+    try {
+      const res = await fetch("/api/admin/technicians");
+      if (!res.ok) { setLoadError(true); return; }
+      const data = await res.json();
+      setTechnicians(data.technicians ?? []);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -146,9 +154,21 @@ export default function TechniciansPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td className="px-4 py-6 text-center text-slate-400" colSpan={5}>Loading...</td></tr>
+                  <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={5}>Loading roster…</td></tr>
+                ) : loadError ? (
+                  <tr>
+                    <td className="px-4 py-8 text-center" colSpan={5}>
+                      <p className="text-sm text-red-600">Failed to load technicians.</p>
+                      <button className="mt-2 text-xs font-semibold text-teal-700 underline" onClick={loadTechnicians} type="button">Retry</button>
+                    </td>
+                  </tr>
                 ) : technicians.length === 0 ? (
-                  <tr><td className="px-4 py-6 text-center text-slate-400" colSpan={5}>No technicians yet.</td></tr>
+                  <tr>
+                    <td className="px-4 py-8 text-center" colSpan={5}>
+                      <p className="text-sm text-slate-500">No technicians added yet.</p>
+                      <p className="mt-1 text-xs text-slate-400">Use the form to create the first field account.</p>
+                    </td>
+                  </tr>
                 ) : technicians.map((tech) => (
                   <tr key={tech.id}>
                     <td className="px-4 py-3 font-mono text-slate-600">{tech.handle ?? "-"}</td>
