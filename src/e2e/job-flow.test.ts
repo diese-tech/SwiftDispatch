@@ -11,7 +11,7 @@
  *   - At least one company with a non-null slug and at least one technician
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import jwt from 'jsonwebtoken'
 
 const RUN = process.env.TEST_INTEGRATION === 'true'
@@ -21,7 +21,8 @@ describe.skipIf(!RUN)('E2E smoke: intake → dispatch → tech → invoice', () 
 
   // Lazy: describe.skipIf still evaluates this factory during collection — do not
   // call createClient here or `npm test` fails without Supabase env vars.
-  let supabase: ReturnType<typeof createClient>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let supabase: SupabaseClient<any>
   let TECH_SECRET: string
 
   // Resolved in beforeAll
