@@ -224,7 +224,8 @@ export async function resetCompanyDataAction(formData: FormData) {
 
   if (!companyId) return;
 
-  await supabase.from("jobs").delete().eq("company_id", companyId);
+  // Only delete demo-flagged jobs so a reset cannot wipe live operational data.
+  await supabase.from("jobs").delete().eq("company_id", companyId).eq("is_demo", true);
   await supabase
     .from("companies")
     .update({ demo_mode_enabled: false })
