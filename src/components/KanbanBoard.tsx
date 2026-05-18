@@ -4,7 +4,7 @@ import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Plus } from "lucide-react";
 import KanbanColumn from "@/components/KanbanColumn";
-import { MetricTile, StatusPill, SurfaceCard } from "@/components/DesignSystem";
+import { MetricTile, SurfaceCard } from "@/components/DesignSystem";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { JobStatus, JobWithTechnician, Technician } from "@/types/db";
 
@@ -220,7 +220,7 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
             </h2>
           </div>
           {readOnly ? (
-            <StatusPill tone="warm">Read only</StatusPill>
+            <span className="rounded border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[10.5px] font-medium text-orange-700">Read only</span>
           ) : (
             <button className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-400 px-5 py-3 text-sm font-semibold !text-slate-950 transition hover:bg-orange-300" onClick={() => setFormOpen((current) => !current)} type="button">
               <Plus size={16} /> {formOpen ? "Close form" : "New Job"}
@@ -234,12 +234,12 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
           </p>
         ) : formOpen ? (
           <form className="mt-6 grid gap-3 md:grid-cols-2" onSubmit={createJob}>
-            <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" name="customer_name" placeholder="Customer name" required />
-            <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" name="phone" placeholder="Phone" required />
-            <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100 md:col-span-2" name="address" placeholder="Address" required />
-            <textarea className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100 md:col-span-2" name="issue" placeholder="Issue" required />
+            <input className="rounded-xl border border-[var(--c-line)] bg-[var(--c-paper)] px-4 py-3 text-sm outline-none transition focus:border-[var(--c-signal)] focus:ring-2 focus:ring-[var(--c-signal-w)]" name="customer_name" placeholder="Customer name" required />
+            <input className="rounded-xl border border-[var(--c-line)] bg-[var(--c-paper)] px-4 py-3 text-sm outline-none transition focus:border-[var(--c-signal)] focus:ring-2 focus:ring-[var(--c-signal-w)]" name="phone" placeholder="Phone" required />
+            <input className="rounded-xl border border-[var(--c-line)] bg-[var(--c-paper)] px-4 py-3 text-sm outline-none transition focus:border-[var(--c-signal)] focus:ring-2 focus:ring-[var(--c-signal-w)] md:col-span-2" name="address" placeholder="Address" required />
+            <textarea className="min-h-28 rounded-xl border border-[var(--c-line)] bg-[var(--c-paper)] px-4 py-3 text-sm outline-none transition focus:border-[var(--c-signal)] focus:ring-2 focus:ring-[var(--c-signal-w)] md:col-span-2" name="issue" placeholder="Issue" required />
             {saveError ? (
-              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 md:col-span-2">{saveError}</p>
+              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 md:col-span-2">{saveError}</p>
             ) : null}
             <button className="rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold !text-white disabled:opacity-60" disabled={saving}>{saving ? "Saving..." : "Create Job"}</button>
           </form>
@@ -254,9 +254,9 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Mobile board mode</p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">Focus on one lane at a time.</h2>
               </div>
-              <StatusPill tone={connected ? "teal" : "warm"}>
-                {connected ? `${mobileJobs.length} visible` : "Reconnecting..."}
-              </StatusPill>
+              <span className={`font-mono text-[10.5px] ${connected ? "text-[var(--c-green)]" : "text-[var(--c-amber)]"}`}>
+                {connected ? `${mobileJobs.length} visible` : "Reconnecting…"}
+              </span>
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
