@@ -29,13 +29,13 @@ export default function SiteHeader() {
 
         <div className="flex items-center gap-3">
           <Link
-            className="hidden rounded-full border border-white/12 px-4 py-2 text-sm font-semibold !text-slate-200 transition hover:bg-white/8 sm:inline-flex"
+            className="hidden rounded-full border border-white/12 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/8 sm:inline-flex"
             href="/login"
           >
             Sign In
           </Link>
           <Link
-            className="inline-flex items-center rounded-full bg-orange-400 px-5 py-2.5 text-sm font-semibold !text-slate-950 transition hover:bg-orange-300"
+            className="inline-flex items-center rounded-full bg-orange-400 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-orange-300"
             href="/demo"
           >
             Book Demo

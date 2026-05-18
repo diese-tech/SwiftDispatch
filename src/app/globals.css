@@ -90,9 +90,11 @@ textarea::placeholder {
   color: var(--c-text-4);
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 ::selection {
