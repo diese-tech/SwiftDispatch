@@ -1,24 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  --background: #edf3f2;
-  --background-strong: #dfe9e8;
-  --foreground: #0f1d2b;
-  --muted: #5f7382;
-  --line: #d8e2e7;
-  --panel: #ffffff;
-  --panel-soft: #f6fafb;
+  /* Neutral scale */
+  --c-bg: #fafafa;
+  --c-paper: #ffffff;
+  --c-paper-2: #fafafa;
+  --c-paper-3: #f4f4f5;
+  --c-line: #e4e4e7;
+  --c-line-2: #d4d4d8;
+  --c-text: #18181b;
+  --c-text-2: #3f3f46;
+  --c-text-3: #71717a;
+  --c-text-4: #a1a1aa;
+
+  /* Signal / status palette */
+  --c-signal: #1f6feb;
+  --c-signal-w: #eaf2ff;
+  --c-amber: #b45309;
+  --c-amber-w: #fef6e7;
+  --c-red: #b91c1c;
+  --c-red-w: #fdecec;
+  --c-green: #15803d;
+  --c-green-w: #e8f4ec;
+  --c-violet: #6d28d9;
+  --c-violet-w: #f1ebfe;
+
+  /* Brand — keep */
   --navy: #0b2235;
   --navy-strong: #071927;
-  --teal: #0f766e;
-  --teal-bright: #2dd4bf;
   --warm: #f08a24;
   --warm-soft: #fff0df;
-  --success: #198754;
-  --danger: #dc3545;
+
+  /* Teal kept for marketing pages */
+  --teal: #0f766e;
+  --teal-bright: #2dd4bf;
+
+  /* Legacy aliases so existing Tailwind utilities still resolve */
+  --background: var(--c-bg);
+  --foreground: var(--c-text);
+  --panel: var(--c-paper);
+  --panel-soft: var(--c-paper-2);
+  --line: var(--c-line);
+  --muted: var(--c-text-3);
+  --success: #15803d;
+  --danger: #b91c1c;
+
+  /* Shadows */
   --shadow-lg: 0 28px 80px rgba(8, 26, 40, 0.14);
   --shadow-md: 0 14px 34px rgba(8, 26, 40, 0.1);
-  --shadow-sm: 0 8px 20px rgba(8, 26, 40, 0.06);
+  --shadow-sm: 0 1px 0 rgba(24, 24, 27, 0.04), 0 2px 8px rgba(24, 24, 27, 0.06);
 }
 
 * {
@@ -32,12 +62,11 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgba(45, 212, 191, 0.08), transparent 28%),
-    linear-gradient(180deg, #eff5f4 0%, #f7fafb 54%, #edf3f2 100%);
-  color: var(--foreground);
-  font-family: "Segoe UI", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 img {
@@ -54,7 +83,7 @@ select {
 
 input::placeholder,
 textarea::placeholder {
-  color: #8ea0ad;
+  color: var(--c-text-4);
 }
 
 a {
@@ -63,7 +92,7 @@ a {
 }
 
 ::selection {
-  background: rgba(45, 212, 191, 0.28);
+  background: rgba(31, 111, 235, 0.18);
 }
 
 .noise-overlay {
@@ -75,7 +104,8 @@ a {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
   background-size: 18px 18px;
   opacity: 0.35;

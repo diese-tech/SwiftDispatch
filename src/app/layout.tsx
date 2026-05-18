@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://swift-dispatch-xi.vercel.app"),
+  metadataBase: new URL("https://swiftdispatch.app"),
   title: {
     default: "SwiftDispatch | Emergency HVAC Dispatch Software",
     template: "%s | SwiftDispatch",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "SwiftDispatch | Emergency HVAC Dispatch Software",
     description:
       "Dispatch, quote, and collect approvals in one workflow built for HVAC service teams.",
-    url: "https://swift-dispatch-xi.vercel.app",
+    url: "https://swiftdispatch.app",
     siteName: "SwiftDispatch",
     type: "website",
   },

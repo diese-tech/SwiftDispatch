@@ -24,7 +24,7 @@ export default async function DashboardPage() {
         description="Use the dashboard as the premium operator layer over dispatch, sales movement, and field coordination."
       />
       <div className="mb-6"><SalesBadges /></div>
-      <KanbanBoard initialJobs={(jobsResult.data ?? []) as JobWithTechnician[]} technicians={(techsResult.data ?? []) as Technician[]} />
+      <KanbanBoard companyId={profile.company_id!} initialJobs={(jobsResult.data ?? []) as JobWithTechnician[]} technicians={(techsResult.data ?? []) as Technician[]} />
     </main>
   );
 }

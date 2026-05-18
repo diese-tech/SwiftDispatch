@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import QuoteBuilder from "@/components/QuoteBuilder";
 import TechnicianDropdown from "@/components/TechnicianDropdown";
-import WorkflowComparison from "@/components/WorkflowComparison";
 import { AppPageIntro, SurfaceCard, StatusPill } from "@/components/DesignSystem";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -59,7 +58,6 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
             </div>
           </div>
           <div className="mt-5"><TechnicianDropdown jobId={job.id} selectedId={job.technician_id} technicians={(techsResult.data ?? []) as Technician[]} /></div>
-          <WorkflowComparison />
         </SurfaceCard>
         <QuoteBuilder initialQuote={quote} jobId={job.id} />
       </div>

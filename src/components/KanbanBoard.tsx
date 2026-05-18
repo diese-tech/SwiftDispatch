@@ -1,10 +1,11 @@
 "use client";
 
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Plus } from "lucide-react";
 import KanbanColumn from "@/components/KanbanColumn";
-import { MetricTile, StatusPill, SurfaceCard } from "@/components/DesignSystem";
+import { MetricTile, SurfaceCard } from "@/components/DesignSystem";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { JobStatus, JobWithTechnician, Technician } from "@/types/db";
 
 const statuses: JobStatus[] = [
@@ -23,7 +24,7 @@ const LEGACY_STATUS_MAP: Record<string, JobStatus> = {
   Completed: "completed",
 };
 
-const STATUS_LABELS: Record<JobStatus, string> = {
+const STATUS_LABELS: Record<string, string> = {
   new: "New",
   assigned: "Assigned",
   en_route: "En Route",
@@ -32,10 +33,6 @@ const STATUS_LABELS: Record<JobStatus, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
   no_access: "No Access",
-  New: "New",
-  Assigned: "Assigned",
-  "En Route": "En Route",
-  Completed: "Completed",
 };
 
 function normalizeStatus(status: string): JobStatus {
@@ -43,21 +40,27 @@ function normalizeStatus(status: string): JobStatus {
 }
 
 type Props = {
+  companyId: string;
   initialJobs: JobWithTechnician[];
   readOnly?: boolean;
   technicians: Technician[];
 };
 
-export default function KanbanBoard({ initialJobs, readOnly = false, technicians }: Props) {
+export default function KanbanBoard({ companyId, initialJobs, readOnly = false, technicians }: Props) {
   const [jobs, setJobs] = useState(
     initialJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })),
   );
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [syncing, setSyncing] = useState(false);
+  const [connected, setConnected] = useState(true);
   const [mobileStatus, setMobileStatus] = useState<JobStatus>("new");
   const sensors = useSensors(useSensor(PointerSensor));
+  const technicianMap = useRef<Map<string, Pick<Technician, "id" | "name" | "phone">>>(new Map());
+
+  useEffect(() => {
+    technicianMap.current = new Map(technicians.map((t) => [t.id, t]));
+  }, [technicians]);
 
   useEffect(() => {
     setJobs(initialJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })));
@@ -66,42 +69,72 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
   useEffect(() => {
     if (readOnly) return;
 
-    let cancelled = false;
+    const supabase = createSupabaseBrowserClient();
 
-    async function refreshBoard() {
-      try {
-        setSyncing(true);
-        const response = await fetch("/api/jobs", {
-          method: "GET",
-          cache: "no-store",
-        });
-        // Session expired — stop polling silently; next navigation will redirect to login
-        if (response.status === 401) {
-          window.clearInterval(interval);
-          return;
-        }
-        if (!response.ok) return;
-        const { jobs: latestJobs } = (await response.json()) as { jobs: JobWithTechnician[] };
-        if (cancelled) return;
+    async function refetchAll() {
+      const { data } = await supabase
+        .from("jobs")
+        .select("*, technicians!jobs_technician_id_fkey(id,name,phone)")
+        .eq("company_id", companyId)
+        .eq("is_demo", false)
+        .order("created_at", { ascending: false });
+      if (data) {
         startTransition(() => {
-          setJobs(latestJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })));
+          setJobs((data as JobWithTechnician[]).map((job) => ({ ...job, status: normalizeStatus(job.status) })));
         });
-      } finally {
-        if (!cancelled) setSyncing(false);
       }
     }
 
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void refreshBoard();
-      }
-    }, 5000);
+    const channel = supabase
+      .channel(`jobs:company:${companyId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "jobs", filter: `company_id=eq.${companyId}` },
+        (payload) => {
+          startTransition(() => {
+            if (payload.eventType === "INSERT") {
+              const raw = payload.new as JobWithTechnician;
+              const job: JobWithTechnician = {
+                ...raw,
+                status: normalizeStatus(raw.status),
+                technicians: raw.technician_id ? (technicianMap.current.get(raw.technician_id) ?? null) : null,
+              };
+              setJobs((current) => {
+                if (current.some((j) => j.id === job.id)) return current;
+                return [job, ...current];
+              });
+            } else if (payload.eventType === "UPDATE") {
+              const raw = payload.new as JobWithTechnician;
+              setJobs((current) =>
+                current.map((j) =>
+                  j.id === raw.id
+                    ? {
+                        ...raw,
+                        status: normalizeStatus(raw.status),
+                        technicians: raw.technician_id ? (technicianMap.current.get(raw.technician_id) ?? j.technicians ?? null) : null,
+                      }
+                    : j
+                )
+              );
+            } else if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id: string }).id;
+              setJobs((current) => current.filter((j) => j.id !== id));
+            }
+          });
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setConnected(true);
+        if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+          setConnected(false);
+          void refetchAll();
+        }
+      });
 
     return () => {
-      cancelled = true;
-      window.clearInterval(interval);
+      void supabase.removeChannel(channel);
     };
-  }, [readOnly]);
+  }, [companyId, readOnly]);
 
   const jobsByStatus = useMemo(() => {
     return statuses.reduce(
@@ -183,7 +216,7 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
             </h2>
           </div>
           {readOnly ? (
-            <StatusPill tone="warm">Read only</StatusPill>
+            <span className="rounded border border-orange-200 bg-orange-50 px-2 py-0.5 font-mono text-[10.5px] font-medium text-orange-700">Read only</span>
           ) : (
             <button className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-400 px-5 py-3 text-sm font-semibold !text-slate-950 transition hover:bg-orange-300" onClick={() => setFormOpen((current) => !current)} type="button">
               <Plus size={16} /> {formOpen ? "Close form" : "New Job"}
@@ -197,12 +230,12 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
           </p>
         ) : formOpen ? (
           <form className="mt-6 grid gap-3 md:grid-cols-2" onSubmit={createJob}>
-            <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" name="customer_name" placeholder="Customer name" required />
-            <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100" name="phone" placeholder="Phone" required />
-            <input className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100 md:col-span-2" name="address" placeholder="Address" required />
-            <textarea className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100 md:col-span-2" name="issue" placeholder="Issue" required />
+            <input className="rounded-xl border border-[var(--c-line)] bg-[var(--c-paper)] px-4 py-3 text-sm outline-none transition focus:border-[var(--c-signal)] focus:ring-2 focus:ring-[var(--c-signal-w)]" name="customer_name" placeholder="Customer name" required />
+            <input className="rounded-xl border border-[var(--c-line)] bg-[var(--c-paper)] px-4 py-3 text-sm outline-none transition focus:border-[var(--c-signal)] focus:ring-2 focus:ring-[var(--c-signal-w)]" name="phone" placeholder="Phone" required />
+            <input className="rounded-xl border border-[var(--c-line)] bg-[var(--c-paper)] px-4 py-3 text-sm outline-none transition focus:border-[var(--c-signal)] focus:ring-2 focus:ring-[var(--c-signal-w)] md:col-span-2" name="address" placeholder="Address" required />
+            <textarea className="min-h-28 rounded-xl border border-[var(--c-line)] bg-[var(--c-paper)] px-4 py-3 text-sm outline-none transition focus:border-[var(--c-signal)] focus:ring-2 focus:ring-[var(--c-signal-w)] md:col-span-2" name="issue" placeholder="Issue" required />
             {saveError ? (
-              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 md:col-span-2">{saveError}</p>
+              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 md:col-span-2">{saveError}</p>
             ) : null}
             <button className="rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold !text-white disabled:opacity-60" disabled={saving}>{saving ? "Saving..." : "Create Job"}</button>
           </form>
@@ -217,9 +250,9 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Mobile board mode</p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">Focus on one lane at a time.</h2>
               </div>
-              <StatusPill tone={syncing ? "warm" : "teal"}>
-                {syncing ? "Syncing..." : `${mobileJobs.length} visible`}
-              </StatusPill>
+              <span className={`font-mono text-[10.5px] ${connected ? "text-[var(--c-green)]" : "text-[var(--c-amber)]"}`}>
+                {connected ? `${mobileJobs.length} visible` : "Reconnecting…"}
+              </span>
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
