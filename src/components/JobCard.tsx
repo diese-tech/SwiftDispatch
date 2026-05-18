@@ -28,7 +28,7 @@ function jobAge(createdAt: string): { label: string; tone: "neutral" | "amber" |
   const mins = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
   const hours = Math.floor(mins / 60);
   const label = hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`;
-  const tone = hours >= 8 ? "red" : hours >= 4 ? "amber" : "neutral";
+  const tone = hours >= 2 ? "red" : mins >= 30 ? "amber" : "neutral";
   return { label, tone };
 }
 

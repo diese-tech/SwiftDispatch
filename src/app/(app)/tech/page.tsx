@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AppPageIntro, MetricTile, StatusPill, SurfaceCard } from '@/components/DesignSystem'
+import { MapPin, Phone } from 'lucide-react'
 import type { JobStatus } from '@/lib/stateMachine'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { TechJobActionsClient, SignOutButtonClient } from './TechClientComponents'
@@ -24,12 +24,6 @@ type StatusEvent = {
   created_at: string
 }
 
-const URGENCY_BADGE: Record<string, { label: string; tone: 'danger' | 'warm' | 'neutral' }> = {
-  emergency: { label: 'Emergency', tone: 'danger' },
-  same_day: { label: 'Same day', tone: 'warm' },
-  scheduled: { label: 'Scheduled', tone: 'neutral' },
-}
-
 const STATUS_LABEL: Record<string, string> = {
   new: 'New',
   assigned: 'Assigned',
@@ -41,6 +35,12 @@ const STATUS_LABEL: Record<string, string> = {
   no_access: 'No Access',
 }
 
+const URGENCY_BADGE: Record<string, { label: string; cls: string }> = {
+  emergency: { label: 'Emergency', cls: 'border-red-200 bg-red-50 text-red-700' },
+  same_day: { label: 'Same day', cls: 'border-orange-200 bg-orange-50 text-orange-700' },
+  scheduled: { label: 'Scheduled', cls: 'border-slate-200 bg-slate-50 text-slate-600' },
+}
+
 function fmtTs(ts: string) {
   return new Date(ts).toLocaleString('en-US', {
     month: 'short',
@@ -48,14 +48,6 @@ function fmtTs(ts: string) {
     hour: 'numeric',
     minute: '2-digit',
   })
-}
-
-function getStatusTone(status: string): 'neutral' | 'teal' | 'warm' | 'danger' | 'success' {
-  if (status === 'completed') return 'success'
-  if (status === 'cancelled' || status === 'no_access') return 'danger'
-  if (status === 'quote_pending' || status === 'in_progress') return 'warm'
-  if (status === 'assigned' || status === 'en_route') return 'teal'
-  return 'neutral'
 }
 
 export default async function TechDashboardPage() {
@@ -134,215 +126,124 @@ export default async function TechDashboardPage() {
   const urgencyBadge = URGENCY_BADGE[urgency] ?? URGENCY_BADGE.scheduled
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <AppPageIntro
-          eyebrow="Technician workspace"
-          title={`Stay on top of today's field work, ${firstName}.`}
-          description="See your active assignment, move the job forward, and keep the office aligned without bouncing between calls and text threads."
-          actions={<SignOutButtonClient />}
-        />
+    <main className="min-h-screen px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-lg">
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <MetricTile
-            label="Current assignment"
-            value={activeJob ? '1 live job' : 'No live job'}
-            detail={
-              activeJob
-                ? `${STATUS_LABEL[activeJob.status] ?? activeJob.status} for ${activeJob.customer_name}`
-                : 'Your dispatcher will assign the next call here.'
-            }
-          />
-          <MetricTile
-            label="Recent completions"
-            value={completedJobs?.length ?? 0}
-            detail="Last five completed jobs assigned to your technician account."
-          />
-          <MetricTile
-            label="Response mode"
-            value={urgencyBadge.label}
-            detail="Urgency helps you prioritize travel, arrival, and quote timing."
-          />
+        {/* Top bar */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">Technician</p>
+            <p className="mt-0.5 text-base font-semibold text-slate-950">{tech.name}</p>
+          </div>
+          <SignOutButtonClient />
         </div>
 
         {activeJob ? (
-          <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
-            <SurfaceCard accent className="space-y-6">
-              <div className="flex flex-col gap-4 border-b border-slate-100 pb-6 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Active job
-                  </p>
-                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-                    {activeJob.customer_name}
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Job #{activeJob.id.slice(0, 8).toUpperCase()}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <StatusPill tone={urgencyBadge.tone}>{urgencyBadge.label}</StatusPill>
-                  <StatusPill tone={getStatusTone(activeJob.status)}>
-                    {STATUS_LABEL[activeJob.status] ?? activeJob.status}
-                  </StatusPill>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Customer
-                  </p>
-                  <p className="mt-3 text-lg font-semibold text-slate-950">{activeJob.customer_name}</p>
-                  <a
-                    className="mt-3 inline-flex text-sm font-medium text-teal-700 underline-offset-4 hover:underline"
-                    href={`tel:${activeJob.phone}`}
-                  >
-                    {activeJob.phone}
-                  </a>
-                </div>
-                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Last status update
-                  </p>
-                  <p className="mt-3 text-lg font-semibold text-slate-950">
-                    {latestEvent ? fmtTs(latestEvent.created_at) : 'No timeline updates yet'}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {latestEvent
-                      ? `Most recent transition: ${STATUS_LABEL[latestEvent.to_status] ?? latestEvent.to_status}.`
-                      : 'Once the job changes state, timing will appear here automatically.'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Address</p>
-                  <a
-                    className="mt-3 inline-flex text-base font-semibold text-slate-950 underline-offset-4 hover:text-teal-700 hover:underline"
-                    href={`https://maps.google.com/?q=${encodeURIComponent(activeJob.address)}`}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    {activeJob.address}
-                  </a>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Open directions quickly before heading out.
-                  </p>
-                </div>
-                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Problem summary
-                  </p>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">
-                    {activeJob.problem_description ?? activeJob.issue}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-slate-200 bg-slate-950 px-5 py-5 text-white">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <>
+            {/* Now card */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+              {/* Header */}
+              <div className="border-b border-slate-100 px-5 py-4">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300">
-                      Next action
-                    </p>
-                    <p className="mt-2 text-lg font-semibold">
-                      Move the job forward with one clear field workflow.
-                    </p>
+                    <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">Active job</p>
+                    <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">{activeJob.customer_name}</h1>
                   </div>
-                  <Link
-                    className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
-                    href={`/tech/job/${activeJob.id}`}
-                  >
-                    Open full job detail
-                  </Link>
-                </div>
-                <div className="mt-5">
-                  <TechJobActionsClient
-                    jobId={activeJob.id}
-                    status={activeJob.status}
-                    hasAcceptedQuote={hasAcceptedQuote}
-                  />
+                  <div className="flex flex-col items-end gap-1.5">
+                    <span className={`rounded border px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.06em] ${urgencyBadge.cls}`}>
+                      {urgencyBadge.label}
+                    </span>
+                    <span className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-slate-500">
+                      {STATUS_LABEL[activeJob.status] ?? activeJob.status}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </SurfaceCard>
 
-            <div className="space-y-6">
-              <SurfaceCard className="space-y-4">
-                <div className="flex items-center justify-between gap-4">
+              {/* Details */}
+              <div className="divide-y divide-slate-100">
+                <a
+                  className="flex items-center gap-3 px-5 py-4 transition hover:bg-slate-50"
+                  href={`https://maps.google.com/?q=${encodeURIComponent(activeJob.address)}`}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                      Workbench
-                    </p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">
-                      Field-ready flow
-                    </h3>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.06em] text-slate-400">Address</p>
+                    <p className="mt-0.5 text-sm font-medium text-slate-950">{activeJob.address}</p>
                   </div>
-                  <StatusPill tone="teal">Live</StatusPill>
-                </div>
-                <ul className="space-y-3 text-sm leading-6 text-slate-600">
-                  <li className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-                    Update arrival status so dispatch and the customer stay aligned.
-                  </li>
-                  <li className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-                    Build the quote once diagnosis is complete and pricing is ready.
-                  </li>
-                  <li className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-                    Mark complete after an approved quote and completed work.
-                  </li>
-                </ul>
-              </SurfaceCard>
-
-              <SurfaceCard>
-                <div className="flex items-center justify-between gap-4">
+                </a>
+                <a
+                  className="flex items-center gap-3 px-5 py-4 transition hover:bg-slate-50"
+                  href={`tel:${activeJob.phone}`}
+                >
+                  <Phone className="h-4 w-4 shrink-0 text-slate-400" />
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                      Recent completed jobs
-                    </p>
-                    <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">
-                      Your last finished calls
-                    </h3>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.06em] text-slate-400">Customer phone</p>
+                    <p className="mt-0.5 text-sm font-medium text-teal-700">{activeJob.phone}</p>
                   </div>
-                  <StatusPill tone="success">{completedJobs?.length ?? 0} logged</StatusPill>
+                </a>
+                <div className="px-5 py-4">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.06em] text-slate-400">Issue</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-700">{activeJob.problem_description ?? activeJob.issue}</p>
                 </div>
-
-                {(completedJobs?.length ?? 0) > 0 ? (
-                  <div className="mt-5 space-y-3">
-                    {completedJobs!.map((job) => (
-                      <Link
-                        key={job.id}
-                        className="block rounded-[1.35rem] border border-slate-200 px-4 py-4 transition hover:border-teal-300 hover:bg-slate-50/80"
-                        href={`/tech/job/${job.id}`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-semibold text-slate-950">{job.customer_name}</p>
-                            <p className="mt-1 text-sm text-slate-500">{job.address}</p>
-                          </div>
-                          <span className="text-xs font-medium text-slate-400">{fmtTs(job.created_at)}</span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-5 rounded-[1.35rem] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-6 text-sm leading-6 text-slate-500">
-                    Completed work will appear here once your first call closes out.
+                {latestEvent && (
+                  <div className="px-5 py-4">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.06em] text-slate-400">Last update</p>
+                    <p className="mt-0.5 text-sm text-slate-600">
+                      {STATUS_LABEL[latestEvent.to_status] ?? latestEvent.to_status} · {fmtTs(latestEvent.created_at)}
+                    </p>
                   </div>
                 )}
-              </SurfaceCard>
+              </div>
+
+              {/* Actions */}
+              <div className="border-t border-slate-100 bg-slate-50 px-5 py-4">
+                <TechJobActionsClient
+                  jobId={activeJob.id}
+                  status={activeJob.status}
+                  hasAcceptedQuote={hasAcceptedQuote}
+                />
+                <Link
+                  className="mt-3 block w-full rounded-xl border border-slate-200 bg-white py-2.5 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  href={`/tech/job/${activeJob.id}`}
+                >
+                  Full job detail
+                </Link>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-white px-6 py-12 text-center shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">Status</p>
+            <h1 className="mt-3 text-xl font-semibold tracking-tight text-slate-950">No active job</h1>
+            <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-slate-500">
+              When dispatch assigns your next call, it will appear here.
+            </p>
+          </div>
+        )}
+
+        {/* Recent completed */}
+        {(completedJobs?.length ?? 0) > 0 && (
+          <div className="mt-6">
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">Recent completions</p>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+              {completedJobs!.map((job, i) => (
+                <Link
+                  key={job.id}
+                  className={`flex items-center justify-between gap-3 px-5 py-3.5 transition hover:bg-slate-50 ${i > 0 ? 'border-t border-slate-100' : ''}`}
+                  href={`/tech/job/${job.id}`}
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-950">{job.customer_name}</p>
+                    <p className="text-xs text-slate-500">{job.address}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-slate-400">{fmtTs(job.created_at)}</span>
+                </Link>
+              ))}
             </div>
           </div>
-        ) : (
-          <SurfaceCard accent className="mt-6 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-teal-200 bg-teal-50 text-3xl text-teal-700">
-              W
-            </div>
-            <h2 className="mt-5 text-2xl font-semibold tracking-tight text-slate-950">No active jobs right now</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-500">
-              You are clear for the moment. As soon as dispatch assigns your next visit, it will appear here with the address, customer contact, and status controls.
-            </p>
-          </SurfaceCard>
         )}
       </div>
     </main>

@@ -1,6 +1,5 @@
 import KanbanBoard from "@/components/KanbanBoard";
 import SalesBadges from "@/components/SalesBadges";
-import { AppPageIntro } from "@/components/DesignSystem";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { JobWithTechnician, Technician } from "@/types/db";
@@ -18,11 +17,10 @@ export default async function DashboardPage() {
 
   return (
     <main>
-      <AppPageIntro
-        eyebrow="Operator dashboard"
-        title="Command the day without losing the details."
-        description="Use the dashboard as the premium operator layer over dispatch, sales movement, and field coordination."
-      />
+      <div className="mb-6">
+        <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">Operator dashboard</p>
+        <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-950">Dispatch Board</h1>
+      </div>
       <div className="mb-6"><SalesBadges /></div>
       <KanbanBoard companyId={profile.company_id!} initialJobs={(jobsResult.data ?? []) as JobWithTechnician[]} technicians={(techsResult.data ?? []) as Technician[]} />
     </main>

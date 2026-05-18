@@ -11,7 +11,7 @@ import {
   Send,
   Smartphone,
 } from "lucide-react";
-import { SectionEyebrow, SectionHeading, SurfaceCard } from "@/components/DesignSystem";
+import { SectionEyebrow, SectionHeading } from "@/components/DesignSystem";
 import Reveal from "@/components/Reveal";
 
 const features = [
@@ -215,13 +215,13 @@ export default function MarketingLanding() {
           <div className="mt-10 grid gap-5 lg:grid-cols-3">
             {trustCards.map((card, index) => (
               <Reveal key={card.eyebrow} delay={index * 100}>
-                <SurfaceCard dark className="h-full">
+                <div className="h-full rounded-xl border border-white/10 bg-white/5 p-6">
                   <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">
                     0{index + 1} · {card.eyebrow}
                   </p>
                   <h3 className="mt-4 text-xl font-semibold tracking-tight text-white">{card.title}</h3>
                   <p className="mt-4 text-sm leading-7 text-slate-300">{card.description}</p>
-                </SurfaceCard>
+                </div>
               </Reveal>
             ))}
           </div>
