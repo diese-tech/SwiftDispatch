@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import path from "node:path";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const securityHeaders = [
@@ -35,9 +34,6 @@ const withBundleAnalyzer =
     : (config: NextConfig) => config;
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: path.resolve(__dirname),
-  },
   async headers() {
     return [
       {
@@ -55,7 +51,5 @@ export default withBundleAnalyzer(
     project: process.env.SENTRY_PROJECT,
     widenClientFileUpload: true,
     sourcemaps: { deleteSourcemapsAfterUpload: true },
-    disableLogger: true,
-    automaticVercelMonitors: true,
   })
 );
