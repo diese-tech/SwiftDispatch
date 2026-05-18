@@ -11,7 +11,7 @@ import {
   Send,
   Smartphone,
 } from "lucide-react";
-import { SectionEyebrow, SectionHeading, SurfaceCard, StatusPill } from "@/components/DesignSystem";
+import { SectionEyebrow, SectionHeading, SurfaceCard } from "@/components/DesignSystem";
 import Reveal from "@/components/Reveal";
 
 const features = [
@@ -132,11 +132,14 @@ const fitSignals = [
 export default function MarketingLanding() {
   return (
     <main id="top">
+      {/* ── Hero ─────────────────────────────────────────────────── */}
       <section className="px-6 pb-20 pt-16 sm:pt-20">
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
           <div>
-            <StatusPill tone="warm">HVAC Dispatch Platform</StatusPill>
-            <h1 className="mt-6 max-w-4xl text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl">
+            <span className="inline-flex items-center rounded border border-teal-200 bg-teal-50 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">
+              HVAC Dispatch Platform
+            </span>
+            <h1 className="mt-6 max-w-4xl text-5xl font-semibold tracking-[-0.025em] text-slate-950 sm:text-6xl">
               Built for small HVAC shops that are outgrowing calls, texts, and whiteboards.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
@@ -144,10 +147,16 @@ export default function MarketingLanding() {
             </p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Link className="inline-flex items-center justify-center rounded-full bg-teal-700 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-teal-800" href="/demo">
+              <Link
+                className="inline-flex items-center justify-center rounded-full bg-teal-700 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-teal-800"
+                href="/demo"
+              >
                 Request a Demo
               </Link>
-              <a className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 transition hover:bg-slate-50" href="#product">
+              <a
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 transition hover:bg-slate-50"
+                href="#product"
+              >
                 See the product
                 <ArrowRight className="h-4 w-4" />
               </a>
@@ -160,36 +169,42 @@ export default function MarketingLanding() {
                 "Best fit for 3 to 15 tech teams",
               ].map((item, index) => (
                 <Reveal key={item} delay={index * 80}>
-                  <SurfaceCard className="p-4">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="flex items-start gap-3">
                       <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
                       <p className="text-sm leading-6 text-slate-700">{item}</p>
                     </div>
-                  </SurfaceCard>
+                  </div>
                 </Reveal>
               ))}
             </div>
           </div>
 
           <div className="relative">
-            <div className="absolute -left-8 top-10 h-32 w-32 rounded-full bg-teal-200/70 blur-3xl" />
-            <div className="absolute -bottom-8 right-2 h-36 w-36 rounded-full bg-orange-200/70 blur-3xl" />
-            <SurfaceCard className="p-4">
-              <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-950 p-2">
-                <img alt="SwiftDispatch dashboard preview" className="rounded-[1.15rem] object-cover" src="/images/landing-dashboard.jpg" />
-              </div>
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <StatusPill tone="teal">Dispatch clarity</StatusPill>
-                <StatusPill tone="warm">Quote follow-through</StatusPill>
-                <StatusPill tone="neutral">Built for HVAC operators</StatusPill>
-              </div>
-            </SurfaceCard>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 p-2 shadow-[0_28px_80px_rgba(8,26,40,0.14)]">
+              <img
+                alt="SwiftDispatch dashboard preview"
+                className="rounded-xl object-cover"
+                src="/images/landing-dashboard.jpg"
+              />
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {["Dispatch clarity", "Quote follow-through", "Built for HVAC operators"].map((label) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center rounded border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-500"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
+      {/* ── Why teams pay attention ──────────────────────────────── */}
       <section className="px-6 pb-8" id="proof">
-        <div className="mx-auto max-w-7xl rounded-[2.6rem] bg-[linear-gradient(135deg,#0b2235_0%,#102f47_58%,#081b2a_100%)] px-6 py-8 text-white shadow-[var(--shadow-lg)] sm:px-8 sm:py-10 lg:px-10">
+        <div className="mx-auto max-w-7xl rounded-2xl bg-[linear-gradient(135deg,#0b2235_0%,#102f47_58%,#081b2a_100%)] px-6 py-10 text-white shadow-[0_28px_80px_rgba(8,26,40,0.14)] sm:px-8 lg:px-10">
           <SectionEyebrow inverse>Why Teams Pay Attention</SectionEyebrow>
           <SectionHeading
             inverse
@@ -200,9 +215,11 @@ export default function MarketingLanding() {
           <div className="mt-10 grid gap-5 lg:grid-cols-3">
             {trustCards.map((card, index) => (
               <Reveal key={card.eyebrow} delay={index * 100}>
-                <SurfaceCard accent dark className="h-full backdrop-blur-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">0{index + 1} {card.eyebrow}</p>
-                  <h3 className="mt-4 text-2xl font-semibold tracking-tight text-white">{card.title}</h3>
+                <SurfaceCard dark className="h-full">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">
+                    0{index + 1} · {card.eyebrow}
+                  </p>
+                  <h3 className="mt-4 text-xl font-semibold tracking-tight text-white">{card.title}</h3>
                   <p className="mt-4 text-sm leading-7 text-slate-300">{card.description}</p>
                 </SurfaceCard>
               </Reveal>
@@ -211,6 +228,7 @@ export default function MarketingLanding() {
         </div>
       </section>
 
+      {/* ── Features ─────────────────────────────────────────────── */}
       <section className="px-6 py-20" id="features">
         <div className="mx-auto max-w-7xl">
           <SectionEyebrow>Features</SectionEyebrow>
@@ -222,20 +240,21 @@ export default function MarketingLanding() {
           <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {features.map(({ icon: Icon, title, description }, index) => (
               <Reveal key={title} delay={index * 80}>
-                <SurfaceCard accent className="h-full">
-                  <div className="mb-5 inline-flex rounded-2xl bg-teal-50 p-3 text-teal-700">
-                    <Icon className="h-6 w-6" />
+                <div className="h-full rounded-xl border border-slate-200 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                  <div className="mb-5 inline-flex rounded-lg bg-teal-50 p-2.5 text-teal-700">
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-950">{title}</h3>
+                  <h3 className="text-lg font-semibold tracking-tight text-slate-950">{title}</h3>
                   <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
-                </SurfaceCard>
+                </div>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-white px-6 py-20">
+      {/* ── Fit signals ──────────────────────────────────────────── */}
+      <section className="border-y border-slate-100 bg-slate-50 px-6 py-20">
         <div className="mx-auto max-w-7xl">
           <SectionEyebrow>If This Sounds Familiar</SectionEyebrow>
           <SectionHeading
@@ -246,18 +265,19 @@ export default function MarketingLanding() {
           <div className="mt-12 grid gap-4 lg:grid-cols-3">
             {fitSignals.map((item, index) => (
               <Reveal key={item} delay={index * 90}>
-                <SurfaceCard accent className="p-5">
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                   <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
                     <p className="text-sm leading-7 text-slate-700">{item}</p>
                   </div>
-                </SurfaceCard>
+                </div>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
+      {/* ── Product proof ────────────────────────────────────────── */}
       <section className="bg-white px-6 py-20" id="product">
         <div className="mx-auto max-w-7xl">
           <SectionEyebrow>See The Product</SectionEyebrow>
@@ -269,22 +289,25 @@ export default function MarketingLanding() {
           <div className="mt-14 grid gap-6 lg:grid-cols-3">
             {proofCards.map((card, index) => (
               <Reveal key={card.title} delay={index * 100}>
-                <SurfaceCard accent className="h-full p-4">
-                  <div className="overflow-hidden rounded-[1.35rem] border border-slate-200 bg-slate-100">
-                    <img alt={card.title} className="h-64 w-full object-cover" src={card.image} />
+                <div className="h-full rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                  <div className="overflow-hidden rounded-t-xl border-b border-slate-100 bg-slate-100">
+                    <img alt={card.title} className="h-52 w-full object-cover" src={card.image} />
                   </div>
-                  <div className="mt-5 px-2 pb-2">
-                    <StatusPill tone="teal">{card.audience}</StatusPill>
-                    <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{card.title}</h3>
-                    <p className="mt-3 text-sm leading-7 text-slate-600">{card.outcome}</p>
+                  <div className="p-5">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">
+                      {card.audience}
+                    </span>
+                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">{card.title}</h3>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">{card.outcome}</p>
                   </div>
-                </SurfaceCard>
+                </div>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
+      {/* ── How it works ─────────────────────────────────────────── */}
       <section className="px-6 py-20" id="workflow">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
@@ -296,22 +319,23 @@ export default function MarketingLanding() {
               />
             </div>
 
-            <div className="grid gap-6">
+            <div className="grid gap-4">
               {workflow.map(({ icon: Icon, title, description }, index) => (
                 <Reveal key={title} delay={index * 100}>
-                  <SurfaceCard accent className="grid gap-5 bg-slate-50 sm:grid-cols-[auto_1fr]">
+                  <div className="grid gap-5 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-[auto_1fr]">
                     <div className="flex items-center gap-4">
-                      <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-teal-700 shadow-sm">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-teal-700">
                         <Icon className="h-5 w-5" />
                       </div>
-                      <span className="text-sm font-semibold text-slate-400 sm:hidden">Step {index + 1}</span>
                     </div>
                     <div>
-                      <p className="hidden text-sm font-semibold uppercase tracking-[0.18em] text-slate-400 sm:block">Step {index + 1}</p>
-                      <h3 className="mt-1 text-xl font-semibold text-slate-950">{title}</h3>
-                      <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
+                      <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-slate-400">
+                        Step {index + 1}
+                      </p>
+                      <h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">{title}</h3>
+                      <p className="mt-1.5 text-sm leading-7 text-slate-600">{description}</p>
                     </div>
-                  </SurfaceCard>
+                  </div>
                 </Reveal>
               ))}
             </div>
@@ -319,7 +343,8 @@ export default function MarketingLanding() {
         </div>
       </section>
 
-      <section className="px-6 py-20" id="pricing">
+      {/* ── Pricing ──────────────────────────────────────────────── */}
+      <section className="border-y border-slate-100 bg-slate-50 px-6 py-20" id="pricing">
         <div className="mx-auto max-w-7xl">
           <SectionEyebrow>Pricing</SectionEyebrow>
           <SectionHeading
@@ -331,63 +356,95 @@ export default function MarketingLanding() {
           <div className="mt-14 grid gap-6 lg:grid-cols-3">
             {plans.map((plan, index) => (
               <Reveal key={plan.name} delay={index * 90}>
-              <SurfaceCard accent className={plan.featured ? "h-full bg-[linear-gradient(180deg,#0d6f67_0%,#0b5f58_100%)] text-white" : "h-full"}>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-semibold">{plan.name}</h3>
-                  {plan.featured ? <StatusPill tone="warm">Popular</StatusPill> : null}
-                </div>
-                <div className="mt-6">
-                  <span className="text-5xl font-semibold tracking-tight">{plan.price}</span>
-                  <span className={plan.featured ? "ml-2 text-sm text-teal-50" : "ml-2 text-sm text-slate-500"}>/ month</span>
-                </div>
-                <p className={plan.featured ? "mt-3 text-sm text-teal-50" : "mt-3 text-sm text-slate-500"}>{plan.detail}</p>
+                <div
+                  className={[
+                    "relative h-full rounded-xl border p-6",
+                    plan.featured
+                      ? "border-teal-800 bg-[linear-gradient(180deg,#0d6f67_0%,#0b5f58_100%)] text-white shadow-[0_8px_32px_rgba(13,111,103,0.28)]"
+                      : "border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]",
+                  ].join(" ")}
+                >
+                  {plan.featured ? (
+                    <span className="absolute right-4 top-4 rounded border border-orange-400/40 bg-orange-400/20 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-orange-200">
+                      Popular
+                    </span>
+                  ) : null}
+                  <h3 className="text-xl font-semibold tracking-tight">{plan.name}</h3>
+                  <div className="mt-5">
+                    <span className="text-4xl font-semibold tracking-tight">{plan.price}</span>
+                    <span className={`ml-2 text-sm ${plan.featured ? "text-teal-100" : "text-slate-500"}`}>/ month</span>
+                  </div>
+                  <p className={`mt-2 text-sm ${plan.featured ? "text-teal-100" : "text-slate-500"}`}>{plan.detail}</p>
 
-                <ul className="mt-8 space-y-3">
-                  {plan.features.map((feature) => (
-                    <li className="flex items-start gap-3 text-sm" key={feature}>
-                      <CheckCircle2 className={plan.featured ? "mt-0.5 h-4 w-4 shrink-0 text-white" : "mt-0.5 h-4 w-4 shrink-0 text-teal-700"} />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                  <ul className="mt-7 space-y-3">
+                    {plan.features.map((feature) => (
+                      <li className="flex items-start gap-3 text-sm" key={feature}>
+                        <CheckCircle2
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${plan.featured ? "text-teal-200" : "text-teal-700"}`}
+                        />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
 
-                <Link className={plan.featured ? "mt-8 inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold !text-teal-800 transition hover:bg-slate-100" : "mt-8 inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold !text-slate-900 transition hover:bg-slate-50"} href="/demo">
-                  Talk to Sales
-                </Link>
-              </SurfaceCard>
+                  <Link
+                    className={[
+                      "mt-8 inline-flex w-full items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition",
+                      plan.featured
+                        ? "bg-white !text-teal-800 hover:bg-slate-100"
+                        : "border border-slate-300 bg-white !text-slate-900 hover:bg-slate-50",
+                    ].join(" ")}
+                    href="/demo"
+                  >
+                    Talk to Sales
+                  </Link>
+                </div>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
+      {/* ── CTA ──────────────────────────────────────────────────── */}
       <section className="px-6 pb-24 pt-8">
-        <div className="mx-auto grid max-w-7xl gap-10 overflow-hidden rounded-[2.6rem] bg-[linear-gradient(135deg,#0b2235_0%,#102f47_55%,#081b2a_100%)] px-8 py-10 text-white shadow-[var(--shadow-lg)] lg:grid-cols-[1fr_0.92fr] lg:items-center lg:px-12">
+        <div className="mx-auto grid max-w-7xl gap-10 overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#0b2235_0%,#102f47_55%,#081b2a_100%)] px-8 py-10 text-white shadow-[0_28px_80px_rgba(8,26,40,0.14)] lg:grid-cols-[1fr_0.92fr] lg:items-center lg:px-12">
           <div>
             <SectionEyebrow inverse>Ready To Move Faster?</SectionEyebrow>
-            <h2 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight">Stop running dispatch through scattered texts, callbacks, and sticky-note memory.</h2>
+            <h2 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight">
+              Stop running dispatch through scattered texts, callbacks, and sticky-note memory.
+            </h2>
             <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-300">
               Get a focused walkthrough of how SwiftDispatch can tighten response times, reduce coordination drag, and help your team close jobs with more consistency.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Link className="inline-flex items-center justify-center rounded-full bg-orange-400 px-7 py-3.5 text-base font-semibold !text-slate-950 transition hover:bg-orange-300" href="/demo">
+              <Link
+                className="inline-flex items-center justify-center rounded-full bg-orange-400 px-7 py-3.5 text-base font-semibold !text-slate-950 transition hover:bg-orange-300"
+                href="/demo"
+              >
                 Schedule a Demo
               </Link>
-              <Link className="inline-flex items-center justify-center rounded-full border border-white/18 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-white/10" href="/login">
+              <Link
+                className="inline-flex items-center justify-center rounded-full border border-white/20 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-white/10"
+                href="/login"
+              >
                 Sign In
               </Link>
             </div>
           </div>
 
-          <SurfaceCard dark className="bg-white/5 p-4">
-            <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/5 p-2">
-              <img alt="SwiftDispatch mobile workflow preview" className="rounded-[1.2rem] object-cover" src="/images/landing-mobile.jpg" />
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <div className="overflow-hidden rounded-lg border border-white/10">
+              <img
+                alt="SwiftDispatch mobile workflow preview"
+                className="object-cover"
+                src="/images/landing-mobile.jpg"
+              />
             </div>
             <div className="mt-4 flex items-center gap-3 text-sm text-slate-300">
-              <ClipboardList className="h-4 w-4 text-teal-300" />
+              <ClipboardList className="h-4 w-4 shrink-0 text-teal-300" />
               Built for small HVAC teams that need cleaner dispatch, field coordination, and quote follow-through.
             </div>
-          </SurfaceCard>
+          </div>
         </div>
       </section>
     </main>

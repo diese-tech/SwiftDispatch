@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
-import { SectionEyebrow, SectionHeading, SurfaceCard, StatusPill } from "@/components/DesignSystem";
+import { SectionEyebrow, SectionHeading } from "@/components/DesignSystem";
 import Reveal from "@/components/Reveal";
 
 export const metadata: Metadata = {
@@ -96,53 +96,52 @@ export default function PricingPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             {plans.map((plan, index) => (
               <Reveal key={plan.name} delay={index * 90}>
-                <SurfaceCard
-                  accent
-                  className={
+                <div
+                  className={[
+                    "relative flex h-full flex-col rounded-xl border p-6",
                     plan.featured
-                      ? "flex h-full flex-col bg-[linear-gradient(180deg,#0d6f67_0%,#0b5f58_100%)] text-white"
-                      : "flex h-full flex-col"
-                  }
+                      ? "border-teal-800 bg-[linear-gradient(180deg,#0d6f67_0%,#0b5f58_100%)] text-white shadow-[0_8px_32px_rgba(13,111,103,0.28)]"
+                      : "border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]",
+                  ].join(" ")}
                 >
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold">{plan.name}</h2>
-                    {plan.featured ? <StatusPill tone="warm">Most popular</StatusPill> : null}
+                  {plan.featured ? (
+                    <span className="absolute right-4 top-4 rounded border border-orange-400/40 bg-orange-400/20 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-orange-200">
+                      Most popular
+                    </span>
+                  ) : null}
+                  <h2 className="text-xl font-semibold tracking-tight">{plan.name}</h2>
+                  <div className="mt-5">
+                    <span className="text-4xl font-semibold tracking-tight">{plan.price}</span>
+                    <span className={`ml-2 text-sm ${plan.featured ? "text-teal-100" : "text-slate-500"}`}>/ month</span>
                   </div>
-                  <div className="mt-6">
-                    <span className="text-5xl font-semibold tracking-tight">{plan.price}</span>
-                    <span className={plan.featured ? "ml-2 text-sm text-teal-50" : "ml-2 text-sm text-slate-500"}> / month</span>
-                  </div>
-                  <p className={plan.featured ? "mt-2 text-sm font-medium text-teal-100" : "mt-2 text-sm font-medium text-slate-500"}>
+                  <p className={`mt-2 text-sm font-medium ${plan.featured ? "text-teal-100" : "text-slate-500"}`}>
                     {plan.detail}
                   </p>
-                  <p className={plan.featured ? "mt-4 text-sm leading-7 text-teal-50" : "mt-4 text-sm leading-7 text-slate-600"}>
+                  <p className={`mt-3 text-sm leading-7 ${plan.featured ? "text-teal-50" : "text-slate-600"}`}>
                     {plan.description}
                   </p>
-                  <ul className="mt-8 flex-1 space-y-3">
+                  <ul className="mt-7 flex-1 space-y-3">
                     {plan.features.map((feature) => (
                       <li className="flex items-start gap-3 text-sm" key={feature}>
                         <CheckCircle2
-                          className={
-                            plan.featured
-                              ? "mt-0.5 h-4 w-4 shrink-0 text-white"
-                              : "mt-0.5 h-4 w-4 shrink-0 text-teal-700"
-                          }
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${plan.featured ? "text-teal-200" : "text-teal-700"}`}
                         />
                         <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
                   <Link
-                    className={
+                    className={[
+                      "mt-8 inline-flex w-full items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition",
                       plan.featured
-                        ? "mt-8 inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold !text-teal-800 transition hover:bg-slate-100"
-                        : "mt-8 inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold !text-slate-900 transition hover:bg-slate-50"
-                    }
+                        ? "bg-white !text-teal-800 hover:bg-slate-100"
+                        : "border border-slate-300 bg-white !text-slate-900 hover:bg-slate-50",
+                    ].join(" ")}
                     href="/demo"
                   >
                     Talk to Sales
                   </Link>
-                </SurfaceCard>
+                </div>
               </Reveal>
             ))}
           </div>
@@ -152,7 +151,7 @@ export default function PricingPage() {
       <section className="px-6 pb-24">
         <div className="mx-auto max-w-3xl">
           <SectionEyebrow>FAQ</SectionEyebrow>
-          <SectionHeading title="Common questions" description="" />
+          <SectionHeading title="Common questions" />
           <div className="mt-10 divide-y divide-slate-200">
             {faqs.map(({ question, answer }) => (
               <Reveal key={question}>
@@ -167,16 +166,19 @@ export default function PricingPage() {
       </section>
 
       <section className="px-6 pb-24">
-        <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.6rem] bg-[linear-gradient(135deg,#0b2235_0%,#102f47_58%,#081b2a_100%)] px-8 py-12 text-white shadow-[var(--shadow-lg)] lg:px-12">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#0b2235_0%,#102f47_58%,#081b2a_100%)] px-8 py-12 text-white shadow-[0_28px_80px_rgba(8,26,40,0.14)] lg:px-12">
           <SectionEyebrow inverse>Not sure which plan fits?</SectionEyebrow>
-          <h2 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight">
+          <h2 className="mt-4 max-w-2xl text-4xl font-semibold tracking-[-0.025em]">
             Talk to us before you commit. We will tell you if the Starter plan is enough.
           </h2>
           <p className="mt-4 max-w-xl text-lg leading-8 text-slate-300">
             Most teams start on Growth and never need to think about it again. But we would rather you be on the right plan than the most expensive one.
           </p>
           <div className="mt-8">
-            <Link className="inline-flex items-center justify-center rounded-full bg-orange-400 px-7 py-3.5 text-base font-semibold !text-slate-950 transition hover:bg-orange-300" href="/demo">
+            <Link
+              className="inline-flex items-center justify-center rounded-full bg-orange-400 px-7 py-3.5 text-base font-semibold !text-slate-950 transition hover:bg-orange-300"
+              href="/demo"
+            >
               Book a Demo
             </Link>
           </div>

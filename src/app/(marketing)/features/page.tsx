@@ -11,7 +11,7 @@ import {
   Smartphone,
   Users,
 } from "lucide-react";
-import { SectionEyebrow, SectionHeading, SurfaceCard, StatusPill } from "@/components/DesignSystem";
+import { SectionEyebrow, SectionHeading } from "@/components/DesignSystem";
 import Reveal from "@/components/Reveal";
 
 export const metadata: Metadata = {
@@ -138,10 +138,16 @@ export default function FeaturesPage() {
             description="SwiftDispatch is built around the real workflow of a 3 to 15 technician HVAC team — intake, dispatch, field updates, quotes, and closeout in one operating flow."
           />
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-            <Link className="inline-flex items-center justify-center rounded-full bg-teal-700 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-teal-800" href="/demo">
+            <Link
+              className="inline-flex items-center justify-center rounded-full bg-teal-700 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-teal-800"
+              href="/demo"
+            >
               Request a Demo
             </Link>
-            <Link className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 transition hover:bg-slate-50" href="/pricing">
+            <Link
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 transition hover:bg-slate-50"
+              href="/pricing"
+            >
               View pricing
             </Link>
           </div>
@@ -150,16 +156,18 @@ export default function FeaturesPage() {
 
       <section className="px-6 pb-24">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-8">
+          <div className="grid gap-6">
             {pillars.map(({ icon: Icon, title, tagline, description, details }, index) => (
               <Reveal key={title} delay={index * 60}>
-                <SurfaceCard accent className="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
+                <div className="grid gap-8 rounded-xl border border-slate-200 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] lg:grid-cols-[1fr_1.4fr]">
                   <div>
-                    <div className="mb-5 inline-flex rounded-2xl bg-teal-50 p-3 text-teal-700">
-                      <Icon className="h-6 w-6" />
+                    <div className="mb-4 inline-flex rounded-lg bg-teal-50 p-2.5 text-teal-700">
+                      <Icon className="h-5 w-5" />
                     </div>
-                    <StatusPill tone="neutral">{tagline}</StatusPill>
-                    <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950">{title}</h2>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">
+                      {tagline}
+                    </span>
+                    <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-950">{title}</h2>
                     <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
                   </div>
                   <ul className="space-y-3 self-center">
@@ -170,7 +178,7 @@ export default function FeaturesPage() {
                       </li>
                     ))}
                   </ul>
-                </SurfaceCard>
+                </div>
               </Reveal>
             ))}
           </div>
@@ -178,19 +186,25 @@ export default function FeaturesPage() {
       </section>
 
       <section className="px-6 pb-24">
-        <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.6rem] bg-[linear-gradient(135deg,#0b2235_0%,#102f47_58%,#081b2a_100%)] px-8 py-12 text-white shadow-[var(--shadow-lg)] lg:px-12">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#0b2235_0%,#102f47_58%,#081b2a_100%)] px-8 py-12 text-white shadow-[0_28px_80px_rgba(8,26,40,0.14)] lg:px-12">
           <SectionEyebrow inverse>Ready to see it in action?</SectionEyebrow>
-          <h2 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight">
+          <h2 className="mt-4 max-w-2xl text-4xl font-semibold tracking-[-0.025em]">
             A 30-minute walkthrough is worth more than any feature list.
           </h2>
           <p className="mt-4 max-w-xl text-lg leading-8 text-slate-300">
             Book a demo and we will walk through the exact workflow for your team size and current dispatch setup.
           </p>
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-            <Link className="inline-flex items-center justify-center rounded-full bg-orange-400 px-7 py-3.5 text-base font-semibold !text-slate-950 transition hover:bg-orange-300" href="/demo">
+            <Link
+              className="inline-flex items-center justify-center rounded-full bg-orange-400 px-7 py-3.5 text-base font-semibold !text-slate-950 transition hover:bg-orange-300"
+              href="/demo"
+            >
               Book a Demo
             </Link>
-            <Link className="inline-flex items-center justify-center rounded-full border border-white/18 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-white/10" href="/pricing">
+            <Link
+              className="inline-flex items-center justify-center rounded-full border border-white/20 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-white/10"
+              href="/pricing"
+            >
               See pricing
             </Link>
           </div>
