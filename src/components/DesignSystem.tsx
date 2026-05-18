@@ -7,8 +7,8 @@ export function SectionEyebrow({ children, inverse = false }: { children: ReactN
     <p
       className={
         inverse
-          ? "text-sm font-semibold uppercase tracking-[0.24em] text-teal-300"
-          : "text-sm font-semibold uppercase tracking-[0.24em] text-teal-700"
+          ? "font-mono text-[11px] uppercase tracking-[0.06em] text-teal-300"
+          : "font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700"
       }
     >
       {children}
@@ -33,7 +33,7 @@ export function SectionHeading({
 
   return (
     <div className={alignClass === "text-center mx-auto" ? `${alignClass} max-w-3xl` : "max-w-3xl"}>
-      <h2 className={`mt-4 text-4xl font-semibold tracking-tight sm:text-5xl ${titleClass}`}>
+      <h2 className={`mt-4 text-4xl font-semibold tracking-[-0.025em] sm:text-5xl ${titleClass}`}>
         {title}
       </h2>
       {description ? (
