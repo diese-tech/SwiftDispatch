@@ -2,7 +2,7 @@
 
 **Dispatch software built for HVAC teams — not spreadsheets.**
 
-**Live app:** https://swift-dispatch-xi.vercel.app
+**Live app:** https://swiftdispatch.app
 
 ---
 
