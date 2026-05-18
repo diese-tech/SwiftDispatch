@@ -24,7 +24,7 @@ const LEGACY_STATUS_MAP: Record<string, JobStatus> = {
   Completed: "completed",
 };
 
-const STATUS_LABELS: Record<JobStatus, string> = {
+const STATUS_LABELS: Record<string, string> = {
   new: "New",
   assigned: "Assigned",
   en_route: "En Route",
@@ -33,10 +33,6 @@ const STATUS_LABELS: Record<JobStatus, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
   no_access: "No Access",
-  New: "New",
-  Assigned: "Assigned",
-  "En Route": "En Route",
-  Completed: "Completed",
 };
 
 function normalizeStatus(status: string): JobStatus {

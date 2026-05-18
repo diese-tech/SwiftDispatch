@@ -22,11 +22,15 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
   no_access: "No access",
-  New: "New",
-  Assigned: "Assigned",
-  "En Route": "En route",
-  Completed: "Completed",
 };
+
+function jobAge(createdAt: string): { label: string; tone: "neutral" | "amber" | "red" } {
+  const mins = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
+  const hours = Math.floor(mins / 60);
+  const label = hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`;
+  const tone = hours >= 8 ? "red" : hours >= 4 ? "amber" : "neutral";
+  return { label, tone };
+}
 
 function getStatusTone(status: string): "neutral" | "blue" | "amber" | "red" | "green" | "violet" {
   if (status === "assigned") return "blue";
@@ -51,6 +55,7 @@ export default function JobCard({ job, readOnly = false, technicians }: Props) {
 
   const isEmergency = /emergency|urgent/i.test(job.issue);
   const normalizedStatus = job.status;
+  const age = jobAge(job.created_at);
 
   return (
     <article
@@ -74,8 +79,8 @@ export default function JobCard({ job, readOnly = false, technicians }: Props) {
           <StatusDot tone={getStatusTone(normalizedStatus)}>
             {STATUS_LABELS[normalizedStatus] ?? normalizedStatus}
           </StatusDot>
-          <span className="font-mono text-[10px] text-[var(--c-text-4)]">
-            {job.id.slice(0, 6)}
+          <span className={`font-mono text-[10px] ${age.tone === "red" ? "text-[var(--c-red)]" : age.tone === "amber" ? "text-[var(--c-amber)]" : "text-[var(--c-text-4)]"}`}>
+            {age.label}
           </span>
         </div>
 

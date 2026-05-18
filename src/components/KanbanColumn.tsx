@@ -22,10 +22,6 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
   no_access: "No access",
-  New: "New",
-  Assigned: "Assigned",
-  "En Route": "En route",
-  Completed: "Completed",
 };
 
 function getStatusTone(status: string): "neutral" | "blue" | "amber" | "red" | "green" | "violet" {
