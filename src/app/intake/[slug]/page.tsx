@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { SectionEyebrow, SurfaceCard } from '@/components/DesignSystem'
+import { SectionEyebrow } from '@/components/DesignSystem'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import IntakeForm from './IntakeForm'
 
@@ -32,11 +32,11 @@ export default async function IntakePage({
   return (
     <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        <section className="overflow-hidden rounded-[2.2rem] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(11,34,53,0.98)_0%,rgba(17,45,65,0.98)_56%,rgba(11,34,53,0.94)_100%)] px-6 py-8 text-white shadow-[var(--shadow-md)] sm:px-8 sm:py-10">
+        <section className="overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(135deg,#0b2235_0%,#102f47_58%,#081b2a_100%)] px-6 py-8 shadow-[var(--shadow-md)] sm:px-8 sm:py-10">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] lg:items-center">
             <div className="max-w-3xl">
               <SectionEyebrow inverse>{typedCompany.name}</SectionEyebrow>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
+              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
                 Request HVAC service without the back-and-forth.
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
@@ -45,33 +45,17 @@ export default async function IntakePage({
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-              <SurfaceCard dark accent className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300">
-                  Step 1
-                </p>
-                <p className="mt-3 text-lg font-semibold text-white">Share the issue</p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Give the team the problem, property address, and best callback number.
-                </p>
-              </SurfaceCard>
-              <SurfaceCard dark className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300">
-                  Step 2
-                </p>
-                <p className="mt-3 text-lg font-semibold text-white">Get routed fast</p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Your urgency selection helps dispatch triage emergencies versus scheduled work.
-                </p>
-              </SurfaceCard>
-              <SurfaceCard dark className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300">
-                  Step 3
-                </p>
-                <p className="mt-3 text-lg font-semibold text-white">Track the request</p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Once submitted, you get a reference number and a status tracking link.
-                </p>
-              </SurfaceCard>
+              {[
+                { step: "Step 1", title: "Share the issue", body: "Give the team the problem, property address, and best callback number." },
+                { step: "Step 2", title: "Get routed fast", body: "Your urgency selection helps dispatch triage emergencies versus scheduled work." },
+                { step: "Step 3", title: "Track the request", body: "Once submitted, you get a reference number and a status tracking link." },
+              ].map(({ step, title, body }) => (
+                <div key={step} className="rounded-xl border border-white/10 bg-white/5 p-5">
+                  <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-teal-300">{step}</p>
+                  <p className="mt-2 text-base font-semibold text-white">{title}</p>
+                  <p className="mt-1.5 text-sm leading-6 text-slate-300">{body}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -79,38 +63,38 @@ export default async function IntakePage({
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.72fr)]">
           <IntakeForm company={typedCompany} />
 
-          <div className="space-y-6">
-            <SurfaceCard accent className="p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-slate-400">
                 Before you submit
               </p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+              <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-950">
                 The details that help the office move quickly
               </h2>
-              <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-600">
-                <li className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+              <ul className="mt-5 space-y-2.5 text-sm leading-6 text-slate-600">
+                <li className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   Include the clearest callback number in case dispatch needs a gate code, unit number, or arrival note.
                 </li>
-                <li className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                <li className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   Describe symptoms plainly: no cool air, unusual noise, thermostat issue, leak, or no power.
                 </li>
-                <li className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                <li className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   Mark emergency only for urgent comfort or safety issues that truly need immediate routing.
                 </li>
               </ul>
-            </SurfaceCard>
+            </div>
 
-            <SurfaceCard className="p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-slate-400">
                 What happens next
               </p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+              <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-950">
                 A cleaner handoff into dispatch
               </h2>
               <p className="mt-3 text-sm leading-7 text-slate-600">
                 Your request is turned into a structured job for the office team. They can route the call, assign a technician, and follow status without re-entering the same customer details by hand.
               </p>
-            </SurfaceCard>
+            </div>
           </div>
         </div>
       </div>

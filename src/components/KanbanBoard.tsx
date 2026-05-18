@@ -42,10 +42,11 @@ type Props = {
   companyId: string;
   initialJobs: JobWithTechnician[];
   readOnly?: boolean;
+  smsFailedJobIds?: string[];
   technicians: Technician[];
 };
 
-export default function KanbanBoard({ companyId, initialJobs, readOnly = false, technicians }: Props) {
+export default function KanbanBoard({ companyId, initialJobs, readOnly = false, smsFailedJobIds = [], technicians }: Props) {
   const [jobs, setJobs] = useState(
     initialJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })),
   );
@@ -277,13 +278,13 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
                 </button>
               ))}
             </div>
-            <KanbanColumn jobs={mobileJobs} readOnly={readOnly} status={mobileStatus} technicians={technicians} compact />
+            <KanbanColumn jobs={mobileJobs} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={mobileStatus} technicians={technicians} compact />
           </div>
         </div>
 
         {/* Desktop: full board */}
         <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
-          {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} readOnly={readOnly} status={status} technicians={technicians} />)}
+          {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={status} technicians={technicians} />)}
         </div>
       </DndContext>
     </div>

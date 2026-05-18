@@ -23,15 +23,17 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   }
 
   const supabase = impersonating ? createSupabaseAdminClient() : await createSupabaseServerClient();
-  const [{ data: jobs }, { data: technicians }, companyRes] = await Promise.all([
+  const [{ data: jobs }, { data: technicians }, companyRes, { data: failedSms }] = await Promise.all([
     supabase.from("jobs").select("*, technicians!jobs_technician_id_fkey(id,name,phone)").eq("company_id", companyId).not("status", "in", '("completed","cancelled")').order("created_at", { ascending: false }),
     supabase.from("technicians").select("id,name,phone").eq("company_id", companyId),
     impersonating ? supabase.from("companies").select("name").eq("id", companyId).single() : Promise.resolve({ data: null }),
+    supabase.from("sms_outbox").select("job_id").eq("company_id", companyId).eq("status", "failed"),
   ]);
 
   const activeJobs = (jobs ?? []) as JobWithTechnician[];
   const techList = (technicians ?? []) as Technician[];
   const companyName = (companyRes as { data: { name: string } | null }).data?.name ?? companyId;
+  const smsFailedJobIds = (failedSms ?? []).map((r: { job_id: string | null }) => r.job_id).filter(Boolean) as string[];
 
   return (
     <div className="pb-4">
@@ -70,7 +72,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
 
-      <KanbanBoard companyId={companyId} initialJobs={activeJobs} readOnly={impersonating} technicians={techList} />
+      <KanbanBoard companyId={companyId} initialJobs={activeJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} />
     </div>
   );
 }

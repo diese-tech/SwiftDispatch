@@ -9,6 +9,7 @@ type Props = {
   status: JobStatus;
   jobs: JobWithTechnician[];
   readOnly?: boolean;
+  smsFailedJobIds?: string[];
   technicians: Technician[];
   compact?: boolean;
 };
@@ -37,6 +38,7 @@ export default function KanbanColumn({
   status,
   jobs,
   readOnly = false,
+  smsFailedJobIds = [],
   technicians,
   compact = false,
 }: Props) {
@@ -63,6 +65,7 @@ export default function KanbanColumn({
       <div className={compact ? "space-y-2 p-2" : "space-y-2 p-2"}>
         {jobs.map((job) => (
           <JobCard
+            hasSmsFailure={smsFailedJobIds.includes(job.id)}
             job={job}
             key={job.id}
             readOnly={readOnly}
