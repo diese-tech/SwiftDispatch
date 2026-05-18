@@ -5,8 +5,8 @@ type QuoteApprovalPayload = {
 };
 
 function getSecret(): string {
-  const secret = process.env.TECH_TOKEN_SECRET?.trim();
-  if (!secret) throw new Error("TECH_TOKEN_SECRET is not set");
+  const secret = (process.env.QUOTE_TOKEN_SECRET ?? process.env.TECH_TOKEN_SECRET)?.trim();
+  if (!secret) throw new Error("QUOTE_TOKEN_SECRET is not set");
   return secret;
 }
 
