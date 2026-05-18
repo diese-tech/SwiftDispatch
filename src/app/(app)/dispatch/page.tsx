@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppPageIntro, MetricTile, StatusPill } from "@/components/DesignSystem";
 import KanbanBoard from "@/components/KanbanBoard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth";
@@ -25,41 +23,56 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   }
 
   const supabase = impersonating ? createSupabaseAdminClient() : await createSupabaseServerClient();
-  const [{ data: jobs }, { data: technicians }, companyRes] = await Promise.all([
+  const [{ data: jobs }, { data: technicians }, companyRes, { data: failedSms }] = await Promise.all([
     supabase.from("jobs").select("*, technicians!jobs_technician_id_fkey(id,name,phone)").eq("company_id", companyId).not("status", "in", '("completed","cancelled")').order("created_at", { ascending: false }),
     supabase.from("technicians").select("id,name,phone").eq("company_id", companyId),
     impersonating ? supabase.from("companies").select("name").eq("id", companyId).single() : Promise.resolve({ data: null }),
+    supabase.from("sms_outbox").select("job_id").eq("company_id", companyId).eq("status", "failed"),
   ]);
 
   const activeJobs = (jobs ?? []) as JobWithTechnician[];
   const techList = (technicians ?? []) as Technician[];
   const companyName = (companyRes as { data: { name: string } | null }).data?.name ?? companyId;
+  const smsFailedJobIds = (failedSms ?? []).map((r: { job_id: string | null }) => r.job_id).filter(Boolean) as string[];
 
   return (
     <div className="pb-4">
-      <AppPageIntro
-        eyebrow="Dispatch workspace"
-        title="Dispatch Board"
-        description={impersonating ? `Viewing ${companyName} in read-only platform context.` : "Coordinate the live board, assign technicians fast, and keep the office and field moving from one view."}
-        actions={
-          <>
-            {impersonating ? <StatusPill tone="warm">Platform view</StatusPill> : null}
-            {!impersonating ? (
-              <a className="inline-flex items-center rounded-full bg-orange-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-300" href="/dispatch/jobs/new">+ New Job</a>
-            ) : (
-              <Link className="inline-flex items-center rounded-full border border-white/14 bg-white/8 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/12" href="/superadmin">Back to platform</Link>
-            )}
-          </>
-        }
-      />
-
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <MetricTile label="Active jobs" value={activeJobs.length} detail="Everything currently visible on the board" />
-        <MetricTile label="Technicians" value={techList.length} detail="Available crew records in this workspace" />
-        <MetricTile label="Context" value={impersonating ? companyName : "Live company"} detail={impersonating ? "Platform-side read-only view" : "Direct operational view"} />
+      {/* Page header */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">
+            {impersonating ? `Platform view · ${companyName}` : "Dispatch workspace"}
+          </p>
+          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-950">
+            Dispatch Board
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="rounded border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] text-slate-500">
+            {activeJobs.length} active
+          </span>
+          <span className="rounded border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] text-slate-500">
+            {techList.length} techs
+          </span>
+          {impersonating ? (
+            <a
+              className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              href="/superadmin"
+            >
+              Back to platform
+            </a>
+          ) : (
+            <a
+              className="inline-flex items-center rounded-full bg-orange-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-orange-300"
+              href="/dispatch/jobs/new"
+            >
+              + New Job
+            </a>
+          )}
+        </div>
       </div>
 
-      <KanbanBoard companyId={companyId} initialJobs={activeJobs} readOnly={impersonating} technicians={techList} />
+      <KanbanBoard companyId={companyId} initialJobs={activeJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} />
     </div>
   );
 }

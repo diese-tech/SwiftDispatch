@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Send, Trash2 } from "lucide-react";
-import { StatusPill, SurfaceCard } from "@/components/DesignSystem";
+import { StatusDot } from "@/components/DesignSystem";
 import { money } from "@/lib/format";
 import type { QuoteLineItem, QuoteWithLineItems } from "@/types/db";
 
@@ -99,41 +99,48 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
   }
 
   return (
-    <SurfaceCard accent className="p-5 sm:p-6">
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Quote workspace</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Create quote</h2>
-        </div>
-        <div className="text-right">
-          <p className="text-2xl font-semibold text-slate-950">{money(total)}</p>
-          <p className="mt-1 text-xs text-slate-500">{savingIds.size ? "Saving..." : "Saved to Supabase"}</p>
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+      <div className="border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">Quote workspace</p>
+            <h2 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-950">Create quote</h2>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-semibold text-slate-950">{money(total)}</p>
+            <p className="mt-0.5 font-mono text-[10px] text-slate-400">{savingIds.size ? "Saving…" : "Saved"}</p>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="px-5 py-4 space-y-2">
         {items.map((item) => (
-          <div className="grid grid-cols-1 gap-2 rounded-[1.4rem] border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[1fr_92px_76px_40px]" key={item.id}>
-            <input className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100" placeholder="Line item" value={item.name} onChange={(event) => updateItem(item.id, { name: event.target.value })} />
-            <input className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100" min="0" step="0.01" type="number" value={item.price} onChange={(event) => updateItem(item.id, { price: Number(event.target.value) })} />
-            <input className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100" min="1" type="number" value={item.quantity} onChange={(event) => updateItem(item.id, { quantity: Number(event.target.value) })} />
-            <button aria-label="Remove line item" className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600" onClick={() => deleteItem(item.id)} type="button"><Trash2 size={16} /></button>
+          <div className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[1fr_92px_76px_40px]" key={item.id}>
+            <input className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#1f6feb] focus:ring-2 focus:ring-[#eaf2ff]" placeholder="Line item" value={item.name} onChange={(event) => updateItem(item.id, { name: event.target.value })} />
+            <input className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#1f6feb] focus:ring-2 focus:ring-[#eaf2ff]" min="0" step="0.01" type="number" value={item.price} onChange={(event) => updateItem(item.id, { price: Number(event.target.value) })} />
+            <input className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#1f6feb] focus:ring-2 focus:ring-[#eaf2ff]" min="1" type="number" value={item.quantity} onChange={(event) => updateItem(item.id, { quantity: Number(event.target.value) })} />
+            <button aria-label="Remove line item" className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-red-50 hover:border-red-200 hover:text-red-600" onClick={() => deleteItem(item.id)} type="button"><Trash2 size={16} /></button>
           </div>
         ))}
-      </div>
 
-      <button className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50" onClick={addLineItem} type="button">
-        <Plus size={16} /> Add line
-      </button>
-
-      <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-        <button className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-orange-400 px-4 py-3 text-base font-semibold !text-slate-950 disabled:opacity-60" disabled={sending || !quoteId || !items.length || total <= 0} onClick={sendSms} type="button">
-          <Send size={16} /> {sending ? "Sending..." : "Send SMS"}
+        <button className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50" onClick={addLineItem} type="button">
+          <Plus size={14} /> Add line
         </button>
-        {quoteId ? <a className="text-sm font-semibold text-teal-700" href={`/quote/${quoteId}`} target="_blank">View quote</a> : null}
       </div>
 
-      {message ? <div className="mt-4"><StatusPill tone={message === "SMS sent." ? "success" : "danger"}>{message}</StatusPill></div> : null}
-    </SurfaceCard>
+      <div className="border-t border-slate-100 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <button className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-orange-400 px-4 py-2.5 text-sm font-semibold !text-slate-950 disabled:opacity-60 transition hover:bg-orange-300" disabled={sending || !quoteId || !items.length || total <= 0} onClick={sendSms} type="button">
+            <Send size={14} /> {sending ? "Sending…" : "Send SMS"}
+          </button>
+          {quoteId ? <a className="text-sm font-semibold text-teal-700 hover:underline" href={`/quote/${quoteId}`} rel="noopener noreferrer" target="_blank">Preview</a> : null}
+        </div>
+        {message ? (
+          <div className="mt-3">
+            <StatusDot tone={message === "SMS sent." ? "green" : "red"}>{message}</StatusDot>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }

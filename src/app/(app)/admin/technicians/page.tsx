@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AppPageIntro, StatusPill, SurfaceCard } from "@/components/DesignSystem";
 
 type Technician = {
   id: string;
@@ -16,7 +15,13 @@ type Technician = {
 
 type Credentials = { handle: string; pin: string; portalUrl: string } | null;
 
-const fieldClass = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100";
+const fieldClass = "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-[#1f6feb] focus:ring-2 focus:ring-[#eaf2ff]";
+
+const statusBadgeCls = (s: string | null) => {
+  if (s === "available") return "border-green-200 bg-green-50 text-green-700";
+  if (s === "on_job") return "border-orange-200 bg-orange-50 text-orange-700";
+  return "border-slate-200 bg-slate-50 text-slate-500";
+};
 
 export default function TechniciansPage() {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
@@ -42,9 +47,7 @@ export default function TechniciansPage() {
     }
   }
 
-  useEffect(() => {
-    loadTechnicians();
-  }, []);
+  useEffect(() => { loadTechnicians(); }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -57,10 +60,7 @@ export default function TechniciansPage() {
     });
     const data = await res.json();
     setSubmitting(false);
-    if (!res.ok) {
-      setError(data.error ?? "Failed");
-      return;
-    }
+    if (!res.ok) { setError(data.error ?? "Failed"); return; }
     setCredentials(data);
     setForm({ firstName: "", lastName: "", phone: "", preferredLast: "" });
     await loadTechnicians();
@@ -72,120 +72,131 @@ export default function TechniciansPage() {
     if (res.ok) setRegeneratedPin({ id: techId, pin: data.pin });
   }
 
-  const statusBadge = (s: string | null) => {
-    const tone = s === "available" ? "success" : s === "on_job" ? "warm" : "neutral";
-    return <StatusPill tone={tone}>{s ?? "offline"}</StatusPill>;
-  };
-
   return (
     <main>
-      <AppPageIntro
-        eyebrow="Technician management"
-        title="Manage field-team access and credentials from one place."
-        description="Create technician accounts, reveal one-time login credentials, and monitor field availability without leaving the admin workspace."
-        actions={<Link className="inline-flex items-center rounded-full border border-white/14 bg-white/8 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/12" href="/admin">Back to admin</Link>}
-      />
+      {/* Page header */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">Technician management</p>
+          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-950">Field team credentials</h1>
+        </div>
+        <Link
+          className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          href="/admin"
+        >
+          Back to admin
+        </Link>
+      </div>
 
+      {/* Credentials flash */}
       {credentials ? (
-        <SurfaceCard accent className="mb-6 border-teal-200 bg-teal-50 text-slate-900">
-          <p className="text-sm font-bold text-teal-800">Technician created. Save these credentials now. They are only shown once.</p>
-          <div className="mt-4 space-y-1 font-mono text-sm">
+        <div className="mb-5 rounded-xl border border-teal-200 bg-teal-50 px-5 py-4">
+          <p className="text-sm font-semibold text-teal-800">Technician created. Save these credentials now — they are only shown once.</p>
+          <div className="mt-3 space-y-1 font-mono text-sm text-slate-800">
             <p><strong>Username:</strong> {credentials.handle}</p>
             <p><strong>PIN:</strong> {credentials.pin}</p>
             <p><strong>Portal:</strong> {credentials.portalUrl}</p>
           </div>
-          <button className="mt-4 text-xs font-semibold text-teal-700 underline" onClick={() => setCredentials(null)} type="button">Dismiss</button>
-        </SurfaceCard>
+          <button className="mt-3 text-xs font-semibold text-teal-700 underline" onClick={() => setCredentials(null)} type="button">Dismiss</button>
+        </div>
       ) : null}
 
       {regeneratedPin ? (
-        <SurfaceCard accent className="mb-6 border-orange-200 bg-orange-50 text-slate-900">
-          <p className="text-sm font-bold text-orange-800">New PIN generated. Save it now. It is only shown once.</p>
-          <p className="mt-3 font-mono text-2xl font-semibold text-slate-950">{regeneratedPin.pin}</p>
-          <button className="mt-4 text-xs font-semibold text-orange-700 underline" onClick={() => setRegeneratedPin(null)} type="button">Dismiss</button>
-        </SurfaceCard>
+        <div className="mb-5 rounded-xl border border-orange-200 bg-orange-50 px-5 py-4">
+          <p className="text-sm font-semibold text-orange-800">New PIN generated. Save it now.</p>
+          <p className="mt-2 font-mono text-2xl font-semibold text-slate-950">{regeneratedPin.pin}</p>
+          <button className="mt-3 text-xs font-semibold text-orange-700 underline" onClick={() => setRegeneratedPin(null)} type="button">Dismiss</button>
+        </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <SurfaceCard accent>
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Add technician</h2>
-          <p className="mt-2 text-sm leading-7 text-slate-500">Create a technician record and generate field login credentials in one step.</p>
-          <form className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleCreate}>
+      <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+        {/* Add form */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <h2 className="text-lg font-semibold tracking-tight text-slate-950">Add technician</h2>
+          <p className="mt-1 text-sm text-slate-500">Create a field account and generate login credentials in one step.</p>
+          <form className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleCreate}>
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">First name *</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">First name *</label>
               <input className={fieldClass} required value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Last name *</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Last name *</label>
               <input className={fieldClass} required value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Phone *</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Phone *</label>
               <input className={fieldClass} required type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Custom login ID last name <span className="font-normal text-slate-400">(optional)</span></label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Custom login ID <span className="font-normal text-slate-400">(optional)</span></label>
               <input className={fieldClass} placeholder="e.g. Rivera" value={form.preferredLast} onChange={(e) => setForm((f) => ({ ...f, preferredLast: e.target.value }))} />
             </div>
             {error ? <p className="sm:col-span-2 text-sm text-red-600">{error}</p> : null}
             <div className="sm:col-span-2">
-              <button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60" disabled={submitting} type="submit">
-                {submitting ? "Creating..." : "Create technician"}
+              <button className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60" disabled={submitting} type="submit">
+                {submitting ? "Creating…" : "Create technician"}
               </button>
             </div>
           </form>
-        </SurfaceCard>
+        </div>
 
-        <SurfaceCard accent className="overflow-hidden p-0">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Technician roster</h2>
-            <p className="mt-2 text-sm text-slate-500">Field availability, handles, and credential actions in one table.</p>
+        {/* Roster table */}
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="border-b border-slate-100 px-6 py-4">
+            <h2 className="text-lg font-semibold tracking-tight text-slate-950">Technician roster</h2>
+            <p className="mt-0.5 text-sm text-slate-500">Field availability, handles, and credential actions.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50">
+              <thead className="border-b border-slate-100 bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Handle</th>
-                  <th className="px-4 py-3 text-left font-medium">Name</th>
-                  <th className="px-4 py-3 text-left font-medium">Phone</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Handle</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Phone</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={5}>Loading roster…</td></tr>
+                  <tr><td className="px-4 py-8 text-center text-slate-400" colSpan={5}>Loading…</td></tr>
                 ) : loadError ? (
                   <tr>
                     <td className="px-4 py-8 text-center" colSpan={5}>
-                      <p className="text-sm text-red-600">Failed to load technicians.</p>
+                      <p className="text-sm text-red-600">Failed to load.</p>
                       <button className="mt-2 text-xs font-semibold text-teal-700 underline" onClick={loadTechnicians} type="button">Retry</button>
                     </td>
                   </tr>
                 ) : technicians.length === 0 ? (
                   <tr>
                     <td className="px-4 py-8 text-center" colSpan={5}>
-                      <p className="text-sm text-slate-500">No technicians added yet.</p>
+                      <p className="text-sm text-slate-500">No technicians yet.</p>
                       <p className="mt-1 text-xs text-slate-400">Use the form to create the first field account.</p>
                     </td>
                   </tr>
                 ) : technicians.map((tech) => (
                   <tr key={tech.id}>
-                    <td className="px-4 py-3 font-mono text-slate-600">{tech.handle ?? "-"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-slate-600">{tech.handle ?? "—"}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">{tech.name}</td>
-                    <td className="px-4 py-3 text-slate-600">{tech.phone ?? "-"}</td>
-                    <td className="px-4 py-3">{statusBadge(tech.availability_status)}</td>
+                    <td className="px-4 py-3 text-slate-600">{tech.phone ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded border px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.06em] ${statusBadgeCls(tech.availability_status)}`}>
+                        {tech.availability_status ?? "offline"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       {tech.auth_user_id ? (
-                        <button className="text-xs font-semibold text-teal-700 hover:underline" onClick={() => handleRegenPin(tech.id)} type="button">Regenerate PIN</button>
-                      ) : <span className="text-xs text-slate-400">-</span>}
+                        <button className="text-xs font-semibold text-teal-700 hover:underline" onClick={() => handleRegenPin(tech.id)} type="button">
+                          Regen PIN
+                        </button>
+                      ) : <span className="text-xs text-slate-400">—</span>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </SurfaceCard>
+        </div>
       </div>
     </main>
   );

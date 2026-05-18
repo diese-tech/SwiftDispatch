@@ -17,3 +17,11 @@ export function generateQuoteApprovalToken(quoteId: string): string {
 export function verifyQuoteApprovalToken(token: string): QuoteApprovalPayload {
   return jwt.verify(token, getSecret()) as QuoteApprovalPayload;
 }
+
+export function decodeQuoteApprovalToken(token: string): QuoteApprovalPayload | null {
+  const decoded = jwt.decode(token);
+  if (decoded && typeof decoded === "object" && "quoteId" in decoded) {
+    return decoded as QuoteApprovalPayload;
+  }
+  return null;
+}

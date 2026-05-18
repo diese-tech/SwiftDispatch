@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import BrandMark from "@/components/BrandMark";
-import { StatusPill } from "@/components/DesignSystem";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type HeaderSection = "admin" | "superadmin" | "dispatch" | "dashboard";
@@ -38,7 +37,6 @@ function getNavItems(section: HeaderSection, role: string): NavItem[] {
     const items: NavItem[] = [
       { href: "/dashboard", label: "Dashboard" },
       { href: "/analytics", label: "Analytics" },
-      { href: "/roi", label: "ROI" },
       { href: dispatchHref, label: "Dispatch" },
     ];
     if (role === "admin") items.push({ href: "/admin", label: "Admin" });
@@ -47,7 +45,6 @@ function getNavItems(section: HeaderSection, role: string): NavItem[] {
   const items: NavItem[] = [
     { href: dispatchHref, label: "Dispatch" },
     { href: "/analytics", label: "Analytics" },
-    { href: "/roi", label: "ROI" },
   ];
   if (role === "admin") items.push({ href: "/admin", label: "Admin" });
   if (role === "super_admin") items.push({ href: "/superadmin", label: "Platform" });
@@ -78,8 +75,8 @@ export default function AppHeader({ section, user }: AppHeaderProps) {
             <BrandMark href={homeHref} inverse />
             <p className="mt-4 text-sm leading-6 text-slate-300">A calmer operating shell for dispatch, quoting, and team coordination.</p>
           </div>
-          <div className="flex flex-col items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/5 px-4 py-4 sm:min-w-[280px] sm:items-end">
-            <StatusPill tone="warm">{formattedRole}</StatusPill>
+          <div className="flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-4 sm:min-w-[280px] sm:items-end">
+            <span className="rounded border border-orange-400/30 bg-orange-400/15 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-orange-200">{formattedRole}</span>
             <div className="text-sm text-slate-200 sm:text-right">
               <p className="font-semibold text-white">{user.email}</p>
               <p className="mt-1 text-slate-300">Signed into the internal workspace</p>

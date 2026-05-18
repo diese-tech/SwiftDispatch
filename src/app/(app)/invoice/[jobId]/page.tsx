@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { AppPageIntro, SurfaceCard, StatusPill } from "@/components/DesignSystem";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -32,29 +31,30 @@ export default async function InvoicePage({ params }: { params: Promise<{ jobId:
         }
       `}</style>
       <main>
-        <AppPageIntro
-          eyebrow="Invoice"
-          title={companyData?.name ?? "SwiftDispatch"}
-          description={`Invoice ${invoiceNumber} for ${job.customer_name}`}
-          actions={
-            <>
-              <StatusPill tone={invoice?.status === "paid" ? "success" : "warm"}>{invoice?.status ?? "pending"}</StatusPill>
-              {invoice?.invoice_url ? (
-                <a
-                  className="inline-flex items-center rounded-full bg-orange-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-300"
-                  href={invoice.invoice_url}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  Open Payment Link
-                </a>
-              ) : null}
-            </>
-          }
-        />
+        <div className="mb-6 mx-auto max-w-4xl flex flex-wrap items-center justify-between gap-3 no-print">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">Invoice</p>
+            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-950">{invoiceNumber} · {job.customer_name}</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`rounded border px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.06em] ${invoice?.status === "paid" ? "border-green-200 bg-green-50 text-green-700" : "border-orange-200 bg-orange-50 text-orange-700"}`}>
+              {invoice?.status ?? "pending"}
+            </span>
+            {invoice?.invoice_url ? (
+              <a
+                className="inline-flex items-center rounded-full bg-orange-400 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-orange-300"
+                href={invoice.invoice_url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Open Payment Link
+              </a>
+            ) : null}
+          </div>
+        </div>
 
         <div className="mx-auto max-w-4xl">
-          <SurfaceCard accent className="p-8">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
             <div className="flex flex-col gap-6 border-b border-slate-200 pb-6 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="text-2xl font-bold text-teal-700">{companyData?.name ?? "SwiftDispatch"}</p>
@@ -124,7 +124,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ jobId:
             </div>
 
             {invoice?.invoice_url ? (
-              <div className="mt-6 rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-4 no-print">
+              <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 no-print">
                 <p className="text-sm font-semibold text-emerald-900">Online payment is available for this invoice.</p>
                 <p className="mt-2 text-sm text-emerald-800">Use the hosted Square payment page to collect card payment, including supported wallet methods on eligible devices.</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -161,7 +161,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ jobId:
                 Print Invoice
               </button>
             </div>
-          </SurfaceCard>
+          </div>
         </div>
       </main>
     </>

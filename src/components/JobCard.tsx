@@ -9,6 +9,7 @@ import type { JobWithTechnician, Technician } from "@/types/db";
 
 type Props = {
   job: JobWithTechnician;
+  hasSmsFailure?: boolean;
   readOnly?: boolean;
   technicians: Technician[];
 };
@@ -28,7 +29,7 @@ function jobAge(createdAt: string): { label: string; tone: "neutral" | "amber" |
   const mins = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
   const hours = Math.floor(mins / 60);
   const label = hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`;
-  const tone = hours >= 8 ? "red" : hours >= 4 ? "amber" : "neutral";
+  const tone = hours >= 2 ? "red" : mins >= 30 ? "amber" : "neutral";
   return { label, tone };
 }
 
@@ -41,7 +42,7 @@ function getStatusTone(status: string): "neutral" | "blue" | "amber" | "red" | "
   return "neutral";
 }
 
-export default function JobCard({ job, readOnly = false, technicians }: Props) {
+export default function JobCard({ job, hasSmsFailure = false, readOnly = false, technicians }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: job.id,
   });
@@ -79,9 +80,16 @@ export default function JobCard({ job, readOnly = false, technicians }: Props) {
           <StatusDot tone={getStatusTone(normalizedStatus)}>
             {STATUS_LABELS[normalizedStatus] ?? normalizedStatus}
           </StatusDot>
-          <span className={`font-mono text-[10px] ${age.tone === "red" ? "text-[var(--c-red)]" : age.tone === "amber" ? "text-[var(--c-amber)]" : "text-[var(--c-text-4)]"}`}>
-            {age.label}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {hasSmsFailure ? (
+              <span className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.06em] text-red-600">
+                SMS failed
+              </span>
+            ) : null}
+            <span className={`font-mono text-[10px] ${age.tone === "red" ? "text-[var(--c-red)]" : age.tone === "amber" ? "text-[var(--c-amber)]" : "text-[var(--c-text-4)]"}`}>
+              {age.label}
+            </span>
+          </div>
         </div>
 
         <Link

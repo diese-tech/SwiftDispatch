@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { StatusPill, SurfaceCard } from '@/components/DesignSystem'
+import { MessageSquare } from 'lucide-react'
 
 type Company = {
   id: string
@@ -18,7 +18,7 @@ type SuccessData = {
 
 function FieldError({ errors }: { errors?: string[] }) {
   if (!errors?.length) return null
-  return <p className="mt-2 text-xs font-medium text-red-600">{errors[0]}</p>
+  return <p className="mt-1.5 text-xs font-medium text-red-600">{errors[0]}</p>
 }
 
 export default function IntakeForm({ company }: { company: Company }) {
@@ -74,58 +74,53 @@ export default function IntakeForm({ company }: { company: Company }) {
   }
 
   const inputCls = (field: string) =>
-    `w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-4 ${
+    `w-full rounded-xl border bg-white px-4 py-2.5 text-sm outline-none transition focus:ring-2 ${
       fieldErrors[field]?.length
         ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-        : 'border-slate-200 focus:border-teal-500 focus:ring-teal-100'
+        : 'border-slate-200 focus:border-[#1f6feb] focus:ring-[#eaf2ff]'
     }`
 
   if (success) {
     const statusUrl = `${window.location.origin}/intake/status/${success.statusToken}`
     return (
-      <SurfaceCard accent className="p-8 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-2xl font-semibold text-emerald-700">
-          OK
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)] text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-teal-200 bg-teal-50">
+          <span className="font-mono text-sm font-semibold text-teal-700">OK</span>
         </div>
-        <StatusPill tone="success" >
+        <span className="mt-4 inline-block rounded border border-teal-200 bg-teal-50 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-teal-700">
           Request received
-        </StatusPill>
-        <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">You are on the board.</h2>
-        <p className="mt-3 text-sm leading-7 text-slate-600">
+        </span>
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">You are on the board.</h2>
+        <p className="mt-2 text-sm leading-7 text-slate-600">
           Your service request has been submitted. The office team can now route it cleanly, and someone will contact you shortly.
         </p>
-        <div className="mt-6 rounded-[1.5rem] border border-emerald-200 bg-emerald-50/70 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Reference number</p>
-          <p className="mt-3 text-3xl font-semibold tracking-[0.18em] text-slate-950">#{success.jobRef}</p>
+        <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50 p-5">
+          <p className="font-mono text-[10px] uppercase tracking-[0.06em] text-slate-500">Reference number</p>
+          <p className="mt-2 text-3xl font-semibold tracking-[0.1em] text-slate-950">#{success.jobRef}</p>
         </div>
         <a
           href={statusUrl}
-          className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+          className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
           Track my request
         </a>
-      </SurfaceCard>
+      </div>
     )
   }
 
   return (
-    <SurfaceCard accent className="p-6 sm:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-            Service request
-          </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-            Tell {company.name} what is going on
-          </h2>
-        </div>
-        <StatusPill tone="teal">Customer intake</StatusPill>
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+      <div className="border-b border-slate-100 px-6 py-5">
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-slate-400">Service request</p>
+        <h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
+          Tell {company.name} what is going on
+        </h2>
       </div>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-5">
+      <form onSubmit={onSubmit} className="px-6 py-5 space-y-5">
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <label htmlFor="name" className="mb-2 block text-sm font-medium text-slate-700">
+            <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-slate-700">
               Full name <span className="text-red-500">*</span>
             </label>
             <input
@@ -142,7 +137,7 @@ export default function IntakeForm({ company }: { company: Company }) {
           </div>
 
           <div>
-            <label htmlFor="phone" className="mb-2 block text-sm font-medium text-slate-700">
+            <label htmlFor="phone" className="mb-1.5 block text-sm font-medium text-slate-700">
               Phone number <span className="text-red-500">*</span>
             </label>
             <input
@@ -160,7 +155,7 @@ export default function IntakeForm({ company }: { company: Company }) {
         </div>
 
         <div>
-          <label htmlFor="address" className="mb-2 block text-sm font-medium text-slate-700">
+          <label htmlFor="address" className="mb-1.5 block text-sm font-medium text-slate-700">
             Service address <span className="text-red-500">*</span>
           </label>
           <input
@@ -177,7 +172,7 @@ export default function IntakeForm({ company }: { company: Company }) {
         </div>
 
         <div>
-          <label htmlFor="problemDescription" className="mb-2 block text-sm font-medium text-slate-700">
+          <label htmlFor="problemDescription" className="mb-1.5 block text-sm font-medium text-slate-700">
             Problem description <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -193,7 +188,7 @@ export default function IntakeForm({ company }: { company: Company }) {
         </div>
 
         <div>
-          <label htmlFor="urgency" className="mb-2 block text-sm font-medium text-slate-700">
+          <label htmlFor="urgency" className="mb-1.5 block text-sm font-medium text-slate-700">
             Urgency <span className="text-red-500">*</span>
           </label>
           <select
@@ -204,34 +199,43 @@ export default function IntakeForm({ company }: { company: Company }) {
             onChange={(e) => setUrgency(e.target.value)}
           >
             <option value="">Select urgency...</option>
-            <option value="emergency">Emergency - needs service immediately</option>
-            <option value="same_day">Same day - today if possible</option>
-            <option value="scheduled">Scheduled - next available appointment</option>
+            <option value="emergency">Emergency — needs service immediately</option>
+            <option value="same_day">Same day — today if possible</option>
+            <option value="scheduled">Scheduled — next available appointment</option>
           </select>
           <FieldError errors={fieldErrors.urgency} />
         </div>
 
-        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              required
-              className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 accent-teal-600"
-              checked={smsConsent}
-              onChange={(e) => setSmsConsent(e.target.checked)}
-            />
-            <span className="text-sm leading-6 text-slate-600">
-              I agree to receive text message updates about my service request from <strong>{company.name}</strong>.{' '}
-              <a href="/privacy" className="font-medium text-teal-700 underline-offset-4 hover:underline">
-                See the privacy policy.
-              </a>
-            </span>
-          </label>
-          <FieldError errors={fieldErrors.smsConsent} />
+        {/* SMS consent — explicit block above submit */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex items-start gap-3">
+            <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-slate-800">Text message updates</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                {company.name} may send you SMS updates about this job — dispatch confirmation, tech arrival, and quote notification. Message and data rates may apply. Reply STOP at any time to opt out.{' '}
+                <a href="/privacy" className="font-medium text-teal-700 underline-offset-4 hover:underline">
+                  Privacy policy
+                </a>
+              </p>
+              <label className="mt-3 flex cursor-pointer items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-teal-600 accent-teal-600"
+                  checked={smsConsent}
+                  onChange={(e) => setSmsConsent(e.target.checked)}
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  Yes, send me SMS updates for this request
+                </span>
+              </label>
+              <FieldError errors={fieldErrors.smsConsent} />
+            </div>
+          </div>
         </div>
 
         {submitError ? (
-          <p className="rounded-2xl border border-red-200/70 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {submitError}
           </p>
         ) : null}
@@ -244,6 +248,6 @@ export default function IntakeForm({ company }: { company: Company }) {
           {loading ? 'Submitting...' : 'Submit service request'}
         </button>
       </form>
-    </SurfaceCard>
+    </div>
   )
 }

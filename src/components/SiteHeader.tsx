@@ -2,10 +2,10 @@ import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
 
 const navItems = [
-  { href: "/#features", label: "Features" },
-  { href: "/#product", label: "Product" },
-  { href: "/#workflow", label: "How It Works" },
-  { href: "/#pricing", label: "Pricing" },
+  { href: "/product", label: "Product" },
+  { href: "/how-it-works", label: "How It Works" },
+  { href: "/features", label: "Features" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/demo", label: "Demo" },
 ];
 
