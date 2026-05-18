@@ -59,7 +59,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
         <MetricTile label="Context" value={impersonating ? companyName : "Live company"} detail={impersonating ? "Platform-side read-only view" : "Direct operational view"} />
       </div>
 
-      <KanbanBoard initialJobs={activeJobs} readOnly={impersonating} technicians={techList} />
+      <KanbanBoard companyId={companyId} initialJobs={activeJobs} readOnly={impersonating} technicians={techList} />
     </div>
   );
 }

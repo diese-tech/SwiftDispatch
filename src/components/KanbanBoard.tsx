@@ -1,10 +1,11 @@
 "use client";
 
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Plus } from "lucide-react";
 import KanbanColumn from "@/components/KanbanColumn";
 import { MetricTile, StatusPill, SurfaceCard } from "@/components/DesignSystem";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { JobStatus, JobWithTechnician, Technician } from "@/types/db";
 
 const statuses: JobStatus[] = [
@@ -43,21 +44,27 @@ function normalizeStatus(status: string): JobStatus {
 }
 
 type Props = {
+  companyId: string;
   initialJobs: JobWithTechnician[];
   readOnly?: boolean;
   technicians: Technician[];
 };
 
-export default function KanbanBoard({ initialJobs, readOnly = false, technicians }: Props) {
+export default function KanbanBoard({ companyId, initialJobs, readOnly = false, technicians }: Props) {
   const [jobs, setJobs] = useState(
     initialJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })),
   );
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [syncing, setSyncing] = useState(false);
+  const [connected, setConnected] = useState(true);
   const [mobileStatus, setMobileStatus] = useState<JobStatus>("new");
   const sensors = useSensors(useSensor(PointerSensor));
+  const technicianMap = useRef<Map<string, Pick<Technician, "id" | "name" | "phone">>>(new Map());
+
+  useEffect(() => {
+    technicianMap.current = new Map(technicians.map((t) => [t.id, t]));
+  }, [technicians]);
 
   useEffect(() => {
     setJobs(initialJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })));
@@ -66,42 +73,72 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
   useEffect(() => {
     if (readOnly) return;
 
-    let cancelled = false;
+    const supabase = createSupabaseBrowserClient();
 
-    async function refreshBoard() {
-      try {
-        setSyncing(true);
-        const response = await fetch("/api/jobs", {
-          method: "GET",
-          cache: "no-store",
-        });
-        // Session expired — stop polling silently; next navigation will redirect to login
-        if (response.status === 401) {
-          window.clearInterval(interval);
-          return;
-        }
-        if (!response.ok) return;
-        const { jobs: latestJobs } = (await response.json()) as { jobs: JobWithTechnician[] };
-        if (cancelled) return;
+    async function refetchAll() {
+      const { data } = await supabase
+        .from("jobs")
+        .select("*, technicians!jobs_technician_id_fkey(id,name,phone)")
+        .eq("company_id", companyId)
+        .eq("is_demo", false)
+        .order("created_at", { ascending: false });
+      if (data) {
         startTransition(() => {
-          setJobs(latestJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })));
+          setJobs((data as JobWithTechnician[]).map((job) => ({ ...job, status: normalizeStatus(job.status) })));
         });
-      } finally {
-        if (!cancelled) setSyncing(false);
       }
     }
 
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void refreshBoard();
-      }
-    }, 5000);
+    const channel = supabase
+      .channel(`jobs:company:${companyId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "jobs", filter: `company_id=eq.${companyId}` },
+        (payload) => {
+          startTransition(() => {
+            if (payload.eventType === "INSERT") {
+              const raw = payload.new as JobWithTechnician;
+              const job: JobWithTechnician = {
+                ...raw,
+                status: normalizeStatus(raw.status),
+                technicians: raw.technician_id ? (technicianMap.current.get(raw.technician_id) ?? null) : null,
+              };
+              setJobs((current) => {
+                if (current.some((j) => j.id === job.id)) return current;
+                return [job, ...current];
+              });
+            } else if (payload.eventType === "UPDATE") {
+              const raw = payload.new as JobWithTechnician;
+              setJobs((current) =>
+                current.map((j) =>
+                  j.id === raw.id
+                    ? {
+                        ...raw,
+                        status: normalizeStatus(raw.status),
+                        technicians: raw.technician_id ? (technicianMap.current.get(raw.technician_id) ?? j.technicians ?? null) : null,
+                      }
+                    : j
+                )
+              );
+            } else if (payload.eventType === "DELETE") {
+              const id = (payload.old as { id: string }).id;
+              setJobs((current) => current.filter((j) => j.id !== id));
+            }
+          });
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setConnected(true);
+        if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+          setConnected(false);
+          void refetchAll();
+        }
+      });
 
     return () => {
-      cancelled = true;
-      window.clearInterval(interval);
+      void supabase.removeChannel(channel);
     };
-  }, [readOnly]);
+  }, [companyId, readOnly]);
 
   const jobsByStatus = useMemo(() => {
     return statuses.reduce(
@@ -217,8 +254,8 @@ export default function KanbanBoard({ initialJobs, readOnly = false, technicians
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Mobile board mode</p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">Focus on one lane at a time.</h2>
               </div>
-              <StatusPill tone={syncing ? "warm" : "teal"}>
-                {syncing ? "Syncing..." : `${mobileJobs.length} visible`}
+              <StatusPill tone={connected ? "teal" : "warm"}>
+                {connected ? `${mobileJobs.length} visible` : "Reconnecting..."}
               </StatusPill>
             </div>
 
