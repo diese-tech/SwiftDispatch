@@ -1,4 +1,5 @@
 import AppSidebar from "@/components/AppSidebar";
+import CommandPalette from "@/components/CommandPalette";
 import DemoBanner from "@/components/DemoBanner";
 import type { AppUser } from "@/types/db";
 
@@ -16,11 +17,15 @@ export default function InternalAppLayout({ children, section, user }: InternalA
         <DemoBanner />
         <main className="flex-1 px-5 py-6 sm:px-8">{children}</main>
         <footer className="border-t border-[var(--c-line)] px-5 py-3 sm:px-8">
-          <p className="font-mono text-[10px] text-[var(--c-text-4)]">
-            © {new Date().getFullYear()} SwiftDispatch
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <p className="font-mono text-[10px] text-[var(--c-text-4)]">
+              © {new Date().getFullYear()} SwiftDispatch
+            </p>
+            <kbd className="hidden rounded border border-[var(--c-line)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--c-text-4)] sm:inline">⌘K</kbd>
+          </div>
         </footer>
       </div>
+      <CommandPalette />
     </div>
   );
 }

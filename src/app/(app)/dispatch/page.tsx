@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import KanbanBoard from "@/components/KanbanBoard";
+import TechRail from "@/components/TechRail";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -25,7 +26,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   const supabase = impersonating ? createSupabaseAdminClient() : await createSupabaseServerClient();
   const [{ data: jobs }, { data: technicians }, companyRes, { data: failedSms }] = await Promise.all([
     supabase.from("jobs").select("*, technicians!jobs_technician_id_fkey(id,name,phone)").eq("company_id", companyId).not("status", "in", '("completed","cancelled")').order("created_at", { ascending: false }),
-    supabase.from("technicians").select("id,name,phone").eq("company_id", companyId),
+    supabase.from("technicians").select("id,name,phone,availability_status,current_job_id").eq("company_id", companyId),
     impersonating ? supabase.from("companies").select("name").eq("id", companyId).single() : Promise.resolve({ data: null }),
     supabase.from("sms_outbox").select("job_id").eq("company_id", companyId).eq("status", "failed"),
   ]);
@@ -72,7 +73,10 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
 
-      <KanbanBoard companyId={companyId} initialJobs={activeJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} />
+      <div className="grid gap-4 xl:grid-cols-[1fr_260px]">
+        <KanbanBoard companyId={companyId} initialJobs={activeJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} />
+        {!impersonating && <TechRail companyId={companyId} initialTechnicians={techList} />}
+      </div>
     </div>
   );
 }
