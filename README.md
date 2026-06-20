@@ -50,6 +50,8 @@ For production traffic, set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOK
 
 Set `INTERNAL_WORKER_SECRET` and run an SMS worker against `POST /api/internal/sms-outbox` so customer confirmations are processed out of band instead of on the public intake request path. In local development, `npm run worker:sms` will poll that route every few seconds.
 
+For the demo sandbox, set `CRON_SECRET` to the Vercel cron secret so the daily reset at `/api/internal/reset-demo` is authenticated. The same secret is sent automatically by Vercel's cron runner. To reset manually, send `Authorization: Bearer <INTERNAL_WORKER_SECRET>` to the same endpoint.
+
 Public intake protection is also tunable through `INTAKE_RATE_LIMIT_*` and `INTAKE_STATUS_RATE_LIMIT_*` env vars so you can adjust backpressure without another code deploy.
 
 Standard Vercel deploy. Add all `.env.example` variables in Vercel → Project Settings → Environment Variables. Set `NEXT_PUBLIC_APP_URL` to your Vercel URL.

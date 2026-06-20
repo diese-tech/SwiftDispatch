@@ -37,8 +37,9 @@ Run these manually after each production deploy. Takes ~10 minutes. Full accepta
 - [ ] Create a company, verify scoped navigation. Super admin routes reject non-super-admin users.
 
 **Demo tenant seed/reset**
-- [ ] Open `/admin/seed-demo` with feature flag enabled. Seed and reset twice.
-- [ ] Repeatable without broken foreign keys or orphan references.
+- [ ] Run `node scripts/seed-demo-tenant.mjs` against a fresh environment to provision the demo company, user, and technicians.
+- [ ] `POST /api/internal/reset-demo` with `Authorization: Bearer <INTERNAL_WORKER_SECRET>` returns `{ ok: true, jobsSeeded: 14 }`.
+- [ ] Run the reset twice consecutively — no broken foreign keys or orphan references.
 
 ---
 
@@ -415,5 +416,5 @@ TEST_INTEGRATION=true npm run test:e2e
 | No PDF invoice | Browser Print → Save as PDF is the supported workaround. |
 | No email notifications | All customer communication is SMS-only. |
 | No customer accounts | Customers track jobs via token link only. |
-| SMS delivery is best-effort | No retry queue today. Twilio failure drops the message silently. |
+| SMS delivery is best-effort | Twilio failures are stored in `sms_outbox` with `status = 'failed'`. Dispatchers can retry from the job detail page. Persistent failures require manual investigation. |
 | Single timezone per company | Set in Admin → Settings. |
