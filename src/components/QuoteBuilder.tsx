@@ -6,6 +6,8 @@ import { StatusDot } from "@/components/DesignSystem";
 import { money } from "@/lib/format";
 import type { QuoteLineItem, QuoteWithLineItems } from "@/types/db";
 
+type SendStatus = "idle" | "sending" | "success" | "error";
+
 type Props = {
   jobId: string;
   initialQuote: QuoteWithLineItems | null;
@@ -14,12 +16,15 @@ type Props = {
 export default function QuoteBuilder({ jobId, initialQuote }: Props) {
   const [quoteId, setQuoteId] = useState(initialQuote?.id ?? "");
   const [items, setItems] = useState<QuoteLineItem[]>(initialQuote?.quote_line_items ?? []);
-  const [sending, setSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState<SendStatus>("idle");
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
-  const [message, setMessage] = useState("");
+  const [saveErrorIds, setSaveErrorIds] = useState<Set<string>>(new Set());
+  const [generalError, setGeneralError] = useState("");
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const total = useMemo(() => items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0), [items]);
+  const isSaving = savingIds.size > 0;
+  const hasSaveError = saveErrorIds.size > 0;
 
   useEffect(() => () => Object.values(debounceTimers.current).forEach(clearTimeout), []);
 
@@ -31,7 +36,7 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
       body: JSON.stringify({ job_id: jobId }),
     });
     if (!response.ok) {
-      setMessage("Quote could not be created.");
+      setGeneralError("Quote could not be created.");
       return "";
     }
     const data = (await response.json()) as { quote_id: string; quote?: QuoteWithLineItems };
@@ -41,7 +46,7 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
   }
 
   async function addLineItem() {
-    setMessage("");
+    setGeneralError("");
     const id = await ensureQuote();
     if (!id) return;
     const response = await fetch(`/api/quotes/${id}/line-items`, {
@@ -50,7 +55,7 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
       body: JSON.stringify({ name: "", price: 0, quantity: 1 }),
     });
     if (!response.ok) {
-      setMessage("Line item could not be added.");
+      setGeneralError("Line item could not be added.");
       return;
     }
     const data = (await response.json()) as { item: QuoteLineItem };
@@ -73,7 +78,15 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
         next.delete(itemId);
         return next;
       });
-      if (!response.ok) setMessage("Line item could not be saved.");
+      if (response.ok) {
+        setSaveErrorIds((current) => {
+          const next = new Set(current);
+          next.delete(itemId);
+          return next;
+        });
+      } else {
+        setSaveErrorIds((current) => new Set(current).add(itemId));
+      }
     }, 500);
   }
 
@@ -81,22 +94,34 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
     if (!quoteId) return;
     clearTimeout(debounceTimers.current[itemId]);
     setItems((current) => current.filter((item) => item.id !== itemId));
+    setSaveErrorIds((current) => {
+      const next = new Set(current);
+      next.delete(itemId);
+      return next;
+    });
     const response = await fetch(`/api/quotes/${quoteId}/line-items/${itemId}`, { method: "DELETE" });
-    if (!response.ok) setMessage("Line item could not be deleted.");
+    if (!response.ok) setGeneralError("Line item could not be deleted.");
   }
 
-  async function sendSms() {
+  async function sendQuote() {
     if (!quoteId) return;
-    setSending(true);
-    setMessage("");
+    setSendStatus("sending");
     const response = await fetch("/api/send-sms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ quote_id: quoteId }),
     });
-    setSending(false);
-    setMessage(response.ok ? "SMS sent." : "SMS could not be sent.");
+    setSendStatus(response.ok ? "success" : "error");
   }
+
+  function saveStatusLabel() {
+    if (isSaving) return "Saving…";
+    if (hasSaveError) return "Couldn't save changes";
+    if (quoteId) return "Saved";
+    return "";
+  }
+
+  const saveLabel = saveStatusLabel();
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
@@ -108,7 +133,11 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
           </div>
           <div className="text-right">
             <p className="text-xl font-semibold text-slate-950">{money(total)}</p>
-            <p className="mt-0.5 font-mono text-[10px] text-slate-400">{savingIds.size ? "Saving…" : "Saved"}</p>
+            {saveLabel && (
+              <p className={`mt-0.5 font-mono text-[10px] ${hasSaveError ? "text-red-500" : "text-slate-400"}`}>
+                {saveLabel}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -130,16 +159,24 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
 
       <div className="border-t border-slate-100 px-5 py-4">
         <div className="flex items-center gap-3">
-          <button className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-orange-400 px-4 py-2.5 text-sm font-semibold !text-slate-950 disabled:opacity-60 transition hover:bg-orange-300" disabled={sending || !quoteId || !items.length || total <= 0} onClick={sendSms} type="button">
-            <Send size={14} /> {sending ? "Sending…" : "Send SMS"}
+          <button
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-orange-400 px-4 py-2.5 text-sm font-semibold !text-slate-950 disabled:opacity-60 transition hover:bg-orange-300"
+            disabled={sendStatus === "sending" || isSaving || !quoteId || !items.length || total <= 0}
+            onClick={sendQuote}
+            type="button"
+          >
+            <Send size={14} /> {sendStatus === "sending" ? "Sending…" : "Send quote to customer"}
           </button>
           {quoteId ? <a className="text-sm font-semibold text-teal-700 hover:underline" href={`/quote/${quoteId}`} rel="noopener noreferrer" target="_blank">Preview</a> : null}
         </div>
-        {message ? (
+
+        {(sendStatus === "success" || sendStatus === "error" || generalError) && (
           <div className="mt-3">
-            <StatusDot tone={message === "SMS sent." ? "green" : "red"}>{message}</StatusDot>
+            {sendStatus === "success" && <StatusDot tone="green">Quote sent to customer.</StatusDot>}
+            {sendStatus === "error" && <StatusDot tone="red">Quote was not sent. Check SMS consent or phone number.</StatusDot>}
+            {generalError && sendStatus === "idle" && <StatusDot tone="red">{generalError}</StatusDot>}
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
