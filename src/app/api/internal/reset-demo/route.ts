@@ -19,7 +19,7 @@ function requireResetAuth(request: Request): void {
   }
 }
 
-export async function POST(request: Request) {
+async function handleReset(request: Request): Promise<NextResponse> {
   try {
     requireResetAuth(request)
   } catch (error) {
@@ -35,3 +35,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Vercel cron invokes routes with GET; manual/worker calls may use POST
+export const GET = handleReset
+export const POST = handleReset

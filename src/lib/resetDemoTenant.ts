@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { demoJobs } from '@/lib/demo-data'
+import { demoJobs, demoTechnicians } from '@/lib/demo-data'
 
 export const DEMO_COMPANY_SLUG = 'swiftdispatch-demo'
 
@@ -20,11 +20,13 @@ export async function resetDemoTenant(): Promise<{ jobsSeeded: number }> {
 
   const { data: technicians } = await admin
     .from('technicians')
-    .select('id')
+    .select('id, name')
     .eq('company_id', companyId)
-    .order('name')
 
-  const techIds = (technicians ?? []).map((t: { id: string }) => t.id)
+  const techByName = new Map(
+    (technicians ?? []).map((t: { id: string; name: string }) => [t.name, t.id]),
+  )
+  const techIds = demoTechnicians.map((dt) => techByName.get(dt.name) ?? null)
 
   // Unlink technician current_job references before deleting jobs
   await admin
@@ -73,6 +75,7 @@ export async function resetDemoTenant(): Promise<{ jobsSeeded: number }> {
 
     const isAssigned = !['new', 'cancelled'].includes(demoJob.status)
     const techId = demoJob.techIndex !== null ? (techIds[demoJob.techIndex] ?? null) : null
+
 
     const jobPayload: Record<string, unknown> = {
       customer_name: demoJob.customerName,
