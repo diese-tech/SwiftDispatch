@@ -2,11 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import QuoteBuilder from "@/components/QuoteBuilder";
+import SmsFailurePanel from "@/components/SmsFailurePanel";
 import TechnicianDropdown from "@/components/TechnicianDropdown";
 import { StatusDot } from "@/components/DesignSystem";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { JobWithTechnician, QuoteWithLineItems, Technician } from "@/types/db";
+
+type FailedSms = {
+  id: string;
+  message_type: string;
+  last_error: string | null;
+  updated_at: string;
+};
 
 type StatusEvent = {
   id: string;
@@ -51,7 +59,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
   const profile = await getCurrentProfile();
   const supabase = await createSupabaseServerClient();
 
-  const [jobResult, techsResult, quoteResult, eventsResult] = await Promise.all([
+  const [jobResult, techsResult, quoteResult, eventsResult, smsFailResult] = await Promise.all([
     supabase
       .from("jobs")
       .select("*, technicians!jobs_technician_id_fkey(id,name,phone)")
@@ -74,6 +82,13 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       .select("id, from_status, to_status, actor_role, note, created_at")
       .eq("job_id", id)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("sms_outbox")
+      .select("id, message_type, last_error, updated_at")
+      .eq("job_id", id)
+      .eq("company_id", profile.company_id)
+      .eq("status", "failed")
+      .order("updated_at", { ascending: false }),
   ]);
 
   if (jobResult.error || !jobResult.data) notFound();
@@ -83,6 +98,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
   const job = jobResult.data as JobWithTechnician;
   const quote = quoteResult.data as QuoteWithLineItems | null;
   const statusEvents = (eventsResult.data ?? []) as StatusEvent[];
+  const failedSms = (smsFailResult.data ?? []) as FailedSms[];
   const isEmergency = /emergency|urgent/i.test(job.issue);
 
   return (
@@ -189,8 +205,11 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
           )}
         </div>
 
-        {/* Right column — quote builder */}
-        <QuoteBuilder initialQuote={quote} jobId={job.id} />
+        {/* Right column — SMS failures + quote builder */}
+        <div className="space-y-5">
+          <SmsFailurePanel jobId={job.id} initialFailures={failedSms} />
+          <QuoteBuilder initialQuote={quote} jobId={job.id} />
+        </div>
       </div>
     </main>
   );

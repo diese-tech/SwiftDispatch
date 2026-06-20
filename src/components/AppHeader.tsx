@@ -35,9 +35,8 @@ function getNavItems(section: HeaderSection, role: string): NavItem[] {
   }
   if (section === "dashboard") {
     const items: NavItem[] = [
-      { href: "/dashboard", label: "Dashboard" },
-      { href: "/analytics", label: "Analytics" },
       { href: dispatchHref, label: "Dispatch" },
+      { href: "/analytics", label: "Analytics" },
     ];
     if (role === "admin") items.push({ href: "/admin", label: "Admin" });
     return items;

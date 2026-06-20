@@ -61,7 +61,7 @@ export async function requireAdminProfile() {
   const profile = await getCurrentProfile();
 
   if (profile.role !== "admin") {
-    redirect("/dashboard");
+    redirect("/dispatch");
   }
 
   return profile;

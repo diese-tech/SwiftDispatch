@@ -29,7 +29,6 @@ function getNavGroups(section: Section, role: string): NavGroup[] {
 
   const workspaceItems: NavItem[] = [
     { href: dispatchHref, label: "Dispatch" },
-    { href: "/dashboard", label: "Dashboard" },
     { href: "/analytics", label: "Analytics" },
   ];
 

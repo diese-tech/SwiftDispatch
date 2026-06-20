@@ -25,16 +25,17 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
 
   const supabase = impersonating ? createSupabaseAdminClient() : await createSupabaseServerClient();
   const [{ data: jobs }, { data: technicians }, companyRes, { data: failedSms }] = await Promise.all([
-    supabase.from("jobs").select("*, technicians!jobs_technician_id_fkey(id,name,phone)").eq("company_id", companyId).not("status", "in", '("completed","cancelled")').order("created_at", { ascending: false }),
+    supabase.from("jobs").select("*, technicians!jobs_technician_id_fkey(id,name,phone)").eq("company_id", companyId).order("created_at", { ascending: false }),
     supabase.from("technicians").select("id,name,phone,availability_status,current_job_id").eq("company_id", companyId),
     impersonating ? supabase.from("companies").select("name").eq("id", companyId).single() : Promise.resolve({ data: null }),
     supabase.from("sms_outbox").select("job_id").eq("company_id", companyId).eq("status", "failed"),
   ]);
 
-  const activeJobs = (jobs ?? []) as JobWithTechnician[];
+  const allJobs = (jobs ?? []) as JobWithTechnician[];
   const techList = (technicians ?? []) as Technician[];
   const companyName = (companyRes as { data: { name: string } | null }).data?.name ?? companyId;
   const smsFailedJobIds = (failedSms ?? []).map((r: { job_id: string | null }) => r.job_id).filter(Boolean) as string[];
+  const activeCount = allJobs.filter((j) => !["completed", "cancelled"].includes(j.status)).length;
 
   return (
     <div className="pb-4">
@@ -50,7 +51,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] text-slate-500">
-            {activeJobs.length} active
+            {activeCount} active
           </span>
           <span className="rounded border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] text-slate-500">
             {techList.length} techs
@@ -74,7 +75,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_260px]">
-        <KanbanBoard companyId={companyId} initialJobs={activeJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} />
+        <KanbanBoard companyId={companyId} initialJobs={allJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} />
         {!impersonating && <TechRail companyId={companyId} initialTechnicians={techList} />}
       </div>
     </div>

@@ -38,7 +38,7 @@ export default function LoginForm({
       setError(signInError.message);
       return;
     }
-    router.push(nextPath || "/dashboard");
+    router.push(nextPath || "/dispatch");
     router.refresh();
   }
 
