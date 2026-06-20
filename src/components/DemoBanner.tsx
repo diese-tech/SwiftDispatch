@@ -28,7 +28,7 @@ export default async function DemoBanner() {
           Demo mode
         </span>
         <p className="text-sm text-amber-800">
-          This workspace contains seeded demo data. Create your first real job to begin live operations.
+          This is a live demo workspace. All data resets daily at <strong>00:00 EST</strong>. Log in with <strong>demo / demo</strong> to explore.
         </p>
       </div>
     </div>
