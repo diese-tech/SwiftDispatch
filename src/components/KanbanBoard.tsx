@@ -55,6 +55,7 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
   const [saveError, setSaveError] = useState("");
   const [connected, setConnected] = useState(true);
   const [moveError, setMoveError] = useState("");
+  const [pendingMove, setPendingMove] = useState<{ jobId: string; fromStatus: JobStatus; toStatus: JobStatus; customerName: string } | null>(null);
   const moveErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [boardFilter, setBoardFilter] = useState<"active" | "completed" | "cancelled" | "all">("active");
   const [mobileStatus, setMobileStatus] = useState<JobStatus>("new");
@@ -173,23 +174,27 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
     );
   }, [activeJobs]);
 
-  async function onDragEnd(event: DragEndEvent) {
+  function onDragEnd(event: DragEndEvent) {
     if (readOnly) return;
     const jobId = event.active.id.toString();
     const nextStatus = event.over?.id?.toString() as JobStatus | undefined;
     const job = jobs.find((item) => item.id === jobId);
     if (!nextStatus || !statuses.includes(nextStatus) || !job || job.status === nextStatus) return;
+    setPendingMove({ jobId, fromStatus: job.status, toStatus: nextStatus, customerName: job.customer_name });
+  }
 
-    setJobs((current) => current.map((item) => (item.id === jobId ? { ...item, status: nextStatus } : item)));
-
+  async function confirmMove() {
+    if (!pendingMove) return;
+    const { jobId, fromStatus, toStatus } = pendingMove;
+    setPendingMove(null);
+    setJobs((current) => current.map((item) => (item.id === jobId ? { ...item, status: toStatus } : item)));
     const response = await fetch(`/api/jobs/${jobId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: nextStatus }),
+      body: JSON.stringify({ status: toStatus }),
     });
-
     if (!response.ok) {
-      setJobs((current) => current.map((item) => (item.id === jobId ? { ...item, status: job.status } : item)));
+      setJobs((current) => current.map((item) => (item.id === jobId ? { ...item, status: fromStatus } : item)));
       const data = await response.json().catch(() => ({})) as { error?: string };
       showMoveError(data.error ?? "Couldn't move job. Please try again.");
     }
@@ -375,6 +380,37 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
       {(boardFilter === "completed" || boardFilter === "cancelled") && visibleClosedJobs.length === 0 && (
         <div className="rounded-xl border border-[var(--c-line)] bg-[var(--c-paper)] px-5 py-8 text-center">
           <p className="font-mono text-[10.5px] text-[var(--c-text-4)]">No {boardFilter} jobs</p>
+        </div>
+      )}
+
+      {pendingMove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-[var(--c-line)] bg-[var(--c-paper)] p-6 shadow-xl">
+            <p className="text-base font-semibold text-[var(--c-text)]">Move job?</p>
+            <p className="mt-1 text-sm text-[var(--c-text-3)] truncate">{pendingMove.customerName}</p>
+            <div className="mt-4 flex items-center gap-2 font-mono text-[11px]">
+              <span className="rounded-full bg-[var(--c-paper-2)] px-2.5 py-1 text-[var(--c-text-3)]">{STATUS_LABELS[pendingMove.fromStatus]}</span>
+              <span className="text-[var(--c-text-4)]">→</span>
+              <span className="rounded-full bg-slate-950 px-2.5 py-1 !text-white">{STATUS_LABELS[pendingMove.toStatus]}</span>
+            </div>
+            <p className="mt-3 text-xs text-[var(--c-text-4)]">This will be logged to the job&apos;s audit history.</p>
+            <div className="mt-5 flex gap-3">
+              <button
+                className="flex-1 rounded-full border border-[var(--c-line)] px-4 py-2 text-sm font-medium text-[var(--c-text-3)] transition hover:bg-[var(--c-paper-2)]"
+                onClick={() => setPendingMove(null)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-slate-800"
+                onClick={() => void confirmMove()}
+                type="button"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
