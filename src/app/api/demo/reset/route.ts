@@ -22,6 +22,7 @@ export async function POST() {
     return NextResponse.json({ error: "Not a demo account" }, { status: 403 });
   }
 
-  const result = await resetDemoTenant();
+  // Reset the caller's own company, not whichever demo tenant slug resolves to.
+  const result = await resetDemoTenant(profile.company_id);
   return NextResponse.json(result);
 }

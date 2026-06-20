@@ -17,8 +17,15 @@ const TERMINAL_STATUSES = ["completed", "cancelled", "no_access"];
  */
 function pickDemoTech(techs: Technician[], jobs: JobWithTechnician[]): Technician | null {
   if (techs.length === 0) return null;
-  // 1. The tech the seed pinned an active job to.
-  const withCurrent = techs.find((t) => t.current_job_id);
+  const activeJobIds = new Set(
+    jobs.filter((j) => !TERMINAL_STATUSES.includes(j.status)).map((j) => j.id),
+  );
+  // 1. A tech whose current_job_id still points to a non-terminal job.
+  //    (The PATCH path doesn't clear current_job_id on completion, so a bare
+  //    non-null check could pick a tech with a stale pointer and no live job.)
+  const withCurrent = techs.find(
+    (t) => t.current_job_id && activeJobIds.has(t.current_job_id),
+  );
   if (withCurrent) return withCurrent;
   // 2. Any tech currently assigned to a non-terminal job.
   const activeJob = jobs.find(
