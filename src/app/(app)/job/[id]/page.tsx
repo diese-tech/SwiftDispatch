@@ -65,7 +65,6 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       .select("*, technicians!jobs_technician_id_fkey(id,name,phone)")
       .eq("id", id)
       .eq("company_id", profile.company_id)
-      .eq("is_demo", false)
       .single(),
     supabase.from("technicians").select("*").eq("company_id", profile.company_id).order("name"),
     supabase
@@ -73,7 +72,6 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       .select("id,job_id,total,status,created_at,quote_sent_at,accepted_at,rejected_at,quote_line_items(id,quote_id,name,price,quantity),jobs!inner(company_id)")
       .eq("job_id", id)
       .eq("jobs.company_id", profile.company_id)
-      .eq("is_demo", false)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),

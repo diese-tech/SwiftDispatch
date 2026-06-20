@@ -10,9 +10,9 @@ export type JobStatus =
 
 export const VALID_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
   new:           ['assigned', 'cancelled'],
-  assigned:      ['en_route', 'cancelled'],
-  en_route:      ['in_progress', 'no_access', 'cancelled'],
-  in_progress:   ['quote_pending', 'cancelled'],
+  assigned:      ['en_route', 'new', 'cancelled'],
+  en_route:      ['in_progress', 'assigned', 'no_access', 'cancelled'],
+  in_progress:   ['quote_pending', 'en_route', 'assigned', 'cancelled'],
   quote_pending: ['completed', 'in_progress'],
   no_access:     ['new', 'cancelled'],
   completed:     [],
