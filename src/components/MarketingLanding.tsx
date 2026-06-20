@@ -55,10 +55,10 @@ const trustCards = [
       "The office gets a clearer command surface while the field team and customer side keep moving with less friction.",
   },
   {
-    eyebrow: "Helps replace",
-    title: "Whiteboards, callback chains, spreadsheet handoffs, and lost quote follow-up.",
+    eyebrow: "The right tier",
+    title: "More structure than whiteboards. Less overhead than ServiceTitan.",
     description:
-      "The value is not more software. It is more order in the parts of the day that usually turn into noise.",
+      "Enterprise dispatch platforms are built for companies with dedicated IT, six-figure contracts, and months of onboarding. SwiftDispatch is built for teams that need to move faster, not heavier.",
   },
 ];
 
@@ -127,6 +127,7 @@ const fitSignals = [
   "You dispatch from calls, texts, and a whiteboard or spreadsheet.",
   "You have enough job volume that follow-through is starting to break down.",
   "You want technicians, office staff, and customers in a cleaner loop without adding operational clutter.",
+  "You have looked at platforms like ServiceTitan and decided the cost and complexity are not worth it yet.",
 ];
 
 export default function MarketingLanding() {
@@ -140,10 +141,10 @@ export default function MarketingLanding() {
               HVAC Dispatch Platform
             </span>
             <h1 className="mt-6 max-w-4xl text-5xl font-semibold tracking-[-0.025em] text-slate-950 sm:text-6xl">
-              Built for small HVAC shops that are outgrowing calls, texts, and whiteboards.
+              The dispatch layer between whiteboards and enterprise software.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-              SwiftDispatch helps 3 to 15 technician HVAC teams coordinate jobs, track field progress, move quotes faster, and keep customers informed without bouncing between disconnected tools.
+              SwiftDispatch is built for 3 to 15 technician HVAC teams that have outgrown calls, texts, and spreadsheets — but are not ready for the cost and complexity of platforms like ServiceTitan.
             </p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -153,20 +154,23 @@ export default function MarketingLanding() {
               >
                 Request a Demo
               </Link>
-              <a
+              <Link
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 transition hover:bg-slate-50"
-                href="#product"
+                href="/login"
               >
-                See the product
+                Try live demo
                 <ArrowRight className="h-4 w-4" />
-              </a>
+              </Link>
             </div>
+            <p className="mt-3 text-xs text-slate-500">
+              Live sandbox · login with <strong>demo@swiftdispatch.app</strong> / <strong>demo</strong> · resets nightly
+            </p>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {[
                 "No extra app for technicians",
                 "Quote approvals by text",
-                "Best fit for 3 to 15 tech teams",
+                "Starts at $99/mo — not $500+",
               ].map((item, index) => (
                 <Reveal key={item} delay={index * 80}>
                   <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -259,10 +263,10 @@ export default function MarketingLanding() {
           <SectionEyebrow>If This Sounds Familiar</SectionEyebrow>
           <SectionHeading
             title="The product tends to click fast when the shop already feels a little too manual."
-            description="You do not need enterprise complexity. You need a tighter operating rhythm for the stage of growth you are already in."
+            description="You do not need a six-figure enterprise platform. You need a tighter operating rhythm for the stage of growth you are already in."
           />
 
-          <div className="mt-12 grid gap-4 lg:grid-cols-3">
+          <div className="mt-12 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
             {fitSignals.map((item, index) => (
               <Reveal key={item} delay={index * 90}>
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
