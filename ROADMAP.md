@@ -67,6 +67,7 @@ Customer request
 | `/api/quotes/*` | Quote and line-item management |
 | `/api/send-sms` | Outbound SMS trigger |
 | `/api/internal/sms-outbox` | SMS queue worker |
+| `/api/internal/reset-demo` | Demo tenant wipe + reseed (cron + manual) |
 | `/api/admin/technicians` | Technician management |
 | `/api/admin/templates` | Template management |
 | `/api/admin/settings` | Company settings |
@@ -99,7 +100,7 @@ All transitions enforced by `src/lib/stateMachine.ts`.
 | Finding | Notes |
 |---|---|
 | Loading, error, and empty states | Product must feel trustworthy under realistic use. |
-| Demo tenant with realistic seeded data | Seed/reset process must be documented and repeatable. |
+| ~~Demo tenant with realistic seeded data~~ | Seed script + daily cron reset via `/api/internal/reset-demo`. Documented in `scripts/seed-demo-tenant.mjs`. |
 | ~~Fix malformed `.gitignore`~~ | Resolved and committed. |
 | Invoice print UX | Browser print is the current workaround. Document it clearly. |
 | Quote decline dispatcher notification | When a customer declines a quote, the system does not alert the tech. Dispatcher must relay manually. Acceptable gap for Phase 1. |
@@ -127,7 +128,7 @@ All transitions enforced by `src/lib/stateMachine.ts`.
 
 **Tech SMS tokens** — Tokens are JWT-signed and single-use by intent, but the outbox does not enforce deduplication at the DB layer. Duplicate status delivery is possible under load but is guarded by `isValidTransition`.
 
-**SMS outbox reliability** — `/api/internal/sms-outbox` is a push worker. If Twilio is unreachable or the worker misses a call, SMS is silently dropped. No retry queue exists. Document this limitation clearly; do not add a full retry system unless SMS failures become a blocker in beta.
+**SMS outbox reliability** — `/api/internal/sms-outbox` is a push worker. If Twilio is unreachable, failed entries remain in `sms_outbox` with `status = 'failed'`. Dispatchers can retry failed messages from the job detail page via `POST /api/jobs/[id]/retry-sms`. Persistent Twilio failures still require investigation; the retry surface is a manual dispatcher tool, not an automated recovery loop.
 
 ### Definition of Done (Phase 1)
 

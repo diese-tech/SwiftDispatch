@@ -24,6 +24,34 @@ SwiftDispatch replaces that with a single system: dispatchers see every job on a
 
 ---
 
+## Try the demo
+
+A live sandbox is available at **https://swiftdispatch.app** with pre-seeded jobs, technicians, and quote data so you can explore the full workflow without setting anything up.
+
+| Field | Value |
+|---|---|
+| **URL** | https://swiftdispatch.app/login |
+| **Email** | demo@swiftdispatch.app |
+| **Password** | demo |
+| **Role** | Dispatcher |
+
+The demo workspace resets automatically every day at **00:00 EST** (05:00 UTC), wiping all jobs and re-seeding 14 realistic demo jobs across all statuses. You can freely create, assign, update, and cancel jobs — everything resets overnight.
+
+To provision the demo workspace in a new environment, run:
+
+```bash
+node scripts/seed-demo-tenant.mjs
+```
+
+To trigger a manual reset (e.g., after a bad state):
+
+```bash
+curl -X POST https://your-app.vercel.app/api/internal/reset-demo \
+  -H "Authorization: Bearer <INTERNAL_WORKER_SECRET>"
+```
+
+---
+
 ## Quick start
 
 1. Clone the repo and run `npm install`
@@ -49,6 +77,8 @@ Default behavior: smallest safe change, lowest blast radius, no unrelated file e
 For production traffic, set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` so technician action rate limiting is backed by Redis instead of in-memory process state.
 
 Set `INTERNAL_WORKER_SECRET` and run an SMS worker against `POST /api/internal/sms-outbox` so customer confirmations are processed out of band instead of on the public intake request path. In local development, `npm run worker:sms` will poll that route every few seconds.
+
+For the demo sandbox, set `CRON_SECRET` to the Vercel cron secret so the daily reset at `/api/internal/reset-demo` is authenticated. The same secret is sent automatically by Vercel's cron runner. To reset manually, send `Authorization: Bearer <INTERNAL_WORKER_SECRET>` to the same endpoint.
 
 Public intake protection is also tunable through `INTAKE_RATE_LIMIT_*` and `INTAKE_STATUS_RATE_LIMIT_*` env vars so you can adjust backpressure without another code deploy.
 
