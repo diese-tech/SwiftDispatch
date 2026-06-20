@@ -23,7 +23,6 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const total = useMemo(() => items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0), [items]);
-  const hasValidItems = items.some((item) => Number(item.price) > 0);
   const isSaving = savingIds.size > 0;
   const hasSaveError = saveErrorIds.size > 0;
 
@@ -162,7 +161,7 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
         <div className="flex items-center gap-3">
           <button
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-orange-400 px-4 py-2.5 text-sm font-semibold !text-slate-950 disabled:opacity-60 transition hover:bg-orange-300"
-            disabled={sendStatus === "sending" || isSaving || !quoteId || !items.length || !hasValidItems}
+            disabled={sendStatus === "sending" || isSaving || !quoteId || !items.length || total <= 0}
             onClick={sendQuote}
             type="button"
           >

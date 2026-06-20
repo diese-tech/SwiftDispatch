@@ -10,6 +10,9 @@ export async function POST(
   const { profile, response } = await requireApiProfile()
   if (response || !profile) return response
   if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (profile.role !== 'admin' && profile.role !== 'dispatcher') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   // Verify the job belongs to this company using the user-scoped client
   // (admin client used for the outbox write, but we still need to auth the job)
