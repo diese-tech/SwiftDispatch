@@ -139,6 +139,26 @@ The tech taps "Complete" and updates the status to **No Access** from the tech p
 
 ---
 
+## Demo workspace
+
+SwiftDispatch includes a public demo environment with realistic pre-seeded data so prospects and new team members can explore the product without touching a real account.
+
+**Login credentials:**
+
+| Field | Value |
+|---|---|
+| URL | https://swiftdispatch.app/login |
+| Email | demo@swiftdispatch.app |
+| Password | demo |
+
+The demo workspace contains 14 pre-built jobs across all statuses (new, assigned, en route, in progress, quote pending, completed, cancelled, no access), three technicians (Mia Torres, Leo Grant, Avery Brooks), and accepted/pending quotes with line items.
+
+A banner at the top of every page in the demo workspace identifies it as demo mode. **All data resets automatically at 00:00 EST each night** — anything created or modified during the day will be gone the next morning.
+
+The demo account has dispatcher-level access. It can create, assign, and update jobs, build quotes, and browse the full board. It cannot access Admin settings, manage technicians, or view the super admin panel.
+
+---
+
 ## Current limitations
 
 These are known gaps in the current version:

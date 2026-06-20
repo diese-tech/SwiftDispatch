@@ -24,6 +24,34 @@ SwiftDispatch replaces that with a single system: dispatchers see every job on a
 
 ---
 
+## Try the demo
+
+A live sandbox is available at **https://swiftdispatch.app** with pre-seeded jobs, technicians, and quote data so you can explore the full workflow without setting anything up.
+
+| Field | Value |
+|---|---|
+| **URL** | https://swiftdispatch.app/login |
+| **Email** | demo@swiftdispatch.app |
+| **Password** | demo |
+| **Role** | Dispatcher |
+
+The demo workspace resets automatically every day at **00:00 EST** (05:00 UTC), wiping all jobs and re-seeding 14 realistic demo jobs across all statuses. You can freely create, assign, update, and cancel jobs — everything resets overnight.
+
+To provision the demo workspace in a new environment, run:
+
+```bash
+node scripts/seed-demo-tenant.mjs
+```
+
+To trigger a manual reset (e.g., after a bad state):
+
+```bash
+curl -X POST https://your-app.vercel.app/api/internal/reset-demo \
+  -H "Authorization: Bearer <INTERNAL_WORKER_SECRET>"
+```
+
+---
+
 ## Quick start
 
 1. Clone the repo and run `npm install`
