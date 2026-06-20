@@ -173,5 +173,23 @@ export async function resetDemoTenant(): Promise<{ jobsSeeded: number }> {
     seeded++
   }
 
+  // Set current_job_id on Mia Torres (demo tech 0) to her most active job
+  const miaId = techIds[0]
+  if (miaId) {
+    const { data: miaJob } = await admin
+      .from('jobs')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('technician_id', miaId)
+      .not('status', 'in', '("completed","cancelled","no_access")')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (miaJob) {
+      await admin.from('technicians').update({ current_job_id: miaJob.id }).eq('id', miaId)
+    }
+  }
+
   return { jobsSeeded: seeded }
 }
