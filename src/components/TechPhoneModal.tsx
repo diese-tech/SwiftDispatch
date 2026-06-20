@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MapPin, Phone, Smartphone, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { VALID_TRANSITIONS } from "@/lib/stateMachine";
@@ -45,7 +45,6 @@ export default function TechPhoneModal({ demoTechId, demoTechName, companyId }: 
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const channelRef = useRef<ReturnType<typeof createSupabaseBrowserClient>["channel"] extends (...a: never[]) => infer R ? R : never | null>(null);
 
   const fetchJob = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -75,9 +74,6 @@ export default function TechPhoneModal({ demoTechId, demoTechName, companyId }: 
         () => void fetchJob(),
       )
       .subscribe();
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    channelRef.current = channel as any;
 
     return () => {
       void supabase.removeChannel(channel);

@@ -1,19 +1,33 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { demoJobs, demoTechnicians } from '@/lib/demo-data'
+import { DEMO_COMPANY_SLUG } from '@/lib/demo'
 
-export const DEMO_COMPANY_SLUG = 'swiftdispatch-demo'
+// Re-exported for back-compat with existing import sites.
+export { DEMO_COMPANY_SLUG }
 
 export async function resetDemoTenant(): Promise<{ jobsSeeded: number }> {
   const admin = createSupabaseAdminClient()
 
-  const { data: company, error: companyError } = await admin
+  // Resolve the demo company by slug, falling back to the demo_mode_enabled
+  // flag so a hand-provisioned tenant (slug not set) still resets correctly.
+  let { data: company } = await admin
     .from('companies')
     .select('id')
     .eq('slug', DEMO_COMPANY_SLUG)
-    .single()
+    .maybeSingle()
 
-  if (companyError || !company) {
-    throw new Error(`Demo company not found (slug: ${DEMO_COMPANY_SLUG})`)
+  if (!company) {
+    const { data: flagged } = await admin
+      .from('companies')
+      .select('id')
+      .eq('demo_mode_enabled', true)
+      .limit(1)
+      .maybeSingle()
+    company = flagged
+  }
+
+  if (!company) {
+    throw new Error(`Demo company not found (slug: ${DEMO_COMPANY_SLUG} or demo_mode_enabled)`)
   }
 
   const companyId = company.id
