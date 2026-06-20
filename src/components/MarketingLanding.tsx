@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { SectionEyebrow, SectionHeading } from "@/components/DesignSystem";
 import Reveal from "@/components/Reveal";
+import DispatchPreview from "@/components/DispatchPreview";
 
 const features = [
   {
@@ -64,19 +65,16 @@ const trustCards = [
 
 const proofCards = [
   {
-    image: "/images/landing-dashboard.jpg",
     title: "Dispatch board with live job ownership",
     audience: "For the office",
     outcome: "Know what is open, who owns it, and what is slipping before it turns into another callback chain.",
   },
   {
-    image: "/images/landing-mobile.jpg",
     title: "Field workflow that stays lightweight",
     audience: "For technicians",
     outcome: "Keep the field responsive without betting adoption on another complicated mobile app rollout.",
   },
   {
-    image: "/images/landing-hero.jpg",
     title: "Customer communication and closeout clarity",
     audience: "For revenue follow-through",
     outcome: "Move from intake to quote to completion in a flow that feels like one product instead of five stitched together.",
@@ -129,6 +127,103 @@ const fitSignals = [
   "You want technicians, office staff, and customers in a cleaner loop without adding operational clutter.",
   "You have looked at platforms like ServiceTitan and decided the cost and complexity are not worth it yet.",
 ];
+
+/* ── Inline proof thumbs ─────────────────────────────────────────────── */
+
+function DispatchBoardThumb() {
+  return (
+    <div className="h-52 overflow-hidden p-3">
+      <div className="space-y-2 scale-[0.82] origin-top-left w-[122%]">
+        {/* metrics strip */}
+        <div className="grid grid-cols-4 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 text-[10px]">
+          {[["Open jobs","5"],["Unassigned","2"],["En route","1"],["Techs","4"]].map(([l, v]) => (
+            <div key={l} className="bg-white px-2 py-1.5">
+              <p className="font-mono text-[8px] uppercase tracking-wide text-zinc-400">{l}</p>
+              <p className="text-base font-semibold text-zinc-900">{v}</p>
+            </div>
+          ))}
+        </div>
+        {/* mini columns */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "New", dot: "bg-zinc-400", jobs: ["Sarah Chen","Tom Okafor"] },
+            { label: "Assigned", dot: "bg-blue-500", jobs: ["Marcus Rivera"] },
+            { label: "En Route", dot: "bg-amber-600", jobs: ["Lisa Park"] },
+          ].map((col) => (
+            <div key={col.label} className="rounded-lg border border-slate-200 bg-white">
+              <div className="flex items-center gap-1.5 border-b border-slate-100 px-2 py-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${col.dot}`} />
+                <span className="text-[10px] font-medium text-zinc-600">{col.label}</span>
+              </div>
+              <div className="space-y-1.5 p-1.5">
+                {col.jobs.map((name) => (
+                  <div key={name} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                    <p className="text-[10px] font-semibold text-zinc-800">{name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TechSmsThumb() {
+  const messages = [
+    { from: "system", text: "You have been assigned to: Lisa Park — 17 Sunridge Way" },
+    { from: "tech", text: "En route now, ETA 15 min" },
+    { from: "system", text: "Status updated to En Route. Customer notified." },
+    { from: "tech", text: "On site. Starting diagnosis." },
+  ];
+  return (
+    <div className="flex h-52 flex-col gap-1.5 overflow-hidden bg-slate-100 p-3">
+      <div className="flex items-center gap-2 rounded-xl bg-[#0b2235] px-3 py-2">
+        <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-teal-600 font-mono text-[9px] font-bold text-white">JK</div>
+        <div>
+          <p className="text-[10px] font-semibold text-white">Jason K.</p>
+          <p className="text-[9px] text-slate-400">Field technician</p>
+        </div>
+      </div>
+      <div className="flex-1 space-y-1.5 overflow-hidden">
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.from === "tech" ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-[9.5px] leading-4 ${m.from === "tech" ? "bg-teal-700 text-white" : "bg-white text-zinc-700 border border-slate-200"}`}>
+              {m.text}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function QuoteThumb() {
+  return (
+    <div className="h-52 space-y-2 overflow-hidden p-3">
+      <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <p className="font-mono text-[9px] uppercase tracking-wide text-zinc-400">Quote #A8F3</p>
+        <p className="mt-1 text-sm font-semibold text-zinc-900">Marcus Rivera</p>
+        <div className="mt-2 space-y-1">
+          {[["Refrigerant recharge (2 lbs)", "$180"],["Labor — AC diagnostic","$95"],["Service call fee","$75"]].map(([name, price]) => (
+            <div key={name} className="flex items-center justify-between text-[10px]">
+              <span className="text-zinc-600">{name}</span>
+              <span className="font-semibold text-zinc-900">{price}</span>
+            </div>
+          ))}
+          <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-bold">
+            <span className="text-zinc-800">Total</span>
+            <span className="text-zinc-900">$350.00</span>
+          </div>
+        </div>
+      </div>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center">
+        <p className="font-mono text-[9px] uppercase tracking-wide text-emerald-700">Customer accepted via SMS link</p>
+      </div>
+    </div>
+  );
+}
 
 export default function MarketingLanding() {
   return (
@@ -186,11 +281,9 @@ export default function MarketingLanding() {
 
           <div className="relative">
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 p-2 shadow-[0_28px_80px_rgba(8,26,40,0.14)]">
-              <img
-                alt="SwiftDispatch dashboard preview"
-                className="rounded-xl object-cover"
-                src="/images/landing-dashboard.jpg"
-              />
+              <div className="overflow-hidden rounded-xl">
+                <DispatchPreview />
+              </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               {["Dispatch clarity", "Quote follow-through", "Built for HVAC operators"].map((label) => (
@@ -294,8 +387,10 @@ export default function MarketingLanding() {
             {proofCards.map((card, index) => (
               <Reveal key={card.title} delay={index * 100}>
                 <div className="h-full rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-                  <div className="overflow-hidden rounded-t-xl border-b border-slate-100 bg-slate-100">
-                    <img alt={card.title} className="h-52 w-full object-cover" src={card.image} />
+                  <div className="overflow-hidden rounded-t-xl border-b border-slate-100 bg-slate-50">
+                    {index === 0 && <DispatchBoardThumb />}
+                    {index === 1 && <TechSmsThumb />}
+                    {index === 2 && <QuoteThumb />}
                   </div>
                   <div className="p-5">
                     <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">
@@ -438,11 +533,7 @@ export default function MarketingLanding() {
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-3">
             <div className="overflow-hidden rounded-lg border border-white/10">
-              <img
-                alt="SwiftDispatch mobile workflow preview"
-                className="object-cover"
-                src="/images/landing-mobile.jpg"
-              />
+              <TechSmsThumb />
             </div>
             <div className="mt-4 flex items-center gap-3 text-sm text-slate-300">
               <ClipboardList className="h-4 w-4 shrink-0 text-teal-300" />
