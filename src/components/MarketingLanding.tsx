@@ -14,6 +14,7 @@ import {
 import { SectionEyebrow, SectionHeading } from "@/components/DesignSystem";
 import Reveal from "@/components/Reveal";
 import DispatchPreview from "@/components/DispatchPreview";
+import DemoPreview from "@/components/DemoPreview";
 
 const features = [
   {
@@ -282,7 +283,7 @@ export default function MarketingLanding() {
           <div className="relative">
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 p-2 shadow-[0_28px_80px_rgba(8,26,40,0.14)]">
               <div className="overflow-hidden rounded-xl">
-                <DispatchPreview />
+                <DemoPreview />
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2">
