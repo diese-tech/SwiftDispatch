@@ -57,7 +57,7 @@ const plans = [
 const faqs = [
   {
     question: "Is there a free trial?",
-    answer: "We offer a guided demo instead of a self-serve trial. That way you see the workflow configured for your team size, not a generic sandbox. Book a demo and we will get you set up.",
+    answer: "Yes — you can try the live demo sandbox right now at swiftdispatch.app/login with email demo@swiftdispatch.app and password demo. It has pre-seeded jobs, technicians, and quotes and resets every night. For a guided walkthrough configured for your team size, book a demo call.",
   },
   {
     question: "What counts as a technician?",
@@ -86,7 +86,7 @@ export default function PricingPage() {
           <SectionHeading
             align="center"
             title="Straightforward plans for small HVAC teams"
-            description="Pick the plan that fits your crew today. No per-seat pricing, no surprise add-ons, no enterprise contract required."
+            description="Most enterprise field-service platforms run $400–$600+/month before per-user and SMS fees. SwiftDispatch starts at $99 — no per-seat pricing, no surprise add-ons, no enterprise contract required."
           />
         </div>
       </section>
