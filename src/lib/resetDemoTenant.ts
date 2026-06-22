@@ -1,22 +1,47 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { demoJobs, demoTechnicians } from '@/lib/demo-data'
+import { DEMO_COMPANY_SLUG } from '@/lib/demo'
 
-export const DEMO_COMPANY_SLUG = 'swiftdispatch-demo'
+// Re-exported for back-compat with existing import sites.
+export { DEMO_COMPANY_SLUG }
 
-export async function resetDemoTenant(): Promise<{ jobsSeeded: number }> {
+/**
+ * Reset the demo tenant's job data.
+ *
+ * Pass `targetCompanyId` to reset a specific (already-authorized) company —
+ * this is what the in-app "Reset data" button does, so a slug-less demo
+ * tenant resets ITS OWN board rather than some other flagged company. When
+ * omitted (e.g. the nightly cron), the canonical demo company is resolved by
+ * slug, falling back to the demo_mode_enabled flag.
+ */
+export async function resetDemoTenant(targetCompanyId?: string): Promise<{ jobsSeeded: number }> {
   const admin = createSupabaseAdminClient()
 
-  const { data: company, error: companyError } = await admin
-    .from('companies')
-    .select('id')
-    .eq('slug', DEMO_COMPANY_SLUG)
-    .single()
+  let companyId = targetCompanyId
 
-  if (companyError || !company) {
-    throw new Error(`Demo company not found (slug: ${DEMO_COMPANY_SLUG})`)
+  if (!companyId) {
+    let { data: company } = await admin
+      .from('companies')
+      .select('id')
+      .eq('slug', DEMO_COMPANY_SLUG)
+      .maybeSingle()
+
+    if (!company) {
+      const { data: flagged } = await admin
+        .from('companies')
+        .select('id')
+        .eq('demo_mode_enabled', true)
+        .limit(1)
+        .maybeSingle()
+      company = flagged
+    }
+
+    if (!company) {
+      throw new Error(`Demo company not found (slug: ${DEMO_COMPANY_SLUG} or demo_mode_enabled)`)
+    }
+
+    companyId = company.id
   }
-
-  const companyId = company.id
 
   const { data: technicians } = await admin
     .from('technicians')

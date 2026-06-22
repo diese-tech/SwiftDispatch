@@ -5,9 +5,42 @@ import TechPhoneModal from "@/components/TechPhoneModal";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { DEMO_COMPANY_SLUG } from "@/lib/resetDemoTenant";
+import { isDemoCompany } from "@/lib/demo";
 import { demoTechnicians } from "@/lib/demo-data";
 import type { JobWithTechnician, Technician } from "@/types/db";
+
+const TERMINAL_STATUSES = ["completed", "cancelled", "no_access"];
+
+/**
+ * Pick a single stable technician to surface in the demo "tech view" modal.
+ * Resilient to how the tenant was seeded — never depends on an exact name.
+ */
+function pickDemoTech(techs: Technician[], jobs: JobWithTechnician[]): Technician | null {
+  if (techs.length === 0) return null;
+  const activeJobIds = new Set(
+    jobs.filter((j) => !TERMINAL_STATUSES.includes(j.status)).map((j) => j.id),
+  );
+  // 1. A tech whose current_job_id still points to a non-terminal job.
+  //    (The PATCH path doesn't clear current_job_id on completion, so a bare
+  //    non-null check could pick a tech with a stale pointer and no live job.)
+  const withCurrent = techs.find(
+    (t) => t.current_job_id && activeJobIds.has(t.current_job_id),
+  );
+  if (withCurrent) return withCurrent;
+  // 2. Any tech currently assigned to a non-terminal job.
+  const activeJob = jobs.find(
+    (j) => j.technician_id && !TERMINAL_STATUSES.includes(j.status),
+  );
+  if (activeJob) {
+    const assigned = techs.find((t) => t.id === activeJob.technician_id);
+    if (assigned) return assigned;
+  }
+  // 3. The canonical demo tech name, if present.
+  const byName = techs.find((t) => t.name === demoTechnicians[0]?.name);
+  if (byName) return byName;
+  // 4. Fall back to the first technician.
+  return techs[0];
+}
 
 export default async function DispatchPage({ searchParams }: { searchParams: Promise<{ impersonate?: string }> }) {
   const profile = await getCurrentProfile();
@@ -38,13 +71,12 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   const techList = (technicians ?? []) as Technician[];
   const companyData = (companyRes as { data: { name: string; slug: string | null; demo_mode_enabled: boolean } | null }).data;
   const companyName = companyData?.name ?? companyId;
-  const isDemo = !impersonating && (companyData?.demo_mode_enabled === true || companyData?.slug === DEMO_COMPANY_SLUG);
+  const isDemo = !impersonating && isDemoCompany(companyData);
   const smsFailedJobIds = (failedSms ?? []).map((r: { job_id: string | null }) => r.job_id).filter(Boolean) as string[];
   const activeCount = allJobs.filter((j) => !["completed", "cancelled"].includes(j.status)).length;
 
-  // For the demo tech phone modal — find Mia Torres (first demo tech) by name
-  const demoTechName = demoTechnicians[0].name;
-  const demoTech = isDemo ? techList.find((t) => t.name === demoTechName) : null;
+  // For the demo tech phone modal — pick a stable tech (resilient to seeding).
+  const demoTech = isDemo ? pickDemoTech(techList, allJobs) : null;
 
   return (
     <div className="pb-4">
@@ -91,7 +123,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       {demoTech && (
         <TechPhoneModal
           demoTechId={demoTech.id}
-          demoTechName={demoTechName}
+          demoTechName={demoTech.name}
           companyId={companyId}
         />
       )}

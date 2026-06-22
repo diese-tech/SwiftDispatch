@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isDemoCompany } from "@/lib/demo";
 import DemoTabNav from "@/components/DemoTabNav";
 import ResetDemoButton from "@/components/ResetDemoButton";
 
@@ -18,11 +19,11 @@ export default async function DemoBanner() {
 
   const { data: company } = await supabase
     .from("companies")
-    .select("demo_mode_enabled")
+    .select("slug, demo_mode_enabled")
     .eq("id", profile.company_id)
     .single();
 
-  if (!company?.demo_mode_enabled) return null;
+  if (!isDemoCompany(company)) return null;
 
   return (
     <div className="border-b border-[var(--c-line)] bg-[var(--c-paper)]">
