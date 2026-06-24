@@ -39,12 +39,21 @@ export const metadata: Metadata = {
     url: "https://swiftdispatch.app",
     siteName: "SwiftDispatch",
     type: "website",
+    images: [
+      {
+        url: "/images/landing-hero.jpg",
+        width: 1344,
+        height: 768,
+        alt: "SwiftDispatch — Emergency HVAC Dispatch Software",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "SwiftDispatch | Emergency HVAC Dispatch Software",
     description:
       "Dispatch faster, keep technicians moving, and approve quotes by SMS with SwiftDispatch.",
+    images: ["/images/landing-hero.jpg"],
   },
   robots: {
     index: true,
