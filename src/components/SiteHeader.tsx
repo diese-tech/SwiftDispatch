@@ -40,15 +40,15 @@ export default function SiteHeader() {
             Sign In
           </Link>
           <Link
-            aria-label="Book a demo"
-            className="inline-flex min-h-11 items-center rounded-full bg-orange-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-orange-300 sm:min-h-0 sm:px-5 sm:py-2.5"
+            className="hidden items-center rounded-full bg-orange-400 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-orange-300 sm:inline-flex"
             href="/demo"
           >
-            <span className="sm:hidden">Demo</span>
-            <span className="hidden sm:inline">Book a demo</span>
+            Book a demo
           </Link>
           {/* Hamburger — mobile only */}
           <button
+            aria-controls="mobile-navigation"
+            aria-expanded={open}
             aria-label={open ? "Close menu" : "Open menu"}
             className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 transition hover:bg-slate-100 md:hidden"
             onClick={() => setOpen((v) => !v)}
@@ -59,9 +59,16 @@ export default function SiteHeader() {
         </div>
       </div>
 
-      {/* Mobile drawer */}
-      {open && (
-        <div className="border-t border-slate-200 px-6 pb-5 pt-3 md:hidden">
+      {/* Mobile drawer stays mounted so both opening and closing can animate. */}
+      <div
+        aria-hidden={!open}
+        className={`overflow-hidden border-slate-200 px-6 transition-[max-height,opacity,transform,padding,border-width] duration-300 ease-in-out motion-reduce:transition-none md:hidden ${
+          open
+            ? "max-h-96 translate-y-0 border-t pb-5 pt-3 opacity-100"
+            : "pointer-events-none max-h-0 -translate-y-2 border-t-0 pb-0 pt-0 opacity-0"
+        }`}
+        id="mobile-navigation"
+      >
           <nav className="flex flex-col gap-1">
             {navItems.map((item) => (
               <Link
@@ -69,6 +76,7 @@ export default function SiteHeader() {
                 href={item.href}
                 key={item.href}
                 onClick={() => setOpen(false)}
+                tabIndex={open ? undefined : -1}
               >
                 {item.label}
               </Link>
@@ -76,15 +84,23 @@ export default function SiteHeader() {
           </nav>
           <div className="mt-4 border-t border-slate-200 pt-4">
             <Link
+              className="mb-2 flex min-h-11 items-center justify-center rounded-full bg-orange-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-orange-300"
+              href="/demo"
+              onClick={() => setOpen(false)}
+              tabIndex={open ? undefined : -1}
+            >
+              Book a demo
+            </Link>
+            <Link
               className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
               href="/login"
               onClick={() => setOpen(false)}
+              tabIndex={open ? undefined : -1}
             >
               Sign In
             </Link>
           </div>
-        </div>
-      )}
+      </div>
     </header>
   );
 }
