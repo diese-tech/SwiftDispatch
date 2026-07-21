@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import TechnicianDropdown from "@/components/TechnicianDropdown";
 import { StatusDot } from "@/components/DesignSystem";
+import { VALID_TRANSITIONS } from "@/lib/stateMachine";
+import type { JobStatus } from "@/lib/stateMachine";
 import type { JobWithTechnician, Technician } from "@/types/db";
 
 type Props = {
@@ -12,6 +15,7 @@ type Props = {
   hasSmsFailure?: boolean;
   readOnly?: boolean;
   technicians: Technician[];
+  onRequestMove?: (jobId: string, nextStatus: JobStatus) => void;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -42,7 +46,7 @@ function getStatusTone(status: string): "neutral" | "blue" | "amber" | "red" | "
   return "neutral";
 }
 
-export default function JobCard({ job, hasSmsFailure = false, readOnly = false, technicians }: Props) {
+export default function JobCard({ job, hasSmsFailure = false, onRequestMove, readOnly = false, technicians }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: job.id,
   });
@@ -62,15 +66,12 @@ export default function JobCard({ job, hasSmsFailure = false, readOnly = false, 
     <article
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform) }}
-      {...(!readOnly ? listeners : {})}
-      {...(!readOnly ? attributes : {})}
       className={[
-        "rounded-xl border bg-[var(--c-paper)] transition-shadow select-none",
+        "rounded-xl border bg-[var(--c-paper)] transition-shadow",
         isEmergency
           ? "border-l-[3px] border-l-[var(--c-red)] border-[var(--c-line)]"
           : "border-[var(--c-line)]",
         isDragging ? "opacity-70 shadow-lg ring-1 ring-[var(--c-signal)]" : "shadow-[var(--shadow-sm)]",
-        !readOnly ? "cursor-grab active:cursor-grabbing" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -89,6 +90,17 @@ export default function JobCard({ job, hasSmsFailure = false, readOnly = false, 
             <span className={`font-mono text-[10px] ${age.tone === "red" ? "text-[var(--c-red)]" : age.tone === "amber" ? "text-[var(--c-amber)]" : "text-[var(--c-text-4)]"}`}>
               {age.label}
             </span>
+            {!readOnly ? (
+              <button
+                aria-label={`Drag ${job.customer_name}`}
+                className="grid h-7 w-7 touch-none place-items-center rounded-md text-[var(--c-text-4)] transition hover:bg-[var(--c-paper-2)] hover:text-[var(--c-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-signal)] cursor-grab active:cursor-grabbing"
+                type="button"
+                {...listeners}
+                {...attributes}
+              >
+                <GripVertical aria-hidden="true" size={14} />
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -105,12 +117,32 @@ export default function JobCard({ job, hasSmsFailure = false, readOnly = false, 
       </div>
 
       {!readOnly ? (
-        <div className="border-t border-[var(--c-line)] px-3 py-2">
+        <div className="grid gap-2 border-t border-[var(--c-line)] px-3 py-2">
           <TechnicianDropdown
             jobId={job.id}
             selectedId={job.technician_id}
             technicians={technicians}
           />
+          {onRequestMove && VALID_TRANSITIONS[normalizedStatus as JobStatus]?.length > 0 ? (
+            <label className="flex items-center justify-between gap-2">
+              <span className="font-mono text-[10px] text-[var(--c-text-4)]">Move to</span>
+              <select
+                aria-label={`Move ${job.customer_name} to another status`}
+                className="min-w-0 rounded-lg border border-[var(--c-line)] bg-[var(--c-paper)] px-2 py-1 text-[11px] text-[var(--c-text-3)] outline-none focus:border-[var(--c-signal)] focus:ring-2 focus:ring-[var(--c-signal-w)]"
+                defaultValue=""
+                onChange={(event) => {
+                  const nextStatus = event.currentTarget.value as JobStatus;
+                  event.currentTarget.value = "";
+                  if (nextStatus) onRequestMove(job.id, nextStatus);
+                }}
+              >
+                <option value="" disabled>Select status</option>
+                {VALID_TRANSITIONS[normalizedStatus as JobStatus].map((status) => (
+                  <option key={status} value={status}>{STATUS_LABELS[status] ?? status}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </div>
       ) : (
         <div className="flex items-center gap-2 border-t border-[var(--c-line)] px-3 py-2">

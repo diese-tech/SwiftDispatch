@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta
+      name="description"
+      content="SwiftDispatch keeps HVAC calls, technicians, quotes, and customer updates moving in one visible workflow."
+    />
+
+    <title>SwiftDispatch | HVAC dispatch, without the chaos</title>
+
+    <link
+      rel="icon"
+      type="image/png"
+      href="assets/swift-dispatch-mark.png"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main-content">
+      Skip to main content
+    </a>
+
+    <header class="site-header">
+      <div class="site-header__inner layout-container">
+        <a
+          class="site-header__brand"
+          href="#top"
+          aria-label="SwiftDispatch home"
+        >
+          <img
+            class="site-header__logo"
+            src="assets/swift-dispatch-primary.png"
+            alt=""
+          />
+        </a>
+
+        <nav class="site-header__nav" aria-label="Primary navigation">
+          <a
+            class="site-header__link link-effect"
+            href="#workflow"
+          >
+            Workflow
+          </a>
+
+          <a
+            class="site-header__link link-effect"
+            href="#product"
+          >
+            Product
+          </a>
+
+          <a
+            class="site-header__link link-effect"
+            href="#fit"
+          >
+            Who it’s for
+          </a>
+        </nav>
+
+        <div class="site-header__actions">
+          <a class="site-header__sign-in" href="#sign-in">
+            Sign in
+          </a>
+
+          <a class="button button--orange" href="#demo">
+            Book a demo
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="route-hero" id="top">
+        <div class="route-hero__inner layout-container">
+          <div class="route-hero__track" aria-hidden="true">
+            <span
+              class="route-hero__node route-hero__node--complete"
+            ></span>
+
+            <span
+              class="route-hero__node route-hero__node--active"
+            ></span>
+
+            <span class="route-hero__node"></span>
+          </div>
+
+          <div class="route-hero__content">
+            <p class="eyebrow route-hero__eyebrow--blue">
+              From ring to resolution
+            </p>
+
+            <h1 class="route-hero__title">
+              Your fastest route through a busy dispatch day.
+            </h1>
+
+            <p class="route-hero__summary">
+              SwiftDispatch turns scattered calls, texts, and
+              whiteboards into one visible path your whole team can
+              follow.
+            </p>
+
+            <div class="route-hero__actions">
+              <a
+                class="button button--blue"
+                href="#workflow"
+              >
+                Walk through the workflow
+                <span aria-hidden="true">→</span>
+              </a>
+
+              <a
+                class="route-hero__secondary-link link-effect"
+                href="#fit"
+              >
+                See if it fits your team
+              </a>
+            </div>
+          </div>
+
+          <ol
+            class="route-preview"
+            aria-label="Example job progress"
+          >
+            <li class="route-preview__item">
+              <time
+                class="route-preview__time"
+                datetime="08:42"
+              >
+                08:42
+              </time>
+
+              <span
+                class="route-preview__marker"
+                aria-hidden="true"
+              ></span>
+
+              <div class="route-preview__content">
+                <strong class="route-preview__title">
+                  New emergency call
+                </strong>
+
+                <span class="route-preview__detail">
+                  14 Pine Street · No heat
+                </span>
+              </div>
+            </li>
+
+            <li
+              class="route-preview__item route-preview__item--active"
+            >
+              <time
+                class="route-preview__time"
+                datetime="08:46"
+              >
+                08:46
+              </time>
+
+              <span
+                class="route-preview__marker route-preview__marker--active"
+                aria-hidden="true"
+              ></span>
+
+              <div class="route-preview__content">
+                <strong class="route-preview__title">
+                  Marcus assigned
+                </strong>
+
+                <span class="route-preview__detail">
+                  12 min away · Customer notified
+                </span>
+              </div>
+            </li>
+
+            <li class="route-preview__item">
+              <time
+                class="route-preview__time"
+                datetime="09:31"
+              >
+                09:31
+              </time>
+
+              <span
+                class="route-preview__marker"
+                aria-hidden="true"
+              ></span>
+
+              <div class="route-preview__content">
+                <strong class="route-preview__title">
+                  Quote sent
+                </strong>
+
+                <span class="route-preview__detail">
+                  $486 · Awaiting approval
+                </span>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="signal-path" id="workflow">
+        <div class="signal-path__inner layout-container">
+          <div class="signal-path__intro">
+            <p class="eyebrow eyebrow--blue reveal">
+              The signal path
+            </p>
+
+            <h2
+              class="signal-path__title reveal reveal-delay-1"
+            >
+              Nothing important gets lost between the office and the
+              field.
+            </h2>
+
+            <p
+              class="signal-path__summary reveal reveal-delay-2"
+            >
+              One continuous record replaces the handoff gaps that
+              create callbacks and confusion.
+            </p>
+          </div>
+
+          <ol class="signal-path__steps">
+            <li class="signal-step reveal reveal--right">
+              <span class="signal-step__number">01</span>
+
+              <span
+                class="signal-step__icon"
+                aria-hidden="true"
+              >
+                ☎
+              </span>
+
+              <h3 class="signal-step__title">
+                A customer calls
+              </h3>
+
+              <p class="signal-step__description">
+                Capture the problem, urgency, consent, and address
+                without retyping it later.
+              </p>
+            </li>
+
+            <li
+              class="signal-step reveal reveal--right reveal-delay-1"
+            >
+              <span class="signal-step__number">02</span>
+
+              <span
+                class="signal-step__icon"
+                aria-hidden="true"
+              >
+                ↝
+              </span>
+
+              <h3 class="signal-step__title">
+                Dispatch sees the whole field
+              </h3>
+
+              <p class="signal-step__description">
+                Availability and active work stay visible before the
+                assignment is made.
+              </p>
+            </li>
+
+            <li
+              class="signal-step reveal reveal--right reveal-delay-2"
+            >
+              <span class="signal-step__number">03</span>
+
+              <span
+                class="signal-step__icon"
+                aria-hidden="true"
+              >
+                ✓
+              </span>
+
+              <h3 class="signal-step__title">
+                The quote comes back approved
+              </h3>
+
+              <p class="signal-step__description">
+                Customers review and approve from their phone while
+                the job keeps moving.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="product-proof" id="product">
+        <div class="product-proof__inner layout-container">
+          <div class="product-proof__copy">
+            <p class="eyebrow eyebrow--blue reveal">
+              One operating picture
+            </p>
+
+            <h2
+              class="product-proof__title reveal reveal-delay-1"
+            >
+              See what changed—and what needs you.
+            </h2>
+
+            <p
+              class="product-proof__summary reveal reveal-delay-2"
+            >
+              The live board keeps urgency, ownership, and job
+              context visible without turning dispatch into data
+              entry.
+            </p>
+
+            <ul
+              class="product-proof__list reveal reveal-delay-3"
+            >
+              <li class="product-proof__item">
+                <span aria-hidden="true">✓</span>
+                Persistent lane names and job counts
+              </li>
+
+              <li class="product-proof__item">
+                <span aria-hidden="true">✓</span>
+                Clear assignment and status history
+              </li>
+
+              <li class="product-proof__item">
+                <span aria-hidden="true">✓</span>
+                Office, field, and customer updates together
+              </li>
+            </ul>
+          </div>
+
+          <div
+            class="dispatch-board reveal reveal--right reveal-delay-2"
+            aria-label="Example SwiftDispatch board"
+          >
+            <div class="dispatch-board__header">
+              <div>
+                <span class="dispatch-board__label">
+                  Live workspace
+                </span>
+
+                <h3 class="dispatch-board__title">
+                  Dispatch overview
+                </h3>
+              </div>
+
+              <span class="dispatch-board__status">
+                Live
+              </span>
+            </div>
+
+            <div class="dispatch-board__metrics">
+              <div class="dispatch-board__metric">
+                <span>Open jobs</span>
+                <strong>5</strong>
+              </div>
+
+              <div class="dispatch-board__metric">
+                <span>Unassigned</span>
+                <strong>2</strong>
+              </div>
+
+              <div class="dispatch-board__metric">
+                <span>En route</span>
+                <strong>1</strong>
+              </div>
+            </div>
+
+            <div class="dispatch-board__lanes">
+              <section class="dispatch-lane">
+                <h4 class="dispatch-lane__title">
+                  <span class="dispatch-lane__dot"></span>
+                  New
+                </h4>
+
+                <article class="job-card">
+                  <time class="job-card__age">8m</time>
+
+                  <strong class="job-card__customer">
+                    Sarah Chen
+                  </strong>
+
+                  <span class="job-card__issue">
+                    Furnace not heating
+                  </span>
+
+                  <span class="job-card__status">
+                    Unassigned
+                  </span>
+                </article>
+              </section>
+
+              <section
+                class="dispatch-lane dispatch-lane--assigned"
+              >
+                <h4 class="dispatch-lane__title">
+                  <span class="dispatch-lane__dot"></span>
+                  Assigned
+                </h4>
+
+                <article class="job-card">
+                  <time class="job-card__age">21m</time>
+
+                  <strong class="job-card__customer">
+                    Marcus Rivera
+                  </strong>
+
+                  <span class="job-card__issue">
+                    System not cooling
+                  </span>
+
+                  <span class="job-card__status">
+                    Assigned
+                  </span>
+                </article>
+              </section>
+
+              <section
+                class="dispatch-lane dispatch-lane--en-route"
+              >
+                <h4 class="dispatch-lane__title">
+                  <span class="dispatch-lane__dot"></span>
+                  En route
+                </h4>
+
+                <article class="job-card">
+                  <time class="job-card__age">1h 12m</time>
+
+                  <strong class="job-card__customer">
+                    Lisa Park
+                  </strong>
+
+                  <span class="job-card__issue">
+                    Heat pump failure
+                  </span>
+
+                  <span class="job-card__status">
+                    En route
+                  </span>
+                </article>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="team-fit" id="fit">
+        <div class="team-fit__inner layout-container">
+          <div class="team-fit__content">
+            <p class="eyebrow reveal">
+              Purpose-built fit
+            </p>
+
+            <h2
+              class="team-fit__title reveal reveal-delay-1"
+            >
+              Enough structure to stay in control. Not another
+              enterprise rollout.
+            </h2>
+
+            <ul
+              class="team-fit__list reveal reveal-delay-2"
+            >
+              <li class="team-fit__item">
+                <span aria-hidden="true">✓</span>
+                3–15 technicians
+              </li>
+
+              <li class="team-fit__item">
+                <span aria-hidden="true">✓</span>
+                Emergency and same-day service
+              </li>
+
+              <li class="team-fit__item">
+                <span aria-hidden="true">✓</span>
+                Office-to-field coordination
+              </li>
+            </ul>
+          </div>
+
+          <figure
+            class="team-fit__promise reveal reveal--right reveal-delay-2"
+          >
+            <blockquote class="team-fit__quote">
+              “The value isn’t another dashboard. It’s knowing the
+              next call won’t derail everything already in motion.”
+            </blockquote>
+
+            <figcaption class="team-fit__caption">
+              The SwiftDispatch promise
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="demo-cta" id="demo">
+        <div class="demo-cta__inner layout-container">
+          <img
+            class="demo-cta__logo reveal reveal--scale"
+            src="assets/swift-dispatch-stacked.png"
+            alt="SwiftDispatch"
+          />
+
+          <div class="demo-cta__content">
+            <p class="eyebrow reveal">
+              Ready to see the full path?
+            </p>
+
+            <h2
+              class="demo-cta__title reveal reveal-delay-1"
+            >
+              Bring one real dispatch scenario. We’ll map it
+              together.
+            </h2>
+          </div>
+
+          <a
+            class="button button--orange reveal reveal--right reveal-delay-2"
+            href="mailto:hello@swiftdispatch.com?subject=SwiftDispatch%20demo"
+          >
+            Book a demo
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner layout-container">
+        <a
+          class="site-footer__brand"
+          href="#top"
+          aria-label="SwiftDispatch home"
+        >
+          <img
+            class="site-footer__logo"
+            src="assets/swift-dispatch-primary.png"
+            alt=""
+          />
+        </a>
+
+        <p class="site-footer__copy">
+          Dispatch clarity for HVAC teams.
+        </p>
+
+        <p class="site-footer__legal">
+          © 2026 SwiftDispatch
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      const revealElements = document.querySelectorAll(".reveal");
+
+      const revealObserver = new IntersectionObserver(
+        (entries, observer) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) {
+              return;
+            }
+
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          });
+        },
+        {
+          threshold: 0.15,
+          rootMargin: "0px 0px -60px 0px",
+        }
+      );
+
+      revealElements.forEach((element) => {
+        revealObserver.observe(element);
+      });
+    </script>
+  </body>
+</html>

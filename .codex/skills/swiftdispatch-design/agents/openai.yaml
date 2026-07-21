@@ -1,0 +1,7 @@
+interface:
+  display_name: "SwiftDispatch Design"
+  short_description: "Apply the SwiftDispatch brand and UI system"
+  default_prompt: "Use $swiftdispatch-design to design or review this SwiftDispatch interface."
+  icon_small: "./assets/swift-dispatch-mark.png"
+  icon_large: "./assets/swift-dispatch-stacked.png"
+  brand_color: "#1155F5"

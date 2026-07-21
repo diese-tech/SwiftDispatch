@@ -14,8 +14,9 @@
   --c-text-4: #a1a1aa;
 
   /* Signal / status palette */
-  --c-signal: #1f6feb;
-  --c-signal-w: #eaf2ff;
+  --c-signal: #1155f5;
+  --c-signal-hover: #0d47d9;
+  --c-signal-w: #eaf0ff;
   --c-amber: #b45309;
   --c-amber-w: #fef6e7;
   --c-red: #b91c1c;
@@ -26,14 +27,14 @@
   --c-violet-w: #f1ebfe;
 
   /* Brand — keep */
-  --navy: #0b2235;
-  --navy-strong: #071927;
+  --navy: #050b38;
+  --navy-strong: #030725;
   --warm: #f08a24;
   --warm-soft: #fff0df;
 
-  /* Teal kept for marketing pages */
-  --teal: #0f766e;
-  --teal-bright: #2dd4bf;
+  /* Temporary aliases while legacy teal utilities migrate to brand blue. */
+  --teal: var(--c-signal);
+  --teal-bright: #60a5fa;
 
   /* Legacy aliases so existing Tailwind utilities still resolve */
   --background: var(--c-bg);
@@ -64,7 +65,7 @@ body {
   min-height: 100vh;
   background: var(--c-bg);
   color: var(--c-text);
-  font-family: var(--font-inter-tight, Inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-manrope, Manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
@@ -99,6 +100,36 @@ textarea::placeholder {
 
 ::selection {
   background: rgba(31, 111, 235, 0.18);
+}
+
+.brand-link {
+  position: relative;
+  text-decoration: none;
+  transition: transform 220ms ease;
+}
+
+.brand-link::after {
+  position: absolute;
+  right: 0;
+  bottom: -5px;
+  width: 0;
+  height: 2px;
+  background: var(--c-signal);
+  content: "";
+  transition: width 220ms ease;
+}
+
+.brand-link:hover::after,
+.brand-link:focus-visible::after {
+  right: auto;
+  left: 0;
+  width: 100%;
+}
+
+.brand-link:focus-visible {
+  border-radius: 2px;
+  outline: 3px solid var(--c-signal);
+  outline-offset: 5px;
 }
 
 .noise-overlay {

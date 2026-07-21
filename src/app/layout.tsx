@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 
-const interTight = Inter_Tight({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter-tight",
+  variable: "--font-manrope",
   display: "swap",
 });
 
@@ -65,7 +65,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${interTight.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${jetbrainsMono.variable}`}>
       <body>{children}</body>
     </html>
   );

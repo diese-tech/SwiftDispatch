@@ -24,7 +24,7 @@ export default async function LoginPage({
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
-          <BrandMark href="/" />
+          <BrandMark href="/" variant="stacked" />
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">

@@ -7,31 +7,31 @@ type SiteFooterProps = {
 
 export default function SiteFooter({ compact = false }: SiteFooterProps) {
   return (
-    <footer className="border-t border-white/10 bg-[linear-gradient(180deg,#0c2235_0%,#071927_100%)] px-6 py-10 text-white">
+    <footer className="border-t border-zinc-200 bg-white px-6 py-10 text-[var(--navy)]">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-xl">
           <BrandMark href="/" inverse size={compact ? "sm" : "md"} />
-          <p className="mt-4 text-sm leading-6 text-slate-300">
-            Dispatch, technician updates, quote follow-through, and customer communication in one premium operating workflow.
+          <p className="mt-4 text-sm leading-6 text-zinc-500">
+            Dispatch clarity for HVAC teams.
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 text-sm text-slate-300 sm:items-end">
+        <div className="flex flex-col gap-3 text-sm text-zinc-500 sm:items-end">
           <div className="flex flex-wrap items-center gap-5">
-            <Link className="transition hover:text-white" href="/demo">
-              Book a Demo
+            <Link className="transition hover:text-[var(--c-signal)]" href="/demo">
+              Book a demo
             </Link>
-            <Link className="transition hover:text-white" href="/privacy">
+            <Link className="transition hover:text-[var(--c-signal)]" href="/privacy">
               Privacy
             </Link>
-            <Link className="transition hover:text-white" href="/terms">
+            <Link className="transition hover:text-[var(--c-signal)]" href="/terms">
               Terms
             </Link>
-            <a className="transition hover:text-white" href="mailto:hello@swiftdispatch.app">
+            <a className="transition hover:text-[var(--c-signal)]" href="mailto:hello@swiftdispatch.app">
               hello@swiftdispatch.app
             </a>
           </div>
-          <p>(c) {new Date().getFullYear()} SwiftDispatch. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} SwiftDispatch. All rights reserved.</p>
         </div>
       </div>
     </footer>

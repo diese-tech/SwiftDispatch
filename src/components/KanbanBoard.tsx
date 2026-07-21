@@ -180,6 +180,13 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
     const nextStatus = event.over?.id?.toString() as JobStatus | undefined;
     const job = jobs.find((item) => item.id === jobId);
     if (!nextStatus || !statuses.includes(nextStatus) || !job || job.status === nextStatus) return;
+    requestMove(jobId, nextStatus);
+  }
+
+  function requestMove(jobId: string, nextStatus: JobStatus) {
+    if (readOnly) return;
+    const job = jobs.find((item) => item.id === jobId);
+    if (!job || job.status === nextStatus) return;
     setPendingMove({ jobId, fromStatus: job.status, toStatus: nextStatus, customerName: job.customer_name });
   }
 
@@ -334,13 +341,13 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
                   </button>
                 ))}
               </div>
-              <KanbanColumn jobs={mobileJobs} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={mobileStatus} technicians={technicians} compact />
+              <KanbanColumn jobs={mobileJobs} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={mobileStatus} technicians={technicians} compact />
             </div>
           </div>
 
           {/* Desktop: full board */}
-          <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
-            {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={status} technicians={technicians} />)}
+          <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={status} technicians={technicians} />)}
           </div>
         </DndContext>
       )}

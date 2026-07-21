@@ -14,9 +14,11 @@ describe('isValidTransition — valid transitions', () => {
     ['assigned', 'en_route'],
     ['assigned', 'cancelled'],
     ['en_route', 'in_progress'],
+    ['en_route', 'assigned'],
     ['en_route', 'no_access'],
     ['en_route', 'cancelled'],
     ['in_progress', 'quote_pending'],
+    ['in_progress', 'assigned'],
     ['in_progress', 'cancelled'],
     ['quote_pending', 'completed'],
     ['quote_pending', 'in_progress'],
@@ -40,8 +42,6 @@ describe('isValidTransition — invalid skip transitions', () => {
     ['assigned', 'in_progress'],
     ['assigned', 'completed'],
     ['en_route', 'completed'],
-    ['en_route', 'assigned'],
-    ['in_progress', 'assigned'],
     ['in_progress', 'new'],
   ]
 

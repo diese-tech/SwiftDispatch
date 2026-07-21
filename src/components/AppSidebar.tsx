@@ -126,7 +126,7 @@ export default function AppSidebar({ section, user }: Props) {
         style={{ position: "sticky", top: 0, height: "100vh", overflowY: "auto" }}
       >
         <div className="border-b border-[var(--c-line)] px-4 py-3.5">
-          <BrandMark href={homeHref} size="sm" />
+          <BrandMark href={homeHref} size="sm" variant="mark" />
         </div>
         {navContent}
         {footerContent}

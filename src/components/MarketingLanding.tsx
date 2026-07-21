@@ -1,546 +1,143 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  BarChart3,
-  CheckCircle2,
-  ClipboardList,
-  FileCheck,
-  LayoutGrid,
-  MessageSquare,
-  PhoneCall,
-  Send,
-  Smartphone,
-} from "lucide-react";
-import { SectionEyebrow, SectionHeading } from "@/components/DesignSystem";
+import { ArrowRight, Check, FileCheck, PhoneCall, Route } from "lucide-react";
+import BrandMark from "@/components/BrandMark";
 import Reveal from "@/components/Reveal";
-import DispatchPreview from "@/components/DispatchPreview";
-import DemoPreview from "@/components/DemoPreview";
 
-const features = [
-  {
-    icon: LayoutGrid,
-    title: "Real-time dispatch board",
-    description:
-      "Run dispatch from one visual board with cleaner ownership, less chasing, and fewer dropped updates.",
-  },
-  {
-    icon: MessageSquare,
-    title: "SMS-first field workflow",
-    description:
-      "Technicians and customers stay in the loop without you forcing another heavyweight app install.",
-  },
-  {
-    icon: FileCheck,
-    title: "Quote approvals that move",
-    description:
-      "Send quotes while the job is still active and reduce the dead time between diagnosis and approval.",
-  },
-  {
-    icon: BarChart3,
-    title: "Operational visibility",
-    description:
-      "See response times, quote performance, and revenue momentum without stitching together spreadsheets.",
-  },
-];
-
-const trustCards = [
-  {
-    eyebrow: "Built for",
-    title: "Small HVAC teams with 3 to 15 techs that are growing past calls, texts, and memory.",
-    description:
-      "SwiftDispatch is strongest when the work is increasing, the office is stretched, and coordination has started living in too many places at once.",
-  },
-  {
-    eyebrow: "Designed for",
-    title: "Owner-operators, office managers, dispatchers, and techs in one operating flow.",
-    description:
-      "The office gets a clearer command surface while the field team and customer side keep moving with less friction.",
-  },
-  {
-    eyebrow: "The right tier",
-    title: "More structure than whiteboards. Less overhead than ServiceTitan.",
-    description:
-      "Enterprise dispatch platforms are built for companies with dedicated IT, six-figure contracts, and months of onboarding. SwiftDispatch is built for teams that need to move faster, not heavier.",
-  },
-];
-
-const proofCards = [
-  {
-    title: "Dispatch board with live job ownership",
-    audience: "For the office",
-    outcome: "Know what is open, who owns it, and what is slipping before it turns into another callback chain.",
-  },
-  {
-    title: "Field workflow that stays lightweight",
-    audience: "For technicians",
-    outcome: "Keep the field responsive without betting adoption on another complicated mobile app rollout.",
-  },
-  {
-    title: "Customer communication and closeout clarity",
-    audience: "For revenue follow-through",
-    outcome: "Move from intake to quote to completion in a flow that feels like one product instead of five stitched together.",
-  },
+const routeEvents = [
+  { time: "08:42", title: "New emergency call", detail: "14 Pine Street · No heat" },
+  { time: "08:46", title: "Marcus assigned", detail: "12 min away · Customer notified", active: true },
+  { time: "09:31", title: "Quote sent", detail: "$486 · Awaiting approval" },
 ];
 
 const workflow = [
   {
     icon: PhoneCall,
-    title: "Capture the request",
-    description: "A call, form, or manual intake becomes an active job right away instead of a note to track later.",
+    title: "A customer calls",
+    description: "Capture the problem, urgency, consent, and address without retyping it later.",
   },
   {
-    icon: Send,
-    title: "Assign and notify",
-    description: "Dispatch the right tech, send the update path, and keep the office and field aligned in seconds.",
+    icon: Route,
+    title: "Dispatch sees the whole field",
+    description: "Availability and active work stay visible before the assignment is made.",
   },
   {
-    icon: Smartphone,
-    title: "Update, quote, and close",
-    description: "The technician updates progress from the field while the customer receives cleaner quote and status communication.",
+    icon: FileCheck,
+    title: "The quote comes back approved",
+    description: "Customers review and approve from their phone while the job keeps moving.",
   },
 ];
 
-const plans = [
-  {
-    name: "Starter",
-    price: "$99",
-    detail: "Up to 3 technicians",
-    features: ["Dispatch board", "SMS updates", "Quote builder"],
-  },
-  {
-    name: "Growth",
-    price: "$199",
-    detail: "Up to 10 technicians",
-    features: ["Everything in Starter", "Analytics", "Templates"],
-    featured: true,
-  },
-  {
-    name: "Pro",
-    price: "$399",
-    detail: "Unlimited technicians",
-    features: ["Everything in Growth", "Priority support", "Custom workflows"],
-  },
+const boardColumns = [
+  { label: "New", dot: "bg-zinc-400", age: "8m", customer: "Sarah Chen", issue: "Furnace not heating", status: "Unassigned" },
+  { label: "Assigned", dot: "bg-[var(--c-signal)]", age: "21m", customer: "Marcus Rivera", issue: "System not cooling", status: "Assigned" },
+  { label: "En route", dot: "bg-[var(--warm)]", age: "1h 12m", customer: "Lisa Park", issue: "Heat pump failure", status: "En route" },
 ];
-
-const fitSignals = [
-  "You dispatch from calls, texts, and a whiteboard or spreadsheet.",
-  "You have enough job volume that follow-through is starting to break down.",
-  "You want technicians, office staff, and customers in a cleaner loop without adding operational clutter.",
-  "You have looked at platforms like ServiceTitan and decided the cost and complexity are not worth it yet.",
-];
-
-/* ── Inline proof thumbs ─────────────────────────────────────────────── */
-
-function DispatchBoardThumb() {
-  return (
-    <div className="h-52 overflow-hidden p-3">
-      <div className="space-y-2 scale-[0.82] origin-top-left w-[122%]">
-        {/* metrics strip */}
-        <div className="grid grid-cols-4 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 text-[10px]">
-          {[["Open jobs","5"],["Unassigned","2"],["En route","1"],["Techs","4"]].map(([l, v]) => (
-            <div key={l} className="bg-white px-2 py-1.5">
-              <p className="font-mono text-[8px] uppercase tracking-wide text-zinc-400">{l}</p>
-              <p className="text-base font-semibold text-zinc-900">{v}</p>
-            </div>
-          ))}
-        </div>
-        {/* mini columns */}
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: "New", dot: "bg-zinc-400", jobs: ["Sarah Chen","Tom Okafor"] },
-            { label: "Assigned", dot: "bg-blue-500", jobs: ["Marcus Rivera"] },
-            { label: "En Route", dot: "bg-amber-600", jobs: ["Lisa Park"] },
-          ].map((col) => (
-            <div key={col.label} className="rounded-lg border border-slate-200 bg-white">
-              <div className="flex items-center gap-1.5 border-b border-slate-100 px-2 py-1.5">
-                <span className={`h-1.5 w-1.5 rounded-full ${col.dot}`} />
-                <span className="text-[10px] font-medium text-zinc-600">{col.label}</span>
-              </div>
-              <div className="space-y-1.5 p-1.5">
-                {col.jobs.map((name) => (
-                  <div key={name} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                    <p className="text-[10px] font-semibold text-zinc-800">{name}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TechSmsThumb() {
-  const messages = [
-    { from: "system", text: "You have been assigned to: Lisa Park — 17 Sunridge Way" },
-    { from: "tech", text: "En route now, ETA 15 min" },
-    { from: "system", text: "Status updated to En Route. Customer notified." },
-    { from: "tech", text: "On site. Starting diagnosis." },
-  ];
-  return (
-    <div className="flex h-52 flex-col gap-1.5 overflow-hidden bg-slate-100 p-3">
-      <div className="flex items-center gap-2 rounded-xl bg-[#0b2235] px-3 py-2">
-        <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-teal-600 font-mono text-[9px] font-bold text-white">JK</div>
-        <div>
-          <p className="text-[10px] font-semibold text-white">Jason K.</p>
-          <p className="text-[9px] text-slate-400">Field technician</p>
-        </div>
-      </div>
-      <div className="flex-1 space-y-1.5 overflow-hidden">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.from === "tech" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-[9.5px] leading-4 ${m.from === "tech" ? "bg-teal-700 text-white" : "bg-white text-zinc-700 border border-slate-200"}`}>
-              {m.text}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function QuoteThumb() {
-  return (
-    <div className="h-52 space-y-2 overflow-hidden p-3">
-      <div className="rounded-xl border border-slate-200 bg-white p-3">
-        <p className="font-mono text-[9px] uppercase tracking-wide text-zinc-400">Quote #A8F3</p>
-        <p className="mt-1 text-sm font-semibold text-zinc-900">Marcus Rivera</p>
-        <div className="mt-2 space-y-1">
-          {[["Refrigerant recharge (2 lbs)", "$180"],["Labor — AC diagnostic","$95"],["Service call fee","$75"]].map(([name, price]) => (
-            <div key={name} className="flex items-center justify-between text-[10px]">
-              <span className="text-zinc-600">{name}</span>
-              <span className="font-semibold text-zinc-900">{price}</span>
-            </div>
-          ))}
-          <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-bold">
-            <span className="text-zinc-800">Total</span>
-            <span className="text-zinc-900">$350.00</span>
-          </div>
-        </div>
-      </div>
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center">
-        <p className="font-mono text-[9px] uppercase tracking-wide text-emerald-700">Customer accepted via SMS link</p>
-      </div>
-    </div>
-  );
-}
 
 export default function MarketingLanding() {
   return (
     <main id="top">
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="px-6 pb-20 pt-16 sm:pt-20">
-        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
-          <div>
-            <span className="inline-flex items-center rounded border border-teal-200 bg-teal-50 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">
-              HVAC Dispatch Platform
-            </span>
-            <h1 className="mt-6 max-w-4xl text-5xl font-semibold tracking-[-0.025em] text-slate-950 sm:text-6xl">
-              The dispatch layer between whiteboards and enterprise software.
+      <section className="overflow-hidden bg-white">
+        <div className="relative mx-auto grid min-h-[680px] max-w-7xl gap-16 px-6 py-24 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:gap-24">
+          <div aria-hidden="true" className="absolute inset-y-0 left-[53%] hidden w-0.5 bg-zinc-200 lg:block">
+            <span className="absolute inset-x-0 top-0 h-[54%] bg-[var(--c-signal)]" />
+            <span className="absolute left-1/2 top-[20%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[var(--c-signal)] bg-white" />
+            <span className="absolute left-1/2 top-[54%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[var(--c-signal)] bg-[var(--c-signal)] shadow-[0_0_0_8px_var(--c-signal-w)]" />
+            <span className="absolute left-1/2 top-[84%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-zinc-200 bg-white" />
+          </div>
+
+          <div className="relative z-10">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-[var(--c-signal)]">From ring to resolution</p>
+            <h1 className="mt-4 max-w-3xl text-[clamp(3.25rem,6vw,5.25rem)] font-extrabold leading-[0.95] tracking-[-0.055em] text-[var(--navy)]">
+              Your fastest route through a busy dispatch day.
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-              SwiftDispatch is built for 3 to 15 technician HVAC teams that have outgrown calls, texts, and spreadsheets — but are not ready for the cost and complexity of platforms like ServiceTitan.
+            <p className="mt-8 max-w-xl text-xl leading-8 text-zinc-500">
+              SwiftDispatch turns scattered calls, texts, and whiteboards into one visible path your whole team can follow.
             </p>
-
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Link
-                className="inline-flex items-center justify-center rounded-full bg-teal-700 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-teal-800"
-                href="/demo"
-              >
-                Request a Demo
+            <div className="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center">
+              <Link className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[var(--c-signal)] px-6 font-bold text-white shadow-[0_12px_28px_rgb(17_85_245_/_22%)] transition hover:-translate-y-1 hover:bg-[var(--c-signal-hover)] focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[var(--c-signal)]" href="#workflow">
+                Walk through the workflow <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 transition hover:bg-slate-50"
-                href="/login"
-              >
-                Try live demo
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-            <p className="mt-3 text-xs text-slate-500">
-              Live sandbox · login with <strong>demo@swiftdispatch.app</strong> / <strong>demo</strong> · resets nightly
-            </p>
-
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              {[
-                "No extra app for technicians",
-                "Quote approvals by text",
-                "Starts at $99/mo — not $500+",
-              ].map((item, index) => (
-                <Reveal key={item} delay={index * 80}>
-                  <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
-                      <p className="text-sm leading-6 text-slate-700">{item}</p>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
+              <Link className="brand-link font-bold text-[var(--navy)]" href="#fit">See if it fits your team</Link>
             </div>
           </div>
 
-          <div className="relative">
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 p-2 shadow-[0_28px_80px_rgba(8,26,40,0.14)]">
-              <div className="overflow-hidden rounded-xl">
-                <DemoPreview />
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {["Dispatch clarity", "Quote follow-through", "Built for HVAC operators"].map((label) => (
-                <span
-                  key={label}
-                  className="inline-flex items-center rounded border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-500"
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
+          <ol className="relative z-10 grid list-none gap-3.5 p-0">
+            {routeEvents.map((event) => (
+              <li className={`grid grid-cols-[58px_16px_1fr] items-center gap-4 rounded-xl border bg-white/95 p-5 ${event.active ? "border-[var(--c-signal)] shadow-[var(--shadow-lg)] lg:translate-x-5" : "border-zinc-200"}`} key={event.time}>
+                <time className="font-mono text-xs text-zinc-500">{event.time}</time>
+                <span aria-hidden="true" className={`h-3 w-3 rounded-full border-[3px] border-[var(--c-signal)] ${event.active ? "bg-[var(--c-signal)] shadow-[0_0_0_6px_var(--c-signal-w)]" : ""}`} />
+                <span className="grid gap-1"><strong className="text-[17px] text-[var(--navy)]">{event.title}</strong><span className="text-[13px] text-zinc-500">{event.detail}</span></span>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
-      {/* ── Why teams pay attention ──────────────────────────────── */}
-      <section className="px-6 pb-8" id="proof">
-        <div className="mx-auto max-w-7xl rounded-2xl bg-[linear-gradient(135deg,#0b2235_0%,#102f47_58%,#081b2a_100%)] px-6 py-10 text-white shadow-[0_28px_80px_rgba(8,26,40,0.14)] sm:px-8 lg:px-10">
-          <SectionEyebrow inverse>Why Teams Pay Attention</SectionEyebrow>
-          <SectionHeading
-            inverse
-            title="A cleaner operating system for the part of HVAC work that usually turns into noise."
-            description="This is where SwiftDispatch earns attention: it reduces coordination friction in the office, in the field, and in the customer loop at the same time."
-          />
-
-          <div className="mt-10 grid gap-5 lg:grid-cols-3">
-            {trustCards.map((card, index) => (
-              <Reveal key={card.eyebrow} delay={index * 100}>
-                <div className="h-full rounded-xl border border-white/10 bg-white/5 p-6">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate-400">
-                    0{index + 1} · {card.eyebrow}
-                  </p>
-                  <h3 className="mt-4 text-xl font-semibold tracking-tight text-white">{card.title}</h3>
-                  <p className="mt-4 text-sm leading-7 text-slate-300">{card.description}</p>
-                </div>
+      <section className="bg-[#f3f6fc] px-6 py-28" id="workflow">
+        <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-[0.8fr_1.2fr] lg:gap-28">
+          <Reveal>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-[var(--c-signal)]">The signal path</p>
+            <h2 className="mt-4 text-[clamp(2.25rem,4vw,3.5rem)] font-extrabold leading-none tracking-[-0.04em] text-[var(--navy)]">Nothing important gets lost between the office and the field.</h2>
+            <p className="mt-6 text-lg text-zinc-500">One continuous record replaces the handoff gaps that create callbacks and confusion.</p>
+          </Reveal>
+          <ol className="grid list-none p-0">
+            {workflow.map(({ icon: Icon, title, description }, index) => (
+              <Reveal as="li" className="grid grid-cols-[48px_1fr_auto] gap-x-6 gap-y-2 border-t border-zinc-200 py-9 last:border-b" delay={index * 100} key={title}>
+                <span className="row-span-2 font-mono text-sm text-[var(--c-signal)]">0{index + 1}</span>
+                <h3 className="m-0 text-2xl font-bold text-[var(--navy)]">{title}</h3>
+                <p className="m-0 max-w-xl text-zinc-500">{description}</p>
+                <span aria-hidden="true" className="row-span-2 row-start-1 hidden h-12 w-12 place-items-center rounded-full bg-[var(--c-signal-w)] text-[var(--c-signal)] sm:grid sm:col-start-3"><Icon className="h-5 w-5" /></span>
               </Reveal>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
-      {/* ── Features ─────────────────────────────────────────────── */}
-      <section className="px-6 py-20" id="features">
-        <div className="mx-auto max-w-7xl">
-          <SectionEyebrow>Features</SectionEyebrow>
-          <SectionHeading
-            title="Everything your dispatch flow actually needs"
-            description="The public story and the product story should match. SwiftDispatch is built around operational speed, field coordination, and revenue follow-through."
-          />
+      <section className="bg-white px-6 py-28" id="product">
+        <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20">
+          <Reveal>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-[var(--c-signal)]">One operating picture</p>
+            <h2 className="mt-4 text-[clamp(2.25rem,4vw,3.5rem)] font-extrabold leading-none tracking-[-0.04em] text-[var(--navy)]">See what changed—and what needs you.</h2>
+            <p className="mt-6 text-lg text-zinc-500">The live board keeps urgency, ownership, and job context visible without turning dispatch into data entry.</p>
+            <ul className="mt-8 grid list-none gap-4 p-0 font-semibold">
+              {["Persistent lane names and job counts", "Clear assignment and status history", "Office, field, and customer updates together"].map((item) => <li className="flex items-center gap-3" key={item}><Check className="h-4 w-4 text-green-700" />{item}</li>)}
+            </ul>
+          </Reveal>
 
-          <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {features.map(({ icon: Icon, title, description }, index) => (
-              <Reveal key={title} delay={index * 80}>
-                <div className="h-full rounded-xl border border-slate-200 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-                  <div className="mb-5 inline-flex rounded-lg bg-teal-50 p-2.5 text-teal-700">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-lg font-semibold tracking-tight text-slate-950">{title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Fit signals ──────────────────────────────────────────── */}
-      <section className="border-y border-slate-100 bg-slate-50 px-6 py-20">
-        <div className="mx-auto max-w-7xl">
-          <SectionEyebrow>If This Sounds Familiar</SectionEyebrow>
-          <SectionHeading
-            title="The product tends to click fast when the shop already feels a little too manual."
-            description="You do not need a six-figure enterprise platform. You need a tighter operating rhythm for the stage of growth you are already in."
-          />
-
-          <div className="mt-12 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-            {fitSignals.map((item, index) => (
-              <Reveal key={item} delay={index * 90}>
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
-                    <p className="text-sm leading-7 text-slate-700">{item}</p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Product proof ────────────────────────────────────────── */}
-      <section className="bg-white px-6 py-20" id="product">
-        <div className="mx-auto max-w-7xl">
-          <SectionEyebrow>See The Product</SectionEyebrow>
-          <SectionHeading
-            title="Proof that feels like a real operating tool, not a generic SaaS promise."
-            description="These guided views show the core workflow: dispatch visibility, technician coordination, and cleaner closeout communication."
-          />
-
-          <div className="mt-14 grid gap-6 lg:grid-cols-3">
-            {proofCards.map((card, index) => (
-              <Reveal key={card.title} delay={index * 100}>
-                <div className="h-full rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-                  <div className="overflow-hidden rounded-t-xl border-b border-slate-100 bg-slate-50">
-                    {index === 0 && <DispatchBoardThumb />}
-                    {index === 1 && <TechSmsThumb />}
-                    {index === 2 && <QuoteThumb />}
-                  </div>
-                  <div className="p-5">
-                    <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">
-                      {card.audience}
-                    </span>
-                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">{card.title}</h3>
-                    <p className="mt-2 text-sm leading-7 text-slate-600">{card.outcome}</p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How it works ─────────────────────────────────────────── */}
-      <section className="px-6 py-20" id="workflow">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
-            <div>
-              <SectionEyebrow>How It Works</SectionEyebrow>
-              <SectionHeading
-                title="From incoming request to completed job without the usual mess."
-                description="SwiftDispatch keeps the steps simple, but the coordination stronger. The office sees the board, the field gets a clean path, and the customer stays informed."
-              />
+          <Reveal className="overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 shadow-[var(--shadow-lg)] sm:p-6" delay={150}>
+            <div className="mb-5 flex items-center justify-between">
+              <div><span className="font-mono text-[10px] uppercase tracking-[0.08em] text-zinc-500">Live workspace</span><h3 className="mt-1 text-xl font-bold text-[var(--navy)]">Dispatch overview</h3></div>
+              <span className="rounded-full bg-green-50 px-2.5 py-1 font-mono text-[11px] text-green-700">Live</span>
             </div>
-
-            <div className="grid gap-4">
-              {workflow.map(({ icon: Icon, title, description }, index) => (
-                <Reveal key={title} delay={index * 100}>
-                  <div className="grid gap-5 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-[auto_1fr]">
-                    <div className="flex items-center gap-4">
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-teal-700">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-slate-400">
-                        Step {index + 1}
-                      </p>
-                      <h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">{title}</h3>
-                      <p className="mt-1.5 text-sm leading-7 text-slate-600">{description}</p>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
+            <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-zinc-200">
+              {[["Open jobs", "5"], ["Unassigned", "2"], ["En route", "1"]].map(([label, value]) => <div className="grid gap-1 border-r border-zinc-200 p-3 last:border-r-0 sm:p-4" key={label}><span className="font-mono text-[9px] uppercase tracking-wide text-zinc-500 sm:text-[10px]">{label}</span><strong className="text-2xl text-[var(--navy)]">{value}</strong></div>)}
             </div>
-          </div>
+            <div className="mt-3 grid snap-x grid-cols-[repeat(3,minmax(190px,1fr))] gap-2.5 overflow-x-auto pb-2">
+              {boardColumns.map((column) => <section className="snap-start rounded-lg bg-zinc-100 p-3" key={column.label}><h4 className="mb-2.5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500"><span className={`h-2 w-2 rounded-full ${column.dot}`} />{column.label}</h4><article className="grid min-h-36 gap-1.5 rounded-lg border border-zinc-200 bg-white p-4"><time className="font-mono text-[10px] text-zinc-500">{column.age}</time><strong className="text-sm text-[var(--navy)]">{column.customer}</strong><span className="text-xs text-zinc-500">{column.issue}</span><span className="self-end text-xs text-zinc-500">{column.status}</span></article></section>)}
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ── Pricing ──────────────────────────────────────────────── */}
-      <section className="border-y border-slate-100 bg-slate-50 px-6 py-20" id="pricing">
-        <div className="mx-auto max-w-7xl">
-          <SectionEyebrow>Pricing</SectionEyebrow>
-          <SectionHeading
-            align="center"
-            title="Straightforward plans for small HVAC teams"
-            description="Pick the plan that fits your crew today, then grow into more visibility and process control as the business gets busier."
-          />
-
-          <div className="mt-14 grid gap-6 lg:grid-cols-3">
-            {plans.map((plan, index) => (
-              <Reveal key={plan.name} delay={index * 90}>
-                <div
-                  className={[
-                    "relative h-full rounded-xl border p-6",
-                    plan.featured
-                      ? "border-teal-800 bg-[linear-gradient(180deg,#0d6f67_0%,#0b5f58_100%)] text-white shadow-[0_8px_32px_rgba(13,111,103,0.28)]"
-                      : "border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]",
-                  ].join(" ")}
-                >
-                  {plan.featured ? (
-                    <span className="absolute right-4 top-4 rounded border border-orange-400/40 bg-orange-400/20 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-orange-200">
-                      Popular
-                    </span>
-                  ) : null}
-                  <h3 className="text-xl font-semibold tracking-tight">{plan.name}</h3>
-                  <div className="mt-5">
-                    <span className="text-4xl font-semibold tracking-tight">{plan.price}</span>
-                    <span className={`ml-2 text-sm ${plan.featured ? "text-teal-100" : "text-slate-500"}`}>/ month</span>
-                  </div>
-                  <p className={`mt-2 text-sm ${plan.featured ? "text-teal-100" : "text-slate-500"}`}>{plan.detail}</p>
-
-                  <ul className="mt-7 space-y-3">
-                    {plan.features.map((feature) => (
-                      <li className="flex items-start gap-3 text-sm" key={feature}>
-                        <CheckCircle2
-                          className={`mt-0.5 h-4 w-4 shrink-0 ${plan.featured ? "text-teal-200" : "text-teal-700"}`}
-                        />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link
-                    className={[
-                      "mt-8 inline-flex w-full items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition",
-                      plan.featured
-                        ? "bg-white !text-teal-800 hover:bg-slate-100"
-                        : "border border-slate-300 bg-white !text-slate-900 hover:bg-slate-50",
-                    ].join(" ")}
-                    href="/demo"
-                  >
-                    Talk to Sales
-                  </Link>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+      <section className="bg-[var(--navy)] px-6 py-28 text-white" id="fit">
+        <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1fr_0.8fr] lg:gap-24">
+          <Reveal>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.12em]">Purpose-built fit</p>
+            <h2 className="mt-4 text-[clamp(2.25rem,4vw,3.5rem)] font-extrabold leading-none tracking-[-0.04em]">Enough structure to stay in control. Not another enterprise rollout.</h2>
+            <ul className="mt-8 grid list-none gap-4 p-0 font-semibold">{["3–15 technicians", "Emergency and same-day service", "Office-to-field coordination"].map((item) => <li className="flex items-center gap-3" key={item}><Check className="h-4 w-4 text-green-400" />{item}</li>)}</ul>
+          </Reveal>
+          <Reveal as="figure" className="m-0 rounded-l-lg border-l-[6px] border-[var(--c-signal)] bg-[#b6b2a5] p-7 text-[var(--navy)] sm:p-10" delay={150}>
+            <blockquote className="m-0 text-[clamp(1.5rem,3vw,2.25rem)] font-semibold leading-[1.15] tracking-[-0.025em]">“The value isn’t another dashboard. It’s knowing the next call won’t derail everything already in motion.”</blockquote>
+            <figcaption className="mt-6 font-mono text-sm font-bold uppercase tracking-[0.1em] text-zinc-950">The SwiftDispatch promise</figcaption>
+          </Reveal>
         </div>
       </section>
 
-      {/* ── CTA ──────────────────────────────────────────────────── */}
-      <section className="px-6 pb-24 pt-8">
-        <div className="mx-auto grid max-w-7xl gap-10 overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#0b2235_0%,#102f47_55%,#081b2a_100%)] px-8 py-10 text-white shadow-[0_28px_80px_rgba(8,26,40,0.14)] lg:grid-cols-[1fr_0.92fr] lg:items-center lg:px-12">
-          <div>
-            <SectionEyebrow inverse>Ready To Move Faster?</SectionEyebrow>
-            <h2 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight">
-              Stop running dispatch through scattered texts, callbacks, and sticky-note memory.
-            </h2>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-300">
-              Get a focused walkthrough of how SwiftDispatch can tighten response times, reduce coordination drag, and help your team close jobs with more consistency.
-            </p>
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Link
-                className="inline-flex items-center justify-center rounded-full bg-orange-400 px-7 py-3.5 text-base font-semibold !text-slate-950 transition hover:bg-orange-300"
-                href="/demo"
-              >
-                Schedule a Demo
-              </Link>
-              <Link
-                className="inline-flex items-center justify-center rounded-full border border-white/20 px-7 py-3.5 text-base font-semibold !text-white transition hover:bg-white/10"
-                href="/login"
-              >
-                Sign In
-              </Link>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-            <div className="overflow-hidden rounded-lg border border-white/10">
-              <TechSmsThumb />
-            </div>
-            <div className="mt-4 flex items-center gap-3 text-sm text-slate-300">
-              <ClipboardList className="h-4 w-4 shrink-0 text-teal-300" />
-              Built for small HVAC teams that need cleaner dispatch, field coordination, and quote follow-through.
-            </div>
-          </div>
+      <section className="bg-[var(--c-signal-w)] px-6 py-20" id="demo">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 sm:grid-cols-[96px_1fr] lg:grid-cols-[120px_1fr_auto] lg:gap-12">
+          <Reveal><BrandMark size="sm" /></Reveal>
+          <Reveal delay={100}><p className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-[var(--navy)]">Ready to see the full path?</p><h2 className="mt-3 max-w-2xl text-[clamp(2rem,4vw,3rem)] font-extrabold leading-none tracking-[-0.04em] text-[var(--navy)]">Bring one real dispatch scenario. We’ll map it together.</h2></Reveal>
+          <Reveal className="sm:col-start-2 lg:col-start-auto" delay={200}><Link className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--warm)] px-6 font-bold text-[var(--navy)] shadow-[0_12px_28px_rgb(240_138_36_/_24%)] transition hover:-translate-y-1 hover:bg-orange-500 focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[var(--c-signal)]" href="/demo">Book a demo <ArrowRight className="h-4 w-4" /></Link></Reveal>
         </div>
       </section>
     </main>
