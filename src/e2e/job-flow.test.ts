@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import jwt from 'jsonwebtoken'
+import { createDispatcherSession, fetchAsDispatcher, type DispatcherSession } from './dispatcherSession'
 
 const RUN = process.env.TEST_INTEGRATION === 'true'
 
@@ -29,6 +30,7 @@ describe.skipIf(!RUN)('E2E smoke: intake → dispatch → tech → invoice', () 
   let companySlug: string
   let companyId: string
   let technicianId: string
+  let dispatcherSession: DispatcherSession
 
   // Captured during test run
   let jobId: string
@@ -40,10 +42,12 @@ describe.skipIf(!RUN)('E2E smoke: intake → dispatch → tech → invoice', () 
   beforeAll(async () => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     TECH_SECRET = process.env.TECH_TOKEN_SECRET!
-    if (!url || !key || !TECH_SECRET) {
+    if (!url || !key || !anonKey || !TECH_SECRET) {
       throw new Error(
-        'E2E: set NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and TECH_TOKEN_SECRET',
+        'E2E: set NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, ' +
+        'SUPABASE_SERVICE_ROLE_KEY, and TECH_TOKEN_SECRET',
       )
     }
     supabase = createClient(url, key, {
@@ -81,6 +85,18 @@ describe.skipIf(!RUN)('E2E smoke: intake → dispatch → tech → invoice', () 
       )
     }
     technicianId = tech.id
+
+    // Dispatcher session for the real assignment mutation seam (step 3 below).
+    // Defaults match the seeded live-QA dispatcher used by scripts/seed-live-qa.mjs
+    // and scripts/load-office-actions.mjs; override for other companies/environments.
+    const dispatcherEmail = process.env.TEST_DISPATCHER_EMAIL ?? 'dispatch@northwind-live-qa.com'
+    const dispatcherPassword = process.env.TEST_DISPATCHER_PASSWORD ?? 'serpentine1'
+    dispatcherSession = await createDispatcherSession({
+      email: dispatcherEmail,
+      password: dispatcherPassword,
+      supabaseUrl: url,
+      anonKey,
+    })
   })
 
   // ── Teardown ───────────────────────────────────────────────────────────────
@@ -134,16 +150,39 @@ describe.skipIf(!RUN)('E2E smoke: intake → dispatch → tech → invoice', () 
     expect(body.jobId).toBe(jobId)
   })
 
-  it('3. dispatcher assigns technician', async () => {
-    const { error } = await supabase
+  it('3. dispatcher assigns technician via the real dispatcher mutation API', async () => {
+    const res = await fetchAsDispatcher(`${BASE}/api/jobs/${jobId}`, dispatcherSession, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ technician_id: technicianId, status: 'assigned' }),
+    })
+    expect(res.status, `assign response: ${await res.clone().text()}`).toBe(200)
+    const body = await res.json() as { job: { status: string; technician_id: string } }
+    expect(body.job.status).toBe('assigned')
+    expect(body.job.technician_id).toBe(technicianId)
+
+    // Regression guard for issue #45: repeating the same assignment/status
+    // request (mirroring a stale board re-confirming a move that already
+    // landed) must not surface the operator-facing "No changes provided"
+    // error, and persisted state must remain correct.
+    const repeat = await fetchAsDispatcher(`${BASE}/api/jobs/${jobId}`, dispatcherSession, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'assigned' }),
+    })
+    expect(repeat.status, `repeat assign response: ${await repeat.clone().text()}`).toBe(200)
+    const repeatBody = await repeat.json() as { job: { status: string; technician_id: string } }
+    expect(repeatBody.job.status).toBe('assigned')
+    expect(repeatBody.job.technician_id).toBe(technicianId)
+
+    const { data: job } = await supabase
       .from('jobs')
-      .update({
-        status: 'assigned',
-        technician_id: technicianId,
-        assigned_at: new Date().toISOString(),
-      })
+      .select('status, technician_id, assigned_at')
       .eq('id', jobId)
-    expect(error).toBeNull()
+      .single()
+    expect(job?.status).toBe('assigned')
+    expect(job?.technician_id).toBe(technicianId)
+    expect(job?.assigned_at).toBeTruthy()
   })
 
   it('4. tech marks en_route via SMS token link', async () => {

@@ -16,6 +16,7 @@ type Props = {
   readOnly?: boolean;
   technicians: Technician[];
   onRequestMove?: (jobId: string, nextStatus: JobStatus) => void;
+  onAssigned?: (job: JobWithTechnician) => void;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -46,7 +47,7 @@ function getStatusTone(status: string): "neutral" | "blue" | "amber" | "red" | "
   return "neutral";
 }
 
-export default function JobCard({ job, hasSmsFailure = false, onRequestMove, readOnly = false, technicians }: Props) {
+export default function JobCard({ job, hasSmsFailure = false, onRequestMove, onAssigned, readOnly = false, technicians }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: job.id,
   });
@@ -120,6 +121,7 @@ export default function JobCard({ job, hasSmsFailure = false, onRequestMove, rea
         <div className="grid gap-2 border-t border-[var(--c-line)] px-3 py-2">
           <TechnicianDropdown
             jobId={job.id}
+            onAssigned={onAssigned}
             selectedId={job.technician_id}
             technicians={technicians}
           />
