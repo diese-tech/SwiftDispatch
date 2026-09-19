@@ -64,4 +64,13 @@ describe("assignTechnician", () => {
 
     expect(outcome.ok).toBe(false);
   });
+
+  it("resolves to a failure outcome instead of rejecting when the request itself fails (offline/aborted)", async () => {
+    vi.mocked(global.fetch).mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(assignTechnician(JOB_ID, TECH_ID)).resolves.toEqual({
+      ok: false,
+      error: expect.any(String),
+    });
+  });
 });

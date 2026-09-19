@@ -14,14 +14,23 @@ export async function assignTechnician(
   jobId: string,
   technicianId: string | null,
 ): Promise<AssignTechnicianOutcome> {
-  const response = await fetch(`/api/jobs/${jobId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      technician_id: technicianId,
-      status: technicianId ? "assigned" : undefined,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api/jobs/${jobId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        technician_id: technicianId,
+        status: technicianId ? "assigned" : undefined,
+      }),
+    });
+  } catch {
+    // Network failure / aborted request: the request never reached the
+    // server, so there's no canonical state to trust. Surface this as an
+    // ordinary failure outcome (rather than a rejected promise) so callers
+    // can roll back optimistic UI instead of silently leaving it stale.
+    return { ok: false, error: "Couldn't reach the server. Check your connection and try again." };
+  }
 
   const data = (await response.json().catch(() => ({}))) as {
     job?: JobWithTechnician;
