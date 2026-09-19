@@ -92,6 +92,54 @@ the company-scoped query (`.eq('company_id', profile.company_id)`, backed
 by the technicians table's own RLS policy as defense-in-depth) before ever
 writing it onto a job, rejecting with `404` if it doesn't resolve.
 
+## Cross-tenant resource reference audit (issue #64)
+
+Deliberate follow-up to the `POST /api/jobs` finding above: audited every
+mutation route (`POST`/`PATCH`/`DELETE` across `src/app/api/**`) for the
+same bug class — a client-supplied id referencing a *different* table,
+written or acted on without confirming it belongs to the caller's own
+company. Two more instances found and fixed, both the identical pattern:
+
+- **`PATCH /api/jobs/[id]`** — `technician_id` on the dispatcher/admin path
+  had the exact same gap as the `POST /api/jobs` case above (RLS protected
+  the foreign technician's own row from mutation, but not the job's
+  `technician_id` field itself). Fixed identically: a company-scoped
+  `technicians` lookup before the id is written into the patch, `404` if it
+  doesn't resolve. The technician-role branch was never affected — it
+  can't submit `technician_id` in its request at all.
+- **`POST /api/jobs`** — `customer_id` had *no* check at all, not even a
+  partial one. `jobs.customer_id` was added as a bare `uuid` column with no
+  FK constraint (`supabase/migrations/202505010001_job_timestamp_columns.sql`),
+  so RLS on `customers` provides zero protection here — nothing in that
+  code path ever queried `customers`. Fixed with the same company-scoped
+  lookup pattern. Lower practical severity than the technician case since
+  `jobs.customer_id` isn't joined/displayed anywhere today, but the same
+  defect class and the same fix.
+
+Everything else audited — the rest of the dispatch/quote routes, every
+admin route, and every public/token/internal route (`intake`,
+`tech-action`, `tech/login`, `demo/reset`, `internal/**`) — was clean: each
+foreign id is either explicitly company-scoped in its query, server-derived
+from an already-scoped row rather than taken raw from the client, or the
+route resolves its own tenant scope from a signed token/slug/session rather
+than trusting client input for it. `GET /api/tech-action` is worth calling
+out positively — its technician-availability update already pulls the
+technician id from the DB-fetched job row, never the request, i.e. it
+already implements this defense correctly.
+
+**Separately flagged, not fixed here:** `POST /api/jobs` and
+`PATCH /api/jobs/[id]` both insert `status_events` rows via the
+session-scoped Supabase client (from `requireApiRole`), not the admin
+client. `supabase/migrations/202506150001_sms_outbox_rls.sql`'s own comment
+states writes to `status_events` happen "exclusively via the service role,"
+but `status_events` has `force row level security` with only a `SELECT`
+policy — if that comment's assumption holds against the table's actual
+Postgres grants, these inserts would be silently rejected by RLS in
+production (neither call site checks the insert's `error`). This wasn't
+verifiable without live Supabase access and is a correctness question, not
+a cross-tenant one, so it's flagged here rather than guessed at or silently
+left undocumented.
+
 ## `PATCH /api/jobs/[id]` — technician branch
 
 This route is intentionally shared rather than split: dispatcher/admin

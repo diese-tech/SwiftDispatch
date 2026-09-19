@@ -116,6 +116,27 @@ export async function PATCH(
 
   // Handle technician assignment
   if ('technician_id' in parsed.data) {
+    // jobs.technician_id is a plain FK with no (technician_id, company_id)
+    // tenant constraint, and the jobs update below is scoped only to THIS
+    // job's own company_id -- neither stops this job from being assigned a
+    // technician_id belonging to a different company. A technician caller
+    // can never reach this branch at all (line 51-59 above rejects any
+    // request including `technician_id` from a technician role), so this
+    // only guards the dispatcher/admin path. Same check, same reasoning as
+    // POST /api/jobs's technician_id validation.
+    if (technician_id) {
+      const { data: technician, error: technicianError } = await supabase
+        .from('technicians')
+        .select('id')
+        .eq('id', technician_id)
+        .eq('company_id', profile.company_id)
+        .maybeSingle()
+
+      if (technicianError || !technician) {
+        return NextResponse.json({ error: 'Technician not found' }, { status: 404 })
+      }
+    }
+
     patch.technician_id = technician_id ?? null
 
     if (technician_id && !currentJob.technician_id) {

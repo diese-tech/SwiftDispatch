@@ -33,6 +33,7 @@ const OTHER_COMPANY_ID = "55555555-5555-4555-8555-555555555555";
 const JOB_ID = "22222222-2222-4222-8222-222222222222";
 const TECH_ID = "33333333-3333-4333-8333-333333333333";
 const OTHER_TECH_ID = "88888888-8888-4888-8888-888888888888";
+const FOREIGN_TECH_ID = "99999999-9999-4999-8999-999999999999";
 const DISPATCHER_ID = "44444444-4444-4444-8444-444444444444";
 const TECH_AUTH_USER_ID = "66666666-6666-4666-8666-666666666666";
 const OTHER_TECH_AUTH_USER_ID = "77777777-7777-4777-8777-777777777777";
@@ -175,6 +176,15 @@ function freshDb(): Db {
         auth_user_id: OTHER_TECH_AUTH_USER_ID,
         name: "Ada Byron",
         phone: "+15550000004",
+        availability_status: "available",
+        current_job_id: null,
+      },
+      {
+        id: FOREIGN_TECH_ID,
+        company_id: OTHER_COMPANY_ID,
+        auth_user_id: "foreign-tech-auth-user",
+        name: "Marie Curie",
+        phone: "+15550000006",
         availability_status: "available",
         current_job_id: null,
       },
@@ -377,6 +387,23 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
 
       expect(response.status).toBe(404);
       expect(db.jobs[0].status).toBe("new");
+    });
+  });
+
+  describe("cross-tenant technician assignment (issue #64)", () => {
+    it("rejects a dispatcher assigning a technician belonging to a different company", async () => {
+      const response = await patchJob({ technician_id: FOREIGN_TECH_ID });
+
+      expect(response.status).toBe(404);
+      // The job's technician_id was never written, the foreign technician's
+      // own row was never touched, and no assignment SMS was queued -- same
+      // "phantom assignment" bug class fixed in POST /api/jobs, same fix.
+      expect(db.jobs[0].technician_id).toBeNull();
+      expect(db.technicians.find((t) => t.id === FOREIGN_TECH_ID)).toMatchObject({
+        availability_status: "available",
+        current_job_id: null,
+      });
+      expect(queueTechnicianAssignmentSmsMock).not.toHaveBeenCalled();
     });
   });
 });
