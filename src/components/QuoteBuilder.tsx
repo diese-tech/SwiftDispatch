@@ -5,6 +5,7 @@ import { Plus, Send, Trash2 } from "lucide-react";
 import { StatusDot } from "@/components/DesignSystem";
 import { money } from "@/lib/format";
 import { fetchMutation } from "@/lib/apiMutation";
+import { LineItemPatchQueue, restoreDeletedItem } from "@/lib/lineItemMutations";
 import type { QuoteLineItem, QuoteWithLineItems } from "@/types/db";
 
 type SendStatus = "idle" | "sending" | "success" | "error";
@@ -22,6 +23,7 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
   const [saveErrorIds, setSaveErrorIds] = useState<Set<string>>(new Set());
   const [generalError, setGeneralError] = useState("");
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const patchQueue = useRef(new LineItemPatchQueue<QuoteLineItem>());
 
   const total = useMemo(() => items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0), [items]);
   const isSaving = savingIds.size > 0;
@@ -69,15 +71,23 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
   }
 
   function updateItem(itemId: string, patch: Partial<QuoteLineItem>) {
-    const previousItem = items.find((item) => item.id === itemId);
+    const currentItem = items.find((item) => item.id === itemId);
     setItems((current) => current.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
-    if (!quoteId || !previousItem) return;
+    if (!quoteId || !currentItem) return;
+    // Queue before overwriting the timer so a second edit inside the same
+    // debounce window (e.g. name, then price) accumulates into one merged
+    // patch instead of the later call silently dropping the earlier field.
+    patchQueue.current.queue(itemId, patch, currentItem);
     clearTimeout(debounceTimers.current[itemId]);
     setSavingIds((current) => new Set(current).add(itemId));
     debounceTimers.current[itemId] = setTimeout(async () => {
+      const queued = patchQueue.current.take(itemId);
+      if (!queued) return;
+      const { patch: mergedPatch, rollbackTo } = queued;
+
       const result = await fetchMutation(
         `/api/quotes/${quoteId}/line-items/${itemId}`,
-        { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) },
+        { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(mergedPatch) },
         (body) =>
           body && typeof body === "object" && "item" in body ? (body as { item: QuoteLineItem }) : undefined,
       );
@@ -89,10 +99,11 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
       });
 
       if (!result.ok) {
-        // Roll back the optimistic edit -- on an HTTP rejection (e.g. a
-        // business-rule failure) or a rejected transport alike, previously
-        // this value was left applied forever with no way back.
-        setItems((current) => current.map((item) => (item.id === itemId ? previousItem : item)));
+        // Roll back to before any of this window's batched edits -- on an
+        // HTTP rejection (e.g. a business-rule failure) or a rejected
+        // transport alike, previously this value was left applied forever
+        // with no way back.
+        setItems((current) => current.map((item) => (item.id === itemId ? rollbackTo : item)));
         setSaveErrorIds((current) => new Set(current).add(itemId));
         return;
       }
@@ -109,7 +120,9 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
 
   async function deleteItem(itemId: string) {
     if (!quoteId) return;
-    const previousItems = items;
+    const deletedIndex = items.findIndex((item) => item.id === itemId);
+    const deletedItem = items[deletedIndex];
+    if (!deletedItem) return;
     clearTimeout(debounceTimers.current[itemId]);
     setItems((current) => current.filter((item) => item.id !== itemId));
     setSaveErrorIds((current) => {
@@ -125,9 +138,10 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
     );
 
     if (!result.ok) {
-      // Previously never restored, on an HTTP rejection or a rejected
-      // transport alike -- the row stayed removed regardless of outcome.
-      setItems(previousItems);
+      // Re-insert into the CURRENT array rather than restoring a stale
+      // pre-delete snapshot -- previously this clobbered any unrelated
+      // edit/addition made to another row while the delete was in flight.
+      setItems((current) => restoreDeletedItem(current, deletedItem, deletedIndex));
       setGeneralError("Line item could not be deleted.");
     }
   }
