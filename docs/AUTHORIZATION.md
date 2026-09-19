@@ -78,6 +78,20 @@ member via `DemoBanner`. Restricting it wasn't required and there's no
 evidence the current UX is wrong — flagged here rather than silently left
 inconsistent with everything else.
 
+## `POST /api/jobs` — technician tenant ownership
+
+Fixed alongside #58's behavior-test coverage pass: `technician_id` is a
+caller-supplied field, but `jobs.technician_id` is a plain FK with no
+`(technician_id, company_id)` composite constraint, and the jobs-insert RLS
+policy only validates the *job's own* `company_id` — neither stopped a
+dispatcher from submitting another company's technician UUID and having it
+persisted onto their own company's job (status `assigned`, with SMS/
+availability side effects silently no-op'ing since the technician row
+itself stays RLS-protected). The route now resolves the technician through
+the company-scoped query (`.eq('company_id', profile.company_id)`, backed
+by the technicians table's own RLS policy as defense-in-depth) before ever
+writing it onto a job, rejecting with `404` if it doesn't resolve.
+
 ## `PATCH /api/jobs/[id]` — technician branch
 
 This route is intentionally shared rather than split: dispatcher/admin

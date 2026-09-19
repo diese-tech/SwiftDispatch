@@ -238,20 +238,23 @@ describe("POST /api/jobs", () => {
     expect(queueCustomerStatusSmsMock).toHaveBeenCalledTimes(1);
   });
 
-  it("cannot bind, mutate, or notify a technician belonging to a different company (RLS-enforced)", async () => {
+  it("rejects assigning a technician belonging to a different company, and creates no job at all", async () => {
+    const jobCountBefore = db.jobs.length;
+
     const response = await createJob({ ...validJobInput, technician_id: OTHER_TECH_ID });
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as { job: Row };
-    // The job write itself isn't blocked (jobs.company_id is this dispatcher's own),
-    // but the cross-tenant technician's row is invisible under RLS, so nothing
-    // about that technician is touched or notified.
-    expect(body.job.status).toBe("assigned");
+    expect(response.status).toBe(404);
+    // No job was created carrying the foreign technician_id -- jobs.technician_id
+    // is a plain FK with no (technician_id, company_id) tenant constraint, and the
+    // jobs insert RLS policy only checks the job's OWN company_id, so nothing at
+    // the DB layer would have stopped an insert here without an app-level check.
+    expect(db.jobs).toHaveLength(jobCountBefore);
     expect(db.technicians.find((t) => t.id === OTHER_TECH_ID)).toMatchObject({
       availability_status: "available",
       current_job_id: null,
     });
     expect(queueTechnicianAssignmentSmsMock).not.toHaveBeenCalled();
+    expect(queueCustomerStatusSmsMock).not.toHaveBeenCalled();
   });
 
   it("rejects a validation failure", async () => {
