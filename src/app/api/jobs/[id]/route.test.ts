@@ -15,12 +15,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type Row = Record<string, unknown>;
 
-const requireApiProfileMock = vi.fn();
+const requireApiRoleMock = vi.fn();
 const queueTechnicianAssignmentSmsMock = vi.fn();
 const queueCustomerStatusSmsMock = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
-  requireApiProfile: requireApiProfileMock,
+  requireApiRole: requireApiRoleMock,
 }));
 
 vi.mock("@/lib/jobNotifications", () => ({
@@ -29,9 +29,13 @@ vi.mock("@/lib/jobNotifications", () => ({
 }));
 
 const COMPANY_ID = "11111111-1111-4111-8111-111111111111";
+const OTHER_COMPANY_ID = "55555555-5555-4555-8555-555555555555";
 const JOB_ID = "22222222-2222-4222-8222-222222222222";
 const TECH_ID = "33333333-3333-4333-8333-333333333333";
+const OTHER_TECH_ID = "88888888-8888-4888-8888-888888888888";
 const DISPATCHER_ID = "44444444-4444-4444-8444-444444444444";
+const TECH_AUTH_USER_ID = "66666666-6666-4666-8666-666666666666";
+const OTHER_TECH_AUTH_USER_ID = "77777777-7777-4777-8777-777777777777";
 
 function matchesFilters(row: Row, filters: [string, unknown][]) {
   return filters.every(([column, value]) => row[column] === value);
@@ -155,8 +159,18 @@ function freshDb(): Db {
       {
         id: TECH_ID,
         company_id: COMPANY_ID,
+        auth_user_id: TECH_AUTH_USER_ID,
         name: "Grace Hopper",
         phone: "+15550000003",
+        availability_status: "available",
+        current_job_id: null,
+      },
+      {
+        id: OTHER_TECH_ID,
+        company_id: COMPANY_ID,
+        auth_user_id: OTHER_TECH_AUTH_USER_ID,
+        name: "Ada Byron",
+        phone: "+15550000004",
         availability_status: "available",
         current_job_id: null,
       },
@@ -183,10 +197,10 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
 
   beforeEach(() => {
     db = freshDb();
-    requireApiProfileMock.mockReset();
+    requireApiRoleMock.mockReset();
     queueTechnicianAssignmentSmsMock.mockReset();
     queueCustomerStatusSmsMock.mockReset();
-    requireApiProfileMock.mockResolvedValue({
+    requireApiRoleMock.mockResolvedValue({
       profile: { id: DISPATCHER_ID, email: "dispatcher@example.com", company_id: COMPANY_ID, role: "dispatcher" },
       response: null,
       supabase: createFakeSupabase(db),
@@ -237,5 +251,84 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
     expect(response.status).toBe(400);
     const body = (await response.json()) as { error?: string };
     expect(body.error).toBe("No changes provided");
+  });
+
+  describe("technician status updates (issue #49)", () => {
+    beforeEach(() => {
+      // The job is already assigned to TECH_ID before each technician-path test.
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "assigned";
+    });
+
+    function asTechnician(authUserId: string) {
+      requireApiRoleMock.mockResolvedValue({
+        profile: { id: authUserId, email: "tech@example.com", company_id: COMPANY_ID, role: "technician" },
+        response: null,
+        supabase: createFakeSupabase(db),
+      });
+    }
+
+    it("lets a technician move their own assigned job to en_route", async () => {
+      asTechnician(TECH_AUTH_USER_ID);
+
+      const response = await patchJob({ status: "en_route" });
+
+      expect(response.status).toBe(200);
+      expect(db.jobs[0].status).toBe("en_route");
+    });
+
+    it("denies a technician updating a job not assigned to them", async () => {
+      asTechnician(OTHER_TECH_AUTH_USER_ID);
+
+      const response = await patchJob({ status: "en_route" });
+
+      expect(response.status).toBe(403);
+      expect(db.jobs[0].status).toBe("assigned");
+    });
+
+    it("denies a technician from reassigning the job's technician", async () => {
+      asTechnician(TECH_AUTH_USER_ID);
+
+      const response = await patchJob({ status: "en_route", technician_id: TECH_ID });
+
+      expect(response.status).toBe(403);
+      expect(db.jobs[0].status).toBe("assigned");
+      expect(db.jobs[0].technician_id).toBe(TECH_ID);
+    });
+
+    it("denies a technician requesting a status outside their allowed set", async () => {
+      asTechnician(TECH_AUTH_USER_ID);
+
+      const response = await patchJob({ status: "cancelled" });
+
+      expect(response.status).toBe(403);
+      expect(db.jobs[0].status).toBe("assigned");
+    });
+
+    it("does not surface 'No changes provided' for a technician's repeated status update either", async () => {
+      asTechnician(TECH_AUTH_USER_ID);
+      const first = await patchJob({ status: "en_route" });
+      expect(first.status).toBe(200);
+
+      const repeat = await patchJob({ status: "en_route" });
+      expect(repeat.status).toBe(200);
+      const repeatBody = (await repeat.json()) as { job: Row; error?: string };
+      expect(repeatBody.error).toBeUndefined();
+    });
+  });
+
+  describe("cross-tenant isolation (issue #49)", () => {
+    it("cannot mutate a job belonging to a different company", async () => {
+      requireApiRoleMock.mockResolvedValue({
+        profile: { id: DISPATCHER_ID, email: "other-co@example.com", company_id: OTHER_COMPANY_ID, role: "dispatcher" },
+        response: null,
+        supabase: createFakeSupabase(db),
+      });
+
+      const response = await patchJob({ status: "assigned" });
+
+      expect(response.status).toBe(404);
+      expect(db.jobs[0].status).toBe("new");
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiProfile } from "@/lib/auth";
+import { requireApiRole } from "@/lib/auth";
 
 type LineItemInput = {
   name: string;
@@ -8,9 +8,8 @@ type LineItemInput = {
 };
 
 export async function POST(request: Request) {
-  const { profile, response, supabase } = await requireApiProfile();
+  const { profile, response, supabase } = await requireApiRole(['dispatcher', 'admin']);
   if (response || !profile) return response;
-  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await request.json();
 
   const { data: job, error: jobError } = await supabase

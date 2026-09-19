@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const requireRoleMock = vi.fn();
+const requireApiRoleMock = vi.fn();
 const exchangeSquareAuthorizationCodeMock = vi.fn();
 const fetchSquareMerchantContextMock = vi.fn();
 const buildStoredSquareConnectionMock = vi.fn();
@@ -11,12 +11,8 @@ const companyQueryState = {
   updatedPayload: null as Record<string, unknown> | null,
 };
 
-vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: vi.fn(async () => ({ kind: "server-client" })),
-}));
-
-vi.mock("@/lib/supabase/withCompany", () => ({
-  requireRole: requireRoleMock,
+vi.mock("@/lib/auth", () => ({
+  requireApiRole: requireApiRoleMock,
 }));
 
 vi.mock("@/lib/square", () => ({
@@ -70,17 +66,17 @@ describe("GET /api/admin/square/callback", () => {
     companyQueryState.companyId = undefined;
     companyQueryState.updatedPayload = null;
     companyQueryState.selectedPaymentConfig = { stripe: { accountId: "acct_123" }, keep: true };
-    requireRoleMock.mockReset();
+    requireApiRoleMock.mockReset();
     exchangeSquareAuthorizationCodeMock.mockReset();
     fetchSquareMerchantContextMock.mockReset();
     buildStoredSquareConnectionMock.mockReset();
   });
 
   it("rejects the callback when the current admin session does not match the signed state", async () => {
-    requireRoleMock.mockResolvedValue({
-      userId: "different-user",
-      companyId: "company-1",
-      role: "admin",
+    requireApiRoleMock.mockResolvedValue({
+      profile: { id: "different-user", email: "admin@example.com", company_id: "company-1", role: "admin" },
+      response: null,
+      supabase: { kind: "server-client" },
     });
 
     const { GET } = await import("./route");
@@ -96,10 +92,10 @@ describe("GET /api/admin/square/callback", () => {
   });
 
   it("preserves unrelated payment_config keys when saving the Square connection", async () => {
-    requireRoleMock.mockResolvedValue({
-      userId: "user-1",
-      companyId: "company-1",
-      role: "admin",
+    requireApiRoleMock.mockResolvedValue({
+      profile: { id: "user-1", email: "admin@example.com", company_id: "company-1", role: "admin" },
+      response: null,
+      supabase: { kind: "server-client" },
     });
     exchangeSquareAuthorizationCodeMock.mockResolvedValue({
       access_token: "access-token",

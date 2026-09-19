@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireApiProfile } from '@/lib/auth'
+import { requireApiRole } from '@/lib/auth'
 import { assertValidTransition, type JobStatus } from '@/lib/stateMachine'
 import { queueCustomerStatusSms, queueTechnicianAssignmentSms } from '@/lib/jobNotifications'
 import type { SmsConsentType } from '@/lib/smsGate'
@@ -20,14 +20,18 @@ const TIMESTAMP_COLUMNS: Partial<Record<JobStatus, string>> = {
   cancelled:     'cancelled_at',
 }
 
+// A technician may only move their own assigned job through these statuses,
+// and only by sending `status` alone -- no technician (re)assignment, no
+// cancellation. This mirrors exactly what TechClientComponents.tsx sends.
+const TECHNICIAN_ALLOWED_STATUSES: JobStatus[] = ['en_route', 'in_progress', 'completed']
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { profile, response, supabase } = await requireApiProfile()
+  const { profile, response, supabase } = await requireApiRole(['dispatcher', 'admin', 'technician'])
   if (response || !profile) return response
-  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let body: unknown
   try { body = await request.json() } catch {
@@ -44,6 +48,17 @@ export async function PATCH(
 
   const { status: newStatus, technician_id, note, cancellation_reason } = parsed.data
 
+  if (profile.role === 'technician') {
+    const isStatusOnlyRequest =
+      newStatus !== undefined &&
+      !('technician_id' in parsed.data) &&
+      note === undefined &&
+      cancellation_reason === undefined
+    if (!isStatusOnlyRequest || !TECHNICIAN_ALLOWED_STATUSES.includes(newStatus)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
   // Fetch current job
   const { data: currentJob, error: fetchError } = await supabase
     .from('jobs')
@@ -54,6 +69,19 @@ export async function PATCH(
 
   if (fetchError || !currentJob) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+  }
+
+  if (profile.role === 'technician') {
+    const { data: technician } = await supabase
+      .from('technicians')
+      .select('id')
+      .eq('auth_user_id', profile.id)
+      .eq('company_id', profile.company_id)
+      .maybeSingle()
+
+    if (!technician || currentJob.technician_id !== technician.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
   }
 
   const patch: Record<string, unknown> = {}
@@ -164,7 +192,7 @@ export async function PATCH(
       from_status: currentJob.status,
       to_status: patch.status as string,
       actor_id: profile.id,
-      actor_role: profile.role === 'admin' ? 'admin' : 'dispatcher',
+      actor_role: profile.role,
       note: note ?? null,
     })
   }

@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
-import { redirect } from "next/navigation";
 import AcceptQuoteButton from "@/components/AcceptQuoteButton";
 import { StatusDot } from "@/components/DesignSystem";
 import { money } from "@/lib/format";
-import { requireRole } from "@/lib/supabase/withCompany";
+import { requireProfileWithRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { QuoteWithItems } from "@/types/db";
 
@@ -16,21 +15,15 @@ function getQuoteTone(status: string): "neutral" | "blue" | "amber" | "red" | "g
 
 export default async function PublicQuotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const profile = await requireProfileWithRole(["admin", "dispatcher"]);
   const supabase = await createSupabaseServerClient();
-
-  let caller: { companyId: string };
-  try {
-    caller = await requireRole(supabase, ["admin", "dispatcher"]);
-  } catch {
-    redirect("/login");
-  }
 
   const { data, error } = await supabase
     .from("quotes")
     .select("*, quote_line_items(id,quote_id,name,price,quantity), jobs!inner(id,customer_name,phone,address,issue,company_id)")
     .eq("id", id)
     .eq("is_demo", false)
-    .eq("jobs.company_id", caller.companyId)
+    .eq("jobs.company_id", profile.company_id)
     .single();
 
   if (error || !data) notFound();

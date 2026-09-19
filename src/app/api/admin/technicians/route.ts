@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { requireRole } from '@/lib/supabase/withCompany'
+import { requireApiRole } from '@/lib/auth'
 import {
   generateTechHandle,
   generatePin,
@@ -12,19 +11,13 @@ import {
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { companyId: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   const { data, error } = await supabase
     .from('technicians')
     .select('id,name,phone,handle,availability_status,current_job_id,auth_user_id')
-    .eq('company_id', caller.companyId)
+    .eq('company_id', profile.company_id)
     .order('name')
 
   if (error) {
@@ -35,14 +28,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { userId: string; companyId: string; role: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   let body: {
     firstName?: string
@@ -89,7 +76,7 @@ export async function POST(request: Request) {
 
   // Insert technician record
   const { error: insertError } = await supabase.from('technicians').insert({
-    company_id: caller.companyId,
+    company_id: profile.company_id,
     name: `${firstName.trim()} ${lastName.trim()}`,
     phone: phone.trim(),
     handle,

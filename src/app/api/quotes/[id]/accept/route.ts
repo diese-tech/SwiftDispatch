@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { assertValidTransition, type JobStatus } from '@/lib/stateMachine'
 import { getPaymentProvider } from '@/lib/payments'
 import { verifyQuoteApprovalToken } from '@/lib/quoteTokens'
-import { requireRole } from '@/lib/supabase/withCompany'
+import { requireApiRole } from '@/lib/auth'
 import { queueCustomerInvoiceSms, queueCustomerStatusSms } from '@/lib/jobNotifications'
 import type { SmsConsentType } from '@/lib/smsGate'
 
@@ -59,16 +58,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 })
     }
   } else {
-    const serverSupabase = await createSupabaseServerClient()
+    const { profile, response: roleResponse } = await requireApiRole(['dispatcher', 'admin'])
+    if (roleResponse || !profile) return roleResponse
 
-    let caller: { companyId: string }
-    try {
-      caller = await requireRole(serverSupabase, ['admin', 'dispatcher'])
-    } catch {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    if (caller.companyId !== job.company_id) {
+    if (profile.company_id !== job.company_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
   }

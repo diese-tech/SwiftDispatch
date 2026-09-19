@@ -1,27 +1,20 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { requireRole } from '@/lib/supabase/withCompany'
+import { requireApiRole } from '@/lib/auth'
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { companyId: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   // Verify the template belongs to this company
   const { data: existing, error: fetchError } = await supabase
     .from('quote_templates')
     .select('id')
     .eq('id', id)
-    .eq('company_id', caller.companyId)
+    .eq('company_id', profile.company_id)
     .single()
 
   if (fetchError || !existing) {
@@ -51,7 +44,7 @@ export async function PATCH(
     .from('quote_templates')
     .update(patch)
     .eq('id', id)
-    .eq('company_id', caller.companyId)
+    .eq('company_id', profile.company_id)
     .select()
     .single()
 
@@ -67,20 +60,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { companyId: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   const { error } = await supabase
     .from('quote_templates')
     .update({ is_active: false })
     .eq('id', id)
-    .eq('company_id', caller.companyId)
+    .eq('company_id', profile.company_id)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

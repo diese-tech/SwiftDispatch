@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireApiProfile } from '@/lib/auth'
+import { requireApiRole } from '@/lib/auth'
 import { queueCustomerStatusSms, queueTechnicianAssignmentSms } from '@/lib/jobNotifications'
 import type { SmsConsentType } from '@/lib/smsGate'
 
@@ -18,9 +18,8 @@ const CreateJobSchema = z.object({
 })
 
 export async function GET() {
-  const { profile, response, supabase } = await requireApiProfile()
+  const { profile, response, supabase } = await requireApiRole(['dispatcher', 'admin'])
   if (response || !profile) return response
-  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data, error } = await supabase
     .from('jobs')
@@ -38,9 +37,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { profile, response, supabase } = await requireApiProfile()
+  const { profile, response, supabase } = await requireApiRole(['dispatcher', 'admin'])
   if (response || !profile) return response
-  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let body: unknown
   try { body = await request.json() } catch {
@@ -96,7 +94,7 @@ export async function POST(request: Request) {
     from_status: null,
     to_status: initialStatus,
     actor_id: profile.id,
-    actor_role: profile.role === 'admin' ? 'admin' : 'dispatcher',
+    actor_role: profile.role,
     note: technician_id ? `Job created and assigned via ${source}` : `Job created via ${source}`,
   })
 

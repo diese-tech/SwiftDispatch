@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { requireRole } from '@/lib/supabase/withCompany'
+import { requireApiRole } from '@/lib/auth'
 import { generatePin } from '@/lib/techAuth'
 
 export async function POST(
@@ -9,21 +8,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { userId: string; companyId: string; role: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   // Verify the technician belongs to the caller's company
   const { data: tech, error: techError } = await supabase
     .from('technicians')
     .select('id, auth_user_id')
     .eq('id', id)
-    .eq('company_id', caller.companyId)
+    .eq('company_id', profile.company_id)
     .single()
 
   if (techError || !tech) {

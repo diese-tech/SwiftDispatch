@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { requireApiProfile } from "@/lib/auth";
+import { requireApiRole } from "@/lib/auth";
 
 async function assertQuoteOwnership(
-  supabase: Awaited<ReturnType<typeof requireApiProfile>>["supabase"],
+  supabase: Awaited<ReturnType<typeof requireApiRole>>["supabase"],
   quoteId: string,
   companyId: string,
 ) {
@@ -16,7 +16,7 @@ async function assertQuoteOwnership(
 }
 
 async function recomputeQuoteTotal(
-  supabase: Awaited<ReturnType<typeof requireApiProfile>>["supabase"],
+  supabase: Awaited<ReturnType<typeof requireApiRole>>["supabase"],
   quoteId: string,
 ) {
   const { data: items, error } = await supabase
@@ -44,9 +44,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; itemId: string }> },
 ) {
   const { id, itemId } = await params;
-  const { profile, response, supabase } = await requireApiProfile();
-  if (response || !profile) return response;
-  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { profile, response, supabase } = await requireApiRole(['dispatcher', 'admin']);
+  if (response || !profile) return response
 
   const { data: quote, error: quoteError } = await assertQuoteOwnership(
     supabase,
@@ -89,9 +88,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; itemId: string }> },
 ) {
   const { id, itemId } = await params;
-  const { profile, response, supabase } = await requireApiProfile();
+  const { profile, response, supabase } = await requireApiRole(['dispatcher', 'admin']);
   if (response || !profile) return response;
-  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: quote, error: quoteError } = await assertQuoteOwnership(
     supabase,

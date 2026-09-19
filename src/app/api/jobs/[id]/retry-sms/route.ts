@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireApiProfile } from '@/lib/auth'
+import { requireApiRole } from '@/lib/auth'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(
@@ -7,12 +7,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { profile, response } = await requireApiProfile()
+  const { profile, response } = await requireApiRole(['dispatcher', 'admin'])
   if (response || !profile) return response
-  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  if (profile.role !== 'admin' && profile.role !== 'dispatcher') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
 
   // Verify the job belongs to this company using the user-scoped client
   // (admin client used for the outbox write, but we still need to auth the job)

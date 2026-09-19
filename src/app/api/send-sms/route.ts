@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireApiProfile } from "@/lib/auth";
+import { requireApiRole } from "@/lib/auth";
 import { generateQuoteApprovalToken } from "@/lib/quoteTokens";
 import { assertSmsConsent } from "@/lib/smsGate";
 import { firstSms } from "@/lib/twilio";
 import { enqueueSms } from "@/lib/smsOutbox";
 
 export async function POST(request: Request) {
-  const { profile, response, supabase } = await requireApiProfile();
+  const { profile, response, supabase } = await requireApiRole(['dispatcher', 'admin']);
   if (response || !profile) return response;
-  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   let body: unknown;
   try {
