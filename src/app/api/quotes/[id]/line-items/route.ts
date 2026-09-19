@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { requireApiProfile } from "@/lib/auth";
+import { requireApiRole } from "@/lib/auth";
 
 async function recomputeQuoteTotal(
-  supabase: Awaited<ReturnType<typeof requireApiProfile>>["supabase"],
+  supabase: Awaited<ReturnType<typeof requireApiRole>>["supabase"],
   quoteId: string,
 ) {
   const { data: items, error } = await supabase
@@ -30,9 +30,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const { profile, response, supabase } = await requireApiProfile();
+  const { profile, response, supabase } = await requireApiRole(['dispatcher', 'admin']);
   if (response || !profile) return response;
-  if (!profile.company_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await request.json().catch(() => ({}));
 
   const { data: quote, error: quoteError } = await supabase

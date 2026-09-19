@@ -1,21 +1,14 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { requireRole } from '@/lib/supabase/withCompany'
+import { requireApiRole } from '@/lib/auth'
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { companyId: string }
-  try {
-    caller = await requireRole(supabase, ['admin', 'dispatcher'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin', 'dispatcher'])
+  if (response || !profile) return response
 
   const { data, error } = await supabase
     .from('quote_templates')
     .select('*')
-    .eq('company_id', caller.companyId)
+    .eq('company_id', profile.company_id)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
@@ -27,14 +20,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { companyId: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   let body: {
     name?: string
@@ -63,7 +50,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from('quote_templates')
     .insert({
-      company_id: caller.companyId,
+      company_id: profile.company_id,
       name: name.trim(),
       line_items: lineItems,
       estimated_duration_minutes: estimatedDurationMinutes ?? null,

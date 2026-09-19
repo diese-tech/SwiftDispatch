@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/supabase/withCompany";
+import { requireApiRole } from "@/lib/auth";
 import { buildSquareAuthorizeUrl, hasSquareOAuthConfig } from "@/lib/square";
 
 function buildSettingsRedirect(request: Request, status: string) {
@@ -8,12 +7,8 @@ function buildSettingsRedirect(request: Request, status: string) {
 }
 
 export async function GET(request: Request) {
-  const supabase = await createSupabaseServerClient();
-
-  let caller: { userId: string; companyId: string };
-  try {
-    caller = await requireRole(supabase, ["admin"]);
-  } catch {
+  const { profile, response } = await requireApiRole(["admin"]);
+  if (response || !profile) {
     return NextResponse.redirect(buildSettingsRedirect(request, "forbidden"));
   }
 
@@ -22,8 +17,8 @@ export async function GET(request: Request) {
   }
 
   const authorizeUrl = buildSquareAuthorizeUrl({
-    companyId: caller.companyId,
-    userId: caller.userId,
+    companyId: profile.company_id,
+    userId: profile.id,
     returnTo: "/admin/settings",
   });
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiProfile } from "@/lib/auth";
+import { requireApiRole } from "@/lib/auth";
 import type { CloseStatus } from "@/types/db";
 
 const closeStatuses: CloseStatus[] = [
@@ -12,11 +12,8 @@ const closeStatuses: CloseStatus[] = [
 ];
 
 export async function PATCH(request: Request) {
-  const { profile, response, supabase } = await requireApiProfile();
+  const { profile, response, supabase } = await requireApiRole(['admin']);
   if (response || !profile) return response;
-  if (profile.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
   const { close_status } = (await request.json()) as {
     close_status?: CloseStatus;
   };

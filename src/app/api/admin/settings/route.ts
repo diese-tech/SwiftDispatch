@@ -1,22 +1,15 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getPublicSquareConnection } from '@/lib/square'
-import { requireRole } from '@/lib/supabase/withCompany'
+import { requireApiRole } from '@/lib/auth'
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { companyId: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   const { data, error } = await supabase
     .from('companies')
     .select('id, name, slug, timezone, sms_sender_name, payment_provider, payment_config')
-    .eq('id', caller.companyId)
+    .eq('id', profile.company_id)
     .single()
 
   if (error || !data) {
@@ -32,14 +25,8 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { companyId: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   let body: {
     name?: string
@@ -74,7 +61,7 @@ export async function PATCH(request: Request) {
       .from('companies')
       .select('id')
       .eq('slug', slug)
-      .neq('id', caller.companyId)
+      .neq('id', profile.company_id)
       .maybeSingle()
 
     if (conflict) {
@@ -97,7 +84,7 @@ export async function PATCH(request: Request) {
   const { data, error } = await supabase
     .from('companies')
     .update(patch)
-    .eq('id', caller.companyId)
+    .eq('id', profile.company_id)
     .select('id, name, slug, timezone, sms_sender_name, payment_provider, payment_config')
     .maybeSingle()
 

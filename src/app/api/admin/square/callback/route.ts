@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/supabase/withCompany";
+import { requireApiRole } from "@/lib/auth";
 import {
   buildStoredSquareConnection,
   exchangeSquareAuthorizationCode,
@@ -36,9 +35,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const serverSupabase = await createSupabaseServerClient();
-    const caller = await requireRole(serverSupabase, ["admin"]);
-    if (caller.userId !== oauthState.userId || caller.companyId !== oauthState.companyId) {
+    const { profile, response } = await requireApiRole(["admin"]);
+    if (response || !profile) {
+      return NextResponse.redirect(buildReturnUrl(request, oauthState.returnTo, "connect-failed"));
+    }
+    if (profile.id !== oauthState.userId || profile.company_id !== oauthState.companyId) {
       return NextResponse.redirect(buildReturnUrl(request, oauthState.returnTo, "forbidden"));
     }
 

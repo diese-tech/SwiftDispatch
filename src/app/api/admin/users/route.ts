@@ -1,40 +1,27 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { requireRole } from '@/lib/supabase/withCompany'
+import { requireApiRole } from '@/lib/auth'
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { userId: string; companyId: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   const { data, error } = await supabase
     .from('users')
     .select('id,email,role')
-    .eq('company_id', caller.companyId)
+    .eq('company_id', profile.company_id)
     .order('email')
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ currentUserId: caller.userId, users: data ?? [] })
+  return NextResponse.json({ currentUserId: profile.id, users: data ?? [] })
 }
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient()
-
-  let caller: { companyId: string }
-  try {
-    caller = await requireRole(supabase, ['admin'])
-  } catch {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const { profile, response, supabase } = await requireApiRole(['admin'])
+  if (response || !profile) return response
 
   let body: { email?: string }
   try {
@@ -54,7 +41,7 @@ export async function POST(request: Request) {
     email,
     {
       data: {
-        company_id: caller.companyId,
+        company_id: profile.company_id,
         role: 'dispatcher',
       },
     },
@@ -70,7 +57,7 @@ export async function POST(request: Request) {
   const { error: insertError } = await supabase.from('users').insert({
     id: invited.user.id,
     email,
-    company_id: caller.companyId,
+    company_id: profile.company_id,
     role: 'dispatcher',
   })
 
