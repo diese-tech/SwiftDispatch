@@ -50,7 +50,7 @@ export default function Reveal({
     return () => observer.disconnect();
   }, [once]);
 
-  const Tag = as as any;
+  const Tag = as;
 
   return (
     <Tag

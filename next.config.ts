@@ -32,7 +32,9 @@ const securityHeaders = [
 
 const withBundleAnalyzer =
   process.env.ANALYZE === "true"
-    ? require("@next/bundle-analyzer")({ enabled: true })
+    ? // Lazy-loaded so this optional, analyzer-only dependency isn't required for a normal build.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("@next/bundle-analyzer")({ enabled: true })
     : (config: NextConfig) => config;
 
 const nextConfig: NextConfig = {

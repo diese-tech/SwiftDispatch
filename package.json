@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "seed:live-qa": "node scripts/seed-live-qa.mjs",
     "seed:load:fleet": "node scripts/seed-load-fleet.mjs",
     "worker:sms": "node scripts/run-sms-worker.mjs",
