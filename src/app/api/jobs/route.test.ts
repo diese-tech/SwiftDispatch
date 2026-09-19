@@ -107,17 +107,20 @@ function makeReadBuilder(getRows: () => Row[]) {
   return builder;
 }
 
-type Db = { jobs: Row[]; technicians: Row[]; companies: Row[]; status_events: Row[] };
+type Db = { jobs: Row[]; technicians: Row[]; customers: Row[]; companies: Row[]; status_events: Row[] };
 
-// The route never scopes its technicians select/update by company_id itself
-// -- in production that's enforced by RLS ("company users can
-// read/update technicians", supabase/schema.sql), not application code (see
-// docs/AUTHORIZATION.md's RLS section: tenant isolation is defense-in-depth
-// at the DB layer for this table). This fake models that by pre-filtering
-// the technicians table to rows visible under the acting company's RLS
-// scope before applying the rest of the query chain, so a cross-tenant
-// technician_id resolves to "not found" here exactly as it would in
-// production, not because the route itself checks it.
+// The route never scopes its technicians/customers select by company_id
+// itself -- in production, technicians is protected by RLS ("company users
+// can read/update technicians", supabase/schema.sql); customers is a plain
+// column with no FK constraint at all (jobs.customer_id was added without
+// `references public.customers(id)`, per
+// supabase/migrations/202505010001_job_timestamp_columns.sql), so nothing
+// but the route's own company-scoped lookup protects it (issue #64). This
+// fake models RLS's effect on technicians by pre-filtering to the acting
+// company before the rest of the query chain applies, and models customers
+// identically for symmetry with the app-level check #64 adds -- either way,
+// a cross-tenant id resolves to "not found" here exactly as the real system
+// (RLS or app code) would produce.
 function createFakeSupabase(db: Db, actingCompanyId: string) {
   return {
     from(table: string) {
@@ -132,6 +135,12 @@ function createFakeSupabase(db: Db, actingCompanyId: string) {
         return {
           select: () => makeReadBuilder(rlsVisible),
           update: (patch: Row) => makeUpdateBuilder(rlsVisible, patch),
+        };
+      }
+      if (table === "customers") {
+        const companyScoped = () => db.customers.filter((c) => c.company_id === actingCompanyId);
+        return {
+          select: () => makeReadBuilder(companyScoped),
         };
       }
       if (table === "companies") {
@@ -154,6 +163,7 @@ const COMPANY_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_COMPANY_ID = "55555555-5555-4555-8555-555555555555";
 const TECH_ID = "44444444-4444-4444-8444-444444444444";
 const OTHER_TECH_ID = "88888888-8888-4888-8888-888888888888";
+const OTHER_CUSTOMER_ID = "99999999-9999-4999-8999-999999999999";
 const DISPATCHER_ID = "66666666-6666-4666-8666-666666666666";
 
 function freshDb(): Db {
@@ -168,6 +178,7 @@ function freshDb(): Db {
       { id: TECH_ID, company_id: COMPANY_ID, name: "Grace Hopper", phone: "+15550000003", availability_status: "available", current_job_id: null },
       { id: OTHER_TECH_ID, company_id: OTHER_COMPANY_ID, name: "Ada Byron", phone: "+15550000004", availability_status: "available", current_job_id: null },
     ],
+    customers: [{ id: OTHER_CUSTOMER_ID, company_id: OTHER_COMPANY_ID, name: "Marie Curie", phone: "+15550000005" }],
     companies: [{ id: COMPANY_ID, name: "Acme HVAC", sms_sender_name: "Acme" }],
     status_events: [],
   };
@@ -255,6 +266,20 @@ describe("POST /api/jobs", () => {
     });
     expect(queueTechnicianAssignmentSmsMock).not.toHaveBeenCalled();
     expect(queueCustomerStatusSmsMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects assigning a customer belonging to a different company, and creates no job at all", async () => {
+    const jobCountBefore = db.jobs.length;
+
+    const response = await createJob({ ...validJobInput, customer_id: OTHER_CUSTOMER_ID });
+
+    expect(response.status).toBe(404);
+    // jobs.customer_id has no FK constraint at all (added as a bare uuid
+    // column, see supabase/migrations/202505010001_job_timestamp_columns.sql),
+    // so unlike technician_id there's no RLS-on-the-referenced-table backstop
+    // either -- only this route's own check stands between a client-supplied
+    // id and a cross-tenant reference landing on the job.
+    expect(db.jobs).toHaveLength(jobCountBefore);
   });
 
   it("rejects a validation failure", async () => {

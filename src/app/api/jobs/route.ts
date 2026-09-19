@@ -75,6 +75,23 @@ export async function POST(request: Request) {
     }
   }
 
+  // jobs.customer_id has no FK constraint at all (added as a bare uuid
+  // column -- see supabase/migrations/202505010001_job_timestamp_columns.sql),
+  // so unlike technician_id there's no RLS-on-the-referenced-table backstop
+  // either. Same check, same reasoning as technician_id above.
+  if (customer_id) {
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('id', customer_id)
+      .eq('company_id', profile.company_id)
+      .maybeSingle()
+
+    if (customerError || !customer) {
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+    }
+  }
+
   const now = new Date().toISOString()
   const initialStatus = technician_id ? 'assigned' : 'new'
 
