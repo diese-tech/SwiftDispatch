@@ -54,6 +54,27 @@ export async function POST(request: Request) {
   }
 
   const { customer_name, phone, address, issue, problem_description, urgency, technician_id, customer_id, sms_consent_type, source } = parsed.data
+
+  // jobs.technician_id is a plain FK with no (technician_id, company_id)
+  // tenant constraint, and the jobs insert RLS policy only checks the new
+  // job's own company_id -- neither stops a job from being created with a
+  // technician_id belonging to a different company. Confirm the technician
+  // is actually visible in this dispatcher's tenant (company-scoped, backed
+  // by the technicians table's own RLS policy as defense-in-depth) before
+  // ever writing it onto a job.
+  if (technician_id) {
+    const { data: technician, error: technicianError } = await supabase
+      .from('technicians')
+      .select('id')
+      .eq('id', technician_id)
+      .eq('company_id', profile.company_id)
+      .maybeSingle()
+
+    if (technicianError || !technician) {
+      return NextResponse.json({ error: 'Technician not found' }, { status: 404 })
+    }
+  }
+
   const now = new Date().toISOString()
   const initialStatus = technician_id ? 'assigned' : 'new'
 
