@@ -183,6 +183,16 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
     requestMove(jobId, nextStatus);
   }
 
+  function handleAssigned(canonicalJob: JobWithTechnician) {
+    setJobs((current) =>
+      current.map((item) =>
+        item.id === canonicalJob.id
+          ? { ...item, ...canonicalJob, status: normalizeStatus(canonicalJob.status) }
+          : item,
+      ),
+    );
+  }
+
   function requestMove(jobId: string, nextStatus: JobStatus) {
     if (readOnly) return;
     const job = jobs.find((item) => item.id === jobId);
@@ -341,13 +351,13 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
                   </button>
                 ))}
               </div>
-              <KanbanColumn jobs={mobileJobs} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={mobileStatus} technicians={technicians} compact />
+              <KanbanColumn jobs={mobileJobs} onAssigned={handleAssigned} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={mobileStatus} technicians={technicians} compact />
             </div>
           </div>
 
           {/* Desktop: full board */}
           <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-            {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={status} technicians={technicians} />)}
+            {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} onAssigned={handleAssigned} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={status} technicians={technicians} />)}
           </div>
         </DndContext>
       )}

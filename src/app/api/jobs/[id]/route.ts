@@ -123,6 +123,25 @@ export async function PATCH(
   }
 
   if (Object.keys(patch).length === 0) {
+    // A requested status that already matches persisted state is a legitimate
+    // no-op (e.g. a stale board re-confirming a move that already landed via
+    // technician assignment), not a client error — return canonical state
+    // instead of surfacing "No changes provided" to the operator.
+    if (newStatus && newStatus === currentJob.status) {
+      const { data: canonicalJob, error: canonicalError } = await supabase
+        .from('jobs')
+        .select('*, technicians!jobs_technician_id_fkey(id,name,phone)')
+        .eq('id', id)
+        .eq('company_id', profile.company_id)
+        .single()
+
+      if (canonicalError || !canonicalJob) {
+        return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+      }
+
+      return NextResponse.json({ job: canonicalJob })
+    }
+
     return NextResponse.json({ error: 'No changes provided' }, { status: 400 })
   }
 

@@ -13,6 +13,7 @@ type Props = {
   technicians: Technician[];
   compact?: boolean;
   onRequestMove?: (jobId: string, nextStatus: JobStatus) => void;
+  onAssigned?: (job: JobWithTechnician) => void;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -43,6 +44,7 @@ export default function KanbanColumn({
   technicians,
   compact = false,
   onRequestMove,
+  onAssigned,
 }: Props) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
 
@@ -70,6 +72,7 @@ export default function KanbanColumn({
             hasSmsFailure={smsFailedJobIds.includes(job.id)}
             job={job}
             key={job.id}
+            onAssigned={onAssigned}
             onRequestMove={onRequestMove}
             readOnly={readOnly}
             technicians={technicians}

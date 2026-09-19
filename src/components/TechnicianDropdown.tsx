@@ -1,24 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import type { Technician } from "@/types/db";
+import { assignTechnician } from "@/lib/technicianAssignment";
+import type { JobWithTechnician, Technician } from "@/types/db";
 
 type Props = {
   jobId: string;
   selectedId: string | null;
   technicians: Technician[];
+  onAssigned?: (job: JobWithTechnician) => void;
 };
 
-export default function TechnicianDropdown({ jobId, selectedId, technicians }: Props) {
+export default function TechnicianDropdown({ jobId, selectedId, technicians, onAssigned }: Props) {
   const [value, setValue] = useState(selectedId ?? "");
+  const [error, setError] = useState("");
 
   async function assign(nextValue: string) {
+    const previousValue = value;
     setValue(nextValue);
-    await fetch(`/api/jobs/${jobId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ technician_id: nextValue || null, status: nextValue ? "assigned" : undefined }),
-    });
+    setError("");
+
+    const outcome = await assignTechnician(jobId, nextValue || null);
+
+    if (!outcome.ok) {
+      setValue(previousValue);
+      setError(outcome.error);
+      return;
+    }
+
+    setValue(outcome.job.technician_id ?? "");
+    onAssigned?.(outcome.job);
   }
 
   return (
@@ -30,6 +41,7 @@ export default function TechnicianDropdown({ jobId, selectedId, technicians }: P
           <option key={tech.id} value={tech.id}>{tech.name}</option>
         ))}
       </select>
+      {error ? <p className="mt-1.5 text-[11px] font-medium text-red-600">{error}</p> : null}
     </label>
   );
 }
