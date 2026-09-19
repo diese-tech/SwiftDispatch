@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Terms of Service — SwiftDispatch",
@@ -84,7 +85,7 @@ export default function TermsPage() {
       </div>
 
       <div className="mt-12 border-t border-slate-200 pt-8">
-        <a className="text-sm text-teal-700 hover:underline" href="/">← Back to home</a>
+        <Link className="text-sm text-teal-700 hover:underline" href="/">← Back to home</Link>
       </div>
     </main>
   );

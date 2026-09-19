@@ -44,11 +44,10 @@
 
 **Done when:** `npm run test:e2e` passes reliably across 3 consecutive runs with actionable failure logs.
 
-### 2 — CI quality gates
-**Scope:** `package.json`
-- Add a `test:ci` script combining lint + unit + at least one smoke E2E
-
-**Done when:** a single command validates all core quality gates before opening a PR.
+### 2 — CI quality gates — done
+Resolved by `.github/workflows/ci.yml`: every pull request and push to
+`main` runs `npm ci` → `npm run lint` → `npx tsc --noEmit` → `npm test` →
+`npm run build`, no secrets required (see "Continuous Integration" below).
 
 ### 3 — Env validation
 **Scope:** new module (e.g. `src/lib/env.ts`)
@@ -82,7 +81,6 @@
 ## Suggested branch names
 
 - `feature/e2e-timeout-stability`
-- `feature/ci-quality-gates`
 - `feature/env-validation-hardening`
 - `feature/payment-contract-tests`
 - `feature/rbac-route-coverage`
@@ -98,9 +96,30 @@ npm test                 # unit tests (no env vars required)
 npm run test:e2e         # integration E2E (requires TEST_INTEGRATION=true + env vars)
 npm run seed:live-qa     # reset QA tenant
 npm run worker:sms       # run SMS outbox worker locally
-npm run lint             # lint
-npm run build            # production build
+npm run lint             # lint (eslint . — no env vars required)
+npm run build            # production build (no env vars required)
 ```
+
+## Continuous Integration
+
+`.github/workflows/ci.yml` runs on every pull request and every push to
+`main`. It is the canonical validation contract for a healthy change —
+reproduce it locally with the same four commands, in order:
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm test
+npm run build
+```
+
+CI installs with `npm ci` against the committed lockfile and uses only
+safe, non-production placeholder values for the environment variables
+`validateEnv()` requires (see the workflow file) — no real secrets are
+needed to validate source code, and none are stored in this repository.
+
+`main` should be configured (GitHub → Settings → Branches) to require a
+pull request and the CI `validate` check before merging.
 
 For full launch readiness and phase scope → `ROADMAP.md`  
 For acceptance tests → `docs/ACCEPTANCE_TESTS.md`  

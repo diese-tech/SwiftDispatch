@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 
 type StatusData = {
   status: string
@@ -55,7 +56,7 @@ export default function StatusPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center max-w-sm">
         <p className="text-red-700">{error}</p>
-        <a href="/" className="mt-4 block text-sm text-teal-700 hover:underline">Back to home</a>
+        <Link href="/" className="mt-4 block text-sm text-teal-700 hover:underline">Back to home</Link>
       </div>
     </main>
   )
