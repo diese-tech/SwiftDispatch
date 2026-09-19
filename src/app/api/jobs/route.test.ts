@@ -109,7 +109,16 @@ function makeReadBuilder(getRows: () => Row[]) {
 
 type Db = { jobs: Row[]; technicians: Row[]; companies: Row[]; status_events: Row[] };
 
-function createFakeSupabase(db: Db) {
+// The route never scopes its technicians select/update by company_id itself
+// -- in production that's enforced by RLS ("company users can
+// read/update technicians", supabase/schema.sql), not application code (see
+// docs/AUTHORIZATION.md's RLS section: tenant isolation is defense-in-depth
+// at the DB layer for this table). This fake models that by pre-filtering
+// the technicians table to rows visible under the acting company's RLS
+// scope before applying the rest of the query chain, so a cross-tenant
+// technician_id resolves to "not found" here exactly as it would in
+// production, not because the route itself checks it.
+function createFakeSupabase(db: Db, actingCompanyId: string) {
   return {
     from(table: string) {
       if (table === "jobs") {
@@ -119,9 +128,10 @@ function createFakeSupabase(db: Db) {
         };
       }
       if (table === "technicians") {
+        const rlsVisible = () => db.technicians.filter((t) => t.company_id === actingCompanyId);
         return {
-          select: () => makeReadBuilder(() => db.technicians),
-          update: (patch: Row) => makeUpdateBuilder(() => db.technicians, patch),
+          select: () => makeReadBuilder(rlsVisible),
+          update: (patch: Row) => makeUpdateBuilder(rlsVisible, patch),
         };
       }
       if (table === "companies") {
@@ -141,7 +151,9 @@ function createFakeSupabase(db: Db) {
 }
 
 const COMPANY_ID = "11111111-1111-4111-8111-111111111111";
+const OTHER_COMPANY_ID = "55555555-5555-4555-8555-555555555555";
 const TECH_ID = "44444444-4444-4444-8444-444444444444";
+const OTHER_TECH_ID = "88888888-8888-4888-8888-888888888888";
 const DISPATCHER_ID = "66666666-6666-4666-8666-666666666666";
 
 function freshDb(): Db {
@@ -150,18 +162,22 @@ function freshDb(): Db {
       { id: "job-existing-active", company_id: COMPANY_ID, status: "assigned", is_demo: false },
       { id: "job-existing-completed", company_id: COMPANY_ID, status: "completed", is_demo: false },
       { id: "job-existing-demo", company_id: COMPANY_ID, status: "new", is_demo: true },
+      { id: "job-other-company", company_id: OTHER_COMPANY_ID, status: "assigned", is_demo: false },
     ],
-    technicians: [{ id: TECH_ID, company_id: COMPANY_ID, name: "Grace Hopper", phone: "+15550000003", availability_status: "available", current_job_id: null }],
+    technicians: [
+      { id: TECH_ID, company_id: COMPANY_ID, name: "Grace Hopper", phone: "+15550000003", availability_status: "available", current_job_id: null },
+      { id: OTHER_TECH_ID, company_id: OTHER_COMPANY_ID, name: "Ada Byron", phone: "+15550000004", availability_status: "available", current_job_id: null },
+    ],
     companies: [{ id: COMPANY_ID, name: "Acme HVAC", sms_sender_name: "Acme" }],
     status_events: [],
   };
 }
 
-function requireApiRoleAs(db: Db, role: string) {
+function requireApiRoleAs(db: Db, role: string, companyId: string = COMPANY_ID) {
   requireApiRoleMock.mockResolvedValue({
-    profile: { id: DISPATCHER_ID, email: "dispatcher@example.com", company_id: COMPANY_ID, role },
+    profile: { id: DISPATCHER_ID, email: "dispatcher@example.com", company_id: companyId, role },
     response: null,
-    supabase: createFakeSupabase(db),
+    supabase: createFakeSupabase(db, companyId),
   });
 }
 
@@ -222,6 +238,22 @@ describe("POST /api/jobs", () => {
     expect(queueCustomerStatusSmsMock).toHaveBeenCalledTimes(1);
   });
 
+  it("cannot bind, mutate, or notify a technician belonging to a different company (RLS-enforced)", async () => {
+    const response = await createJob({ ...validJobInput, technician_id: OTHER_TECH_ID });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { job: Row };
+    // The job write itself isn't blocked (jobs.company_id is this dispatcher's own),
+    // but the cross-tenant technician's row is invisible under RLS, so nothing
+    // about that technician is touched or notified.
+    expect(body.job.status).toBe("assigned");
+    expect(db.technicians.find((t) => t.id === OTHER_TECH_ID)).toMatchObject({
+      availability_status: "available",
+      current_job_id: null,
+    });
+    expect(queueTechnicianAssignmentSmsMock).not.toHaveBeenCalled();
+  });
+
   it("rejects a validation failure", async () => {
     const response = await createJob({ ...validJobInput, phone: "" });
 
@@ -258,6 +290,10 @@ describe("GET /api/jobs", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { jobs: Row[] };
     const ids = body.jobs.map((j) => j.id);
+    // job-other-company proves the company_id filter is actually doing
+    // something, not just the demo/status filters (which alone wouldn't
+    // exclude it -- it's neither demo nor terminal).
     expect(ids).toEqual(["job-existing-active"]);
+    expect(ids).not.toContain("job-other-company");
   });
 });

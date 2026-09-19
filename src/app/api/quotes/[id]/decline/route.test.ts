@@ -144,11 +144,22 @@ describe("POST /api/quotes/[id]/decline", () => {
     expect(db.quotes[0].status).toBe("sent");
   });
 
-  it("rejects an invalid or expired token", async () => {
+  it("rejects an invalid or garbage token", async () => {
     const response = await declineQuote({ token: "garbage" });
 
     expect(response.status).toBe(401);
     expect(db.quotes[0].status).toBe("sent");
+  });
+
+  it("rejects an actually expired token", async () => {
+    const jwt = (await import("jsonwebtoken")).default;
+    const expiredToken = jwt.sign({ quoteId: QUOTE_ID }, process.env.QUOTE_TOKEN_SECRET!, { expiresIn: -1 });
+
+    const response = await declineQuote({ token: expiredToken });
+
+    expect(response.status).toBe(401);
+    expect(db.quotes[0].status).toBe("sent");
+    expect(db.jobs[0].status).toBe("quote_pending");
   });
 
   it("rejects a quote that is not in 'sent' status", async () => {

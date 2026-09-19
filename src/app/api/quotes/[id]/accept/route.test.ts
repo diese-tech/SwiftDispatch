@@ -240,6 +240,17 @@ describe("PATCH /api/quotes/[id]/accept", () => {
     expect(db.quotes[0].status).toBe("sent");
   });
 
+  it("rejects an actually expired token", async () => {
+    const jwt = (await import("jsonwebtoken")).default;
+    const expiredToken = jwt.sign({ quoteId: QUOTE_ID }, process.env.QUOTE_TOKEN_SECRET!, { expiresIn: -1 });
+
+    const response = await acceptQuote({ token: expiredToken });
+
+    expect(response.status).toBe(401);
+    expect(db.quotes[0].status).toBe("sent");
+    expect(db.jobs[0].status).toBe("quote_pending");
+  });
+
   it("rejects a quote that is not in 'sent' status", async () => {
     db.quotes[0].status = "accepted";
 
