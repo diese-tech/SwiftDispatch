@@ -1,7 +1,12 @@
 /**
  * Behavior coverage for company settings read/update (issue #62): role
- * gating, slug-uniqueness validation, partial patch construction, and the
- * public Square connection projection.
+ * gating, tenant-scoped read/write, slug-uniqueness validation, partial
+ * patch construction, and the public Square connection projection.
+ *
+ * The `companies` table fake actually filters by the `.eq()`/`.neq()`
+ * predicates it's given (not a canned response), with two distinct company
+ * fixtures, so these isolation assertions fail if the route's
+ * `company_id` scoping is ever dropped or changed (per PR #68 review).
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,7 +21,11 @@ vi.mock("@/lib/square", () => ({
   getPublicSquareConnection: getPublicSquareConnectionMock,
 }));
 
+type Row = Record<string, unknown>;
+type Predicate = (row: Row) => boolean;
+
 const COMPANY_ID = "11111111-1111-4111-8111-111111111111";
+const OTHER_COMPANY_ID = "88888888-8888-4888-8888-888888888888";
 const ADMIN_ID = "99999999-9999-4999-8999-999999999999";
 
 function forbiddenResponse() {
@@ -25,6 +34,83 @@ function forbiddenResponse() {
 
 function adminProfile() {
   return { id: ADMIN_ID, email: "admin@example.com", company_id: COMPANY_ID, role: "admin" as const };
+}
+
+function makeSelectBuilder(getRows: () => Row[]) {
+  const predicates: Predicate[] = [];
+  const builder = {
+    eq(column: string, value: unknown) {
+      predicates.push((row) => row[column] === value);
+      return builder;
+    },
+    neq(column: string, value: unknown) {
+      predicates.push((row) => row[column] !== value);
+      return builder;
+    },
+    single: async () => {
+      const row = getRows().find((r) => predicates.every((p) => p(r)));
+      return row ? { data: row, error: null } : { data: null, error: { message: "no rows" } };
+    },
+    maybeSingle: async () => {
+      const row = getRows().find((r) => predicates.every((p) => p(r)));
+      return { data: row ?? null, error: null };
+    },
+  };
+  return builder;
+}
+
+function makeUpdateBuilder(getRows: () => Row[], patch: Row, forcedError: { message: string } | null = null) {
+  const predicates: Predicate[] = [];
+  const builder = {
+    eq(column: string, value: unknown) {
+      predicates.push((row) => row[column] === value);
+      return builder;
+    },
+    select() {
+      return {
+        maybeSingle: async () => {
+          if (forcedError) return { data: null, error: forcedError };
+          const row = getRows().find((r) => predicates.every((p) => p(r)));
+          if (!row) return { data: null, error: null };
+          Object.assign(row, patch);
+          return { data: { ...row }, error: null };
+        },
+      };
+    },
+  };
+  return builder;
+}
+
+function freshCompanies(): Row[] {
+  return [
+    {
+      id: COMPANY_ID,
+      name: "Acme HVAC",
+      slug: "acme-hvac",
+      timezone: "America/New_York",
+      sms_sender_name: "Acme",
+      payment_provider: "manual",
+      payment_config: { square: { connected: true } },
+    },
+    {
+      id: OTHER_COMPANY_ID,
+      name: "Rival Plumbing",
+      slug: "rival-plumbing",
+      timezone: "America/Chicago",
+      sms_sender_name: "Rival",
+      payment_provider: "manual",
+      payment_config: {},
+    },
+  ];
+}
+
+function supabaseWithCompanies(companies: Row[], forcedError: { message: string } | null = null) {
+  return {
+    from: () => ({
+      select: () => makeSelectBuilder(() => companies),
+      update: (patch: Row) => makeUpdateBuilder(() => companies, patch, forcedError),
+    }),
+  };
 }
 
 async function getSettings() {
@@ -58,15 +144,13 @@ describe("GET /api/admin/settings", () => {
     expect(response.status).toBe(403);
   });
 
-  it("returns 404 when the company row can't be found", async () => {
+  it("returns 404 when the caller's company_id has no matching row", async () => {
     requireApiRoleMock.mockResolvedValue({
       profile: adminProfile(),
       response: null,
-      supabase: {
-        from: () => ({
-          select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { message: "no rows" } }) }) }),
-        }),
-      },
+      // Only the other company exists -- proves the route's own .eq('id', ...)
+      // filter is what's doing the work, not a canned response.
+      supabase: supabaseWithCompanies(freshCompanies().filter((c) => c.id === OTHER_COMPANY_ID)),
     });
 
     const response = await getSettings();
@@ -74,24 +158,11 @@ describe("GET /api/admin/settings", () => {
     expect(response.status).toBe(404);
   });
 
-  it("returns the company scoped to the caller, with the public Square projection", async () => {
-    const companyRow = {
-      id: COMPANY_ID,
-      name: "Acme HVAC",
-      slug: "acme-hvac",
-      timezone: "America/New_York",
-      sms_sender_name: "Acme",
-      payment_provider: "square",
-      payment_config: { square: { connected: true } },
-    };
+  it("returns only the caller's own company, never another company's row", async () => {
     requireApiRoleMock.mockResolvedValue({
       profile: adminProfile(),
       response: null,
-      supabase: {
-        from: () => ({
-          select: () => ({ eq: () => ({ single: async () => ({ data: companyRow, error: null }) }) }),
-        }),
-      },
+      supabase: supabaseWithCompanies(freshCompanies()),
     });
     getPublicSquareConnectionMock.mockReturnValue({ connected: true });
 
@@ -99,8 +170,11 @@ describe("GET /api/admin/settings", () => {
     const body = (await response.json()) as { company: Record<string, unknown> };
 
     expect(response.status).toBe(200);
+    expect(body.company.id).toBe(COMPANY_ID);
+    expect(body.company.name).toBe("Acme HVAC");
+    expect(body.company.name).not.toBe("Rival Plumbing");
     expect(body.company.square).toEqual({ connected: true });
-    expect(getPublicSquareConnectionMock).toHaveBeenCalledWith(companyRow.payment_config);
+    expect(getPublicSquareConnectionMock).toHaveBeenCalledWith({ square: { connected: true } });
   });
 });
 
@@ -143,46 +217,54 @@ describe("PATCH /api/admin/settings", () => {
     expect(response.status).toBe(400);
   });
 
-  it("rejects a slug already taken by another company", async () => {
+  it("rejects a slug already taken by a real other-company row", async () => {
     requireApiRoleMock.mockResolvedValue({
       profile: adminProfile(),
       response: null,
-      supabase: {
-        from: () => ({
-          select: () => ({
-            eq: () => ({ neq: () => ({ maybeSingle: async () => ({ data: { id: "other-company" }, error: null }) }) }),
-          }),
-        }),
-      },
+      supabase: supabaseWithCompanies(freshCompanies()),
     });
 
-    const response = await patchSettings({ slug: "taken-slug" });
+    // "rival-plumbing" is OTHER_COMPANY_ID's real fixture slug, not a
+    // canned value, so this proves the .eq('slug', slug) filter itself
+    // finds the conflicting row rather than the mock always returning one.
+    const response = await patchSettings({ slug: "rival-plumbing" });
 
     expect(response.status).toBe(409);
   });
 
-  it("normalizes the slug, truncates smsSenderName, and writes only provided fields", async () => {
-    let updatePatch: Record<string, unknown> | undefined;
+  it("allows re-submitting the caller's own unchanged slug (proves .neq('id', ...) excludes the caller's own row)", async () => {
     requireApiRoleMock.mockResolvedValue({
       profile: adminProfile(),
       response: null,
-      supabase: {
-        from: () => ({
-          select: () => ({
-            eq: () => ({ neq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }),
-          }),
-          update: (patch: Record<string, unknown>) => {
-            updatePatch = patch;
-            return {
-              eq: () => ({
-                select: () => ({
-                  maybeSingle: async () => ({ data: { id: COMPANY_ID, ...patch }, error: null }),
-                }),
-              }),
-            };
-          },
-        }),
-      },
+      supabase: supabaseWithCompanies(freshCompanies()),
+    });
+
+    // COMPANY_ID's own row already has slug "acme-hvac". If the route's
+    // .neq('id', profile.company_id) were ever dropped, the uniqueness
+    // query would match the caller's own row and this would wrongly 409.
+    const response = await patchSettings({ slug: "acme-hvac" });
+
+    expect(response.status).toBe(200);
+  });
+
+  it("allows a slug that's free across all companies", async () => {
+    requireApiRoleMock.mockResolvedValue({
+      profile: adminProfile(),
+      response: null,
+      supabase: supabaseWithCompanies(freshCompanies()),
+    });
+
+    const response = await patchSettings({ slug: "brand-new-slug" });
+
+    expect(response.status).toBe(200);
+  });
+
+  it("normalizes the slug, truncates smsSenderName, and writes only provided fields, scoped to the caller's company", async () => {
+    const companies = freshCompanies();
+    requireApiRoleMock.mockResolvedValue({
+      profile: adminProfile(),
+      response: null,
+      supabase: supabaseWithCompanies(companies),
     });
 
     const response = await patchSettings({
@@ -193,25 +275,21 @@ describe("PATCH /api/admin/settings", () => {
     const body = (await response.json()) as { company: Record<string, unknown> };
 
     expect(response.status).toBe(200);
-    expect(updatePatch).toEqual({
-      slug: "my-new-slug",
-      sms_sender_name: "This Name Is Definit",
-      payment_provider: "stripe",
-    });
     expect(body.company.id).toBe(COMPANY_ID);
+    expect(body.company.slug).toBe("my-new-slug");
+    expect(body.company.sms_sender_name).toBe("This Name Is Definit");
+    expect(body.company.payment_provider).toBe("stripe");
+    // The other company's row must be untouched.
+    const other = companies.find((c) => c.id === OTHER_COMPANY_ID)!;
+    expect(other.slug).toBe("rival-plumbing");
+    expect(other.payment_provider).toBe("manual");
   });
 
-  it("returns 404 when the update targets no row (company not found)", async () => {
+  it("returns 404 when the caller's company_id has no matching row to update", async () => {
     requireApiRoleMock.mockResolvedValue({
       profile: adminProfile(),
       response: null,
-      supabase: {
-        from: () => ({
-          update: () => ({
-            eq: () => ({ select: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }),
-          }),
-        }),
-      },
+      supabase: supabaseWithCompanies(freshCompanies().filter((c) => c.id === OTHER_COMPANY_ID)),
     });
 
     const response = await patchSettings({ timezone: "America/Chicago" });
@@ -223,13 +301,7 @@ describe("PATCH /api/admin/settings", () => {
     requireApiRoleMock.mockResolvedValue({
       profile: adminProfile(),
       response: null,
-      supabase: {
-        from: () => ({
-          update: () => ({
-            eq: () => ({ select: () => ({ maybeSingle: async () => ({ data: null, error: { message: "db error" } }) }) }),
-          }),
-        }),
-      },
+      supabase: supabaseWithCompanies(freshCompanies(), { message: "db error" }),
     });
 
     const response = await patchSettings({ timezone: "America/Chicago" });

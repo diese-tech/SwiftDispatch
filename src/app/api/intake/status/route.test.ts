@@ -3,6 +3,15 @@
  * verification, dual (IP + token) rate limiting, status-event timing
  * projection, the quote_pending quote-token issuance branch, and the
  * technicians-join array/object defensive unwrap.
+ *
+ * This route uses the admin client, so RLS provides no boundary here -- the
+ * signed token's `jobId` is the only thing standing between a caller and
+ * another job's status. The `jobs`/`status_events`/`quotes` fakes below
+ * filter by the `.eq()` predicates they're given (not a canned response),
+ * with two distinct job fixtures, so a token for job A cannot read job B's
+ * data in these tests -- proving the route's own `.eq('id', jobId)` (and
+ * downstream `job_id` filters) are what enforce that, not the mock
+ * (per PR #68 review).
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import jwt from "jsonwebtoken";
@@ -12,6 +21,7 @@ beforeAll(() => {
 });
 
 type Row = Record<string, unknown>;
+type Predicate = (row: Row) => boolean;
 
 const checkRateLimitMock = vi.fn();
 const generateQuoteApprovalTokenMock = vi.fn();
@@ -30,40 +40,45 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 const JOB_ID = "33333333-3333-4333-8333-333333333333";
+const OTHER_JOB_ID = "22222222-2222-4222-8222-222222222222";
 const QUOTE_ID = "77777777-7777-4777-8777-777777777777";
 
-function makeJobsBuilder(job: Row | null) {
+function makeFilteredBuilder(getRows: () => Row[], extra: Record<string, unknown> = {}) {
+  const predicates: Predicate[] = [];
   const builder = {
-    eq: () => builder,
-    single: async () => (job ? { data: job, error: null } : { data: null, error: { message: "no rows" } }),
-  };
-  return builder;
-}
-
-function makeStatusEventsBuilder(events: Row[]) {
-  const builder = {
-    eq: () => builder,
-    order: async () => ({ data: events, error: null }),
-  };
-  return builder;
-}
-
-function makeQuotesBuilder(quote: Row | null) {
-  const builder = {
-    eq: () => builder,
+    eq(column: string, value: unknown) {
+      predicates.push((row) => row[column] === value);
+      return builder;
+    },
     order: () => builder,
     limit: () => builder,
-    single: async () => (quote ? { data: quote, error: null } : { data: null, error: { message: "no rows" } }),
+    single: async () => {
+      const row = getRows().find((r) => predicates.every((p) => p(r)));
+      return row ? { data: row, error: null } : { data: null, error: { message: "no rows" } };
+    },
+    ...extra,
   };
   return builder;
 }
 
-function createFakeSupabase(opts: { job: Row | null; events?: Row[]; quote?: Row | null }) {
+function makeStatusEventsBuilder(getEvents: () => Row[]) {
+  const predicates: Predicate[] = [];
+  const builder = {
+    eq(column: string, value: unknown) {
+      predicates.push((row) => row[column] === value);
+      return builder;
+    },
+    order: async () => ({ data: getEvents().filter((r) => predicates.every((p) => p(r))), error: null }),
+  };
+  return builder;
+}
+
+function createFakeSupabase(opts: { jobs: Row[]; events?: Row[]; quotes?: Row[] }) {
   return {
     from(table: string) {
-      if (table === "jobs") return { select: () => makeJobsBuilder(opts.job) };
-      if (table === "status_events") return { select: () => makeStatusEventsBuilder(opts.events ?? []) };
-      if (table === "quotes") return { select: () => makeQuotesBuilder(opts.quote ?? null) };
+      if (table === "jobs") return { select: () => makeFilteredBuilder(() => opts.jobs) };
+      if (table === "status_events") return { select: () => makeStatusEventsBuilder(() => opts.events ?? []) };
+      if (table === "quotes") return { select: () => makeFilteredBuilder(() => opts.quotes ?? []) };
       throw new Error(`Unexpected table in test double: ${table}`);
     },
   };
@@ -122,7 +137,7 @@ describe("GET /api/intake/status", () => {
   });
 
   it("returns 404 when the job can't be found", async () => {
-    createSupabaseAdminClientMock.mockReturnValue(createFakeSupabase({ job: null }));
+    createSupabaseAdminClientMock.mockReturnValue(createFakeSupabase({ jobs: [] }));
 
     const response = await getStatus(tokenFor(JOB_ID));
 
@@ -132,20 +147,20 @@ describe("GET /api/intake/status", () => {
   it("projects status-event timing and unwraps a single-object technicians join", async () => {
     createSupabaseAdminClientMock.mockReturnValue(
       createFakeSupabase({
-        job: {
-          id: JOB_ID,
-          status: "en_route",
-          urgency: "same_day",
-          customer_name: "Ada Lovelace",
-          address: "1 Signal Way",
-          created_at: "2026-01-01T00:00:00.000Z",
-          technician_id: "tech-1",
-          companies: { name: "Acme HVAC", phone: "+15550000000", email: "hello@acme.test" },
-          technicians: { name: "Grace Hopper" },
-        },
-        events: [
-          { to_status: "en_route", created_at: "2026-01-01T01:00:00.000Z" },
+        jobs: [
+          {
+            id: JOB_ID,
+            status: "en_route",
+            urgency: "same_day",
+            customer_name: "Ada Lovelace",
+            address: "1 Signal Way",
+            created_at: "2026-01-01T00:00:00.000Z",
+            technician_id: "tech-1",
+            companies: { name: "Acme HVAC", phone: "+15550000000", email: "hello@acme.test" },
+            technicians: { name: "Grace Hopper" },
+          },
         ],
+        events: [{ job_id: JOB_ID, to_status: "en_route", created_at: "2026-01-01T01:00:00.000Z" }],
       }),
     );
 
@@ -164,17 +179,19 @@ describe("GET /api/intake/status", () => {
   it("unwraps an array-shaped technicians join the same way", async () => {
     createSupabaseAdminClientMock.mockReturnValue(
       createFakeSupabase({
-        job: {
-          id: JOB_ID,
-          status: "new",
-          urgency: "flex",
-          customer_name: "Ada Lovelace",
-          address: "1 Signal Way",
-          created_at: "2026-01-01T00:00:00.000Z",
-          technician_id: null,
-          companies: { name: "Acme HVAC" },
-          technicians: [{ name: "Grace Hopper" }],
-        },
+        jobs: [
+          {
+            id: JOB_ID,
+            status: "new",
+            urgency: "flex",
+            customer_name: "Ada Lovelace",
+            address: "1 Signal Way",
+            created_at: "2026-01-01T00:00:00.000Z",
+            technician_id: null,
+            companies: { name: "Acme HVAC" },
+            technicians: [{ name: "Grace Hopper" }],
+          },
+        ],
         events: [],
       }),
     );
@@ -189,19 +206,21 @@ describe("GET /api/intake/status", () => {
   it("issues a quote approval token when the job is quote_pending with a sent quote", async () => {
     createSupabaseAdminClientMock.mockReturnValue(
       createFakeSupabase({
-        job: {
-          id: JOB_ID,
-          status: "quote_pending",
-          urgency: "flex",
-          customer_name: "Ada Lovelace",
-          address: "1 Signal Way",
-          created_at: "2026-01-01T00:00:00.000Z",
-          technician_id: null,
-          companies: { name: "Acme HVAC" },
-          technicians: null,
-        },
+        jobs: [
+          {
+            id: JOB_ID,
+            status: "quote_pending",
+            urgency: "flex",
+            customer_name: "Ada Lovelace",
+            address: "1 Signal Way",
+            created_at: "2026-01-01T00:00:00.000Z",
+            technician_id: null,
+            companies: { name: "Acme HVAC" },
+            technicians: null,
+          },
+        ],
         events: [],
-        quote: { id: QUOTE_ID },
+        quotes: [{ id: QUOTE_ID, job_id: JOB_ID, status: "sent" }],
       }),
     );
 
@@ -211,5 +230,89 @@ describe("GET /api/intake/status", () => {
     expect(response.status).toBe(200);
     expect(body.quoteToken).toBe("signed-quote-token");
     expect(generateQuoteApprovalTokenMock).toHaveBeenCalledWith(QUOTE_ID);
+  });
+
+  it("a token for one job cannot retrieve a different job's status, even when both jobs exist", async () => {
+    createSupabaseAdminClientMock.mockReturnValue(
+      createFakeSupabase({
+        jobs: [
+          {
+            id: JOB_ID,
+            status: "en_route",
+            urgency: "same_day",
+            customer_name: "Ada Lovelace",
+            address: "1 Signal Way",
+            created_at: "2026-01-01T00:00:00.000Z",
+            technician_id: null,
+            companies: { name: "Acme HVAC" },
+            technicians: null,
+          },
+          {
+            id: OTHER_JOB_ID,
+            status: "completed",
+            urgency: "flex",
+            customer_name: "Grace Hopper",
+            address: "2 Compiler Ave",
+            created_at: "2026-01-02T00:00:00.000Z",
+            technician_id: null,
+            companies: { name: "Acme HVAC" },
+            technicians: null,
+          },
+        ],
+        events: [],
+      }),
+    );
+
+    const responseForJobA = await getStatus(tokenFor(JOB_ID));
+    const bodyForJobA = (await responseForJobA.json()) as Record<string, unknown>;
+
+    expect(responseForJobA.status).toBe(200);
+    expect(bodyForJobA.jobId).toBe(JOB_ID);
+    expect(bodyForJobA.customerName).toBe("Ada Lovelace");
+    expect(bodyForJobA.status).not.toBe("completed");
+
+    // Reciprocal check: OTHER_JOB_ID is second in the fixture array, so if
+    // the route's .eq('id', jobId) were ever dropped, a naive "just return
+    // a row" fake would still satisfy the assertions above (JOB_ID happens
+    // to be first) while silently returning the wrong job here.
+    const responseForJobB = await getStatus(tokenFor(OTHER_JOB_ID));
+    const bodyForJobB = (await responseForJobB.json()) as Record<string, unknown>;
+
+    expect(responseForJobB.status).toBe(200);
+    expect(bodyForJobB.jobId).toBe(OTHER_JOB_ID);
+    expect(bodyForJobB.customerName).toBe("Grace Hopper");
+    expect(bodyForJobB.status).toBe("completed");
+  });
+
+  it("scopes status_events and the quote lookup to the token's own job, not another job's rows", async () => {
+    createSupabaseAdminClientMock.mockReturnValue(
+      createFakeSupabase({
+        jobs: [
+          {
+            id: JOB_ID,
+            status: "quote_pending",
+            urgency: "flex",
+            customer_name: "Ada Lovelace",
+            address: "1 Signal Way",
+            created_at: "2026-01-01T00:00:00.000Z",
+            technician_id: null,
+            companies: { name: "Acme HVAC" },
+            technicians: null,
+          },
+        ],
+        // en_route event and sent quote both belong to OTHER_JOB_ID --
+        // must not leak into JOB_ID's response.
+        events: [{ job_id: OTHER_JOB_ID, to_status: "en_route", created_at: "2026-01-01T01:00:00.000Z" }],
+        quotes: [{ id: "other-job-quote", job_id: OTHER_JOB_ID, status: "sent" }],
+      }),
+    );
+
+    const response = await getStatus(tokenFor(JOB_ID));
+    const body = (await response.json()) as Record<string, unknown>;
+
+    expect(response.status).toBe(200);
+    expect(body.enRouteAt).toBeNull();
+    expect(body.quoteToken).toBeNull();
+    expect(generateQuoteApprovalTokenMock).not.toHaveBeenCalled();
   });
 });
