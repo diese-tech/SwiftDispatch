@@ -121,10 +121,25 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
   async function deleteItem(itemId: string) {
     if (!quoteId) return;
     const deletedIndex = items.findIndex((item) => item.id === itemId);
-    const deletedItem = items[deletedIndex];
-    if (!deletedItem) return;
+    const optimisticItem = items[deletedIndex];
+    if (!optimisticItem) return;
+
+    // A pending debounced edit for this row must not survive the delete --
+    // its patch was never sent, so the current optimistic value (e.g. an
+    // in-progress name edit) isn't server-known state. Resolve and discard
+    // the queued patch, and roll back to what the queue captured as the
+    // pre-edit snapshot (or the current item if nothing was pending) rather
+    // than the unsaved edit.
     clearTimeout(debounceTimers.current[itemId]);
+    const queued = patchQueue.current.take(itemId);
+    const deletedItem = queued?.rollbackTo ?? optimisticItem;
+
     setItems((current) => current.filter((item) => item.id !== itemId));
+    setSavingIds((current) => {
+      const next = new Set(current);
+      next.delete(itemId);
+      return next;
+    });
     setSaveErrorIds((current) => {
       const next = new Set(current);
       next.delete(itemId);

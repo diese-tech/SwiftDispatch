@@ -41,6 +41,23 @@ describe("LineItemPatchQueue", () => {
     expect(queue.take("a")).toEqual({ patch: { name: "A2" }, rollbackTo: a });
     expect(queue.take("b")).toEqual({ patch: { price: 9 }, rollbackTo: b });
   });
+
+  it("resolving a pending patch before delete yields the server-known state, not the unsaved edit, and clears the queue", () => {
+    // Simulates: edit a row (optimistic, debounce not yet fired), then
+    // delete it before the 500ms timer sends the patch. deleteItem() must
+    // consume the queue -- taking it returns the pre-edit (server-known)
+    // snapshot to roll back to on a failed delete, not the in-progress
+    // unsaved "B" -- and leaves nothing pending for this item afterward.
+    const queue = new LineItemPatchQueue<Item>();
+    const serverKnown: Item = { id: "item-1", name: "A", price: 1, quantity: 1 };
+    queue.queue("item-1", { name: "B" }, serverKnown);
+
+    const queued = queue.take("item-1");
+    const deletedItem = queued?.rollbackTo ?? { ...serverKnown, name: "B" };
+
+    expect(deletedItem).toEqual(serverKnown);
+    expect(queue.take("item-1")).toBeUndefined();
+  });
 });
 
 describe("restoreDeletedItem", () => {
