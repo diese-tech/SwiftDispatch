@@ -71,6 +71,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'Job not found' }, { status: 404 })
   }
 
+  // For a technician caller, the resolved technician row id -- carried forward
+  // so the final write can re-assert ownership atomically, not just at this
+  // read. Without this, dispatch reassigning the job between this check and
+  // the write below would let the former technician's request still land.
+  let technicianOwnerId: string | undefined
+
   if (profile.role === 'technician') {
     const { data: technician } = await supabase
       .from('technicians')
@@ -82,6 +88,7 @@ export async function PATCH(
     if (!technician || currentJob.technician_id !== technician.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
+    technicianOwnerId = technician.id
   }
 
   const patch: Record<string, unknown> = {}
@@ -156,15 +163,21 @@ export async function PATCH(
     // technician assignment), not a client error — return canonical state
     // instead of surfacing "No changes provided" to the operator.
     if (newStatus && newStatus === currentJob.status) {
-      const { data: canonicalJob, error: canonicalError } = await supabase
+      let canonicalQuery = supabase
         .from('jobs')
         .select('*, technicians!jobs_technician_id_fkey(id,name,phone)')
         .eq('id', id)
         .eq('company_id', profile.company_id)
-        .single()
+      if (technicianOwnerId) canonicalQuery = canonicalQuery.eq('technician_id', technicianOwnerId)
+
+      const { data: canonicalJob, error: canonicalError } = await canonicalQuery.single()
 
       if (canonicalError || !canonicalJob) {
-        return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+        // A technician-scoped miss here means ownership changed since the
+        // check above (e.g. reassigned mid-request), not a missing job.
+        return technicianOwnerId
+          ? NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+          : NextResponse.json({ error: 'Job not found' }, { status: 404 })
       }
 
       return NextResponse.json({ job: canonicalJob })
@@ -173,16 +186,28 @@ export async function PATCH(
     return NextResponse.json({ error: 'No changes provided' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  let updateQuery = supabase
     .from('jobs')
     .update(patch)
     .eq('id', id)
     .eq('company_id', profile.company_id)
+  if (technicianOwnerId) updateQuery = updateQuery.eq('technician_id', technicianOwnerId)
+
+  const { data, error } = await updateQuery
     .select('*, technicians!jobs_technician_id_fkey(id,name,phone)')
-    .single()
+    .maybeSingle()
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 })
+  }
+
+  if (!data) {
+    // Zero rows matched the update predicate. For a technician caller this
+    // means ownership changed between the check above and this write (e.g.
+    // dispatch reassigned the job mid-request) -- not a missing job.
+    return technicianOwnerId
+      ? NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      : NextResponse.json({ error: 'Job not found' }, { status: 404 })
   }
 
   // Write status event if status changed

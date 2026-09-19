@@ -79,6 +79,10 @@ function makeUpdateBuilder(getRows: () => Row[], project: (row: Row) => Row, pat
           const row = applyAndFind();
           return row ? { data: project(row), error: null } : { data: null, error: { message: "Row not found" } };
         },
+        maybeSingle: async () => {
+          const row = applyAndFind();
+          return { data: row ? project(row) : null, error: null };
+        },
       };
     },
     // Supports `await supabase.from(x).update(patch).eq(...)` with no .select() chained,
@@ -303,6 +307,50 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
 
       expect(response.status).toBe(403);
       expect(db.jobs[0].status).toBe("assigned");
+    });
+
+    it("denies a technician whose ownership changed between the read and the write (TOCTOU)", async () => {
+      // Simulate dispatch reassigning the job to someone else in the window
+      // between this route's ownership check and its final write, by
+      // patching the fake supabase's technician lookup (the ownership
+      // check) to mutate the job's technician_id as a side effect of that
+      // read -- exactly the race the review flagged.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const racySupabase: any = createFakeSupabase(db);
+      const originalFrom = racySupabase.from.bind(racySupabase);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      racySupabase.from = (table: string): any => {
+        const real = originalFrom(table);
+        if (table !== "technicians") return real;
+        return {
+          ...real,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          select: (...args: unknown[]): any => {
+            const builder = real.select(...args);
+            const originalMaybeSingle = builder.maybeSingle.bind(builder);
+            builder.maybeSingle = async () => {
+              const result = await originalMaybeSingle();
+              db.jobs[0].technician_id = OTHER_TECH_ID;
+              return result;
+            };
+            return builder;
+          },
+        };
+      };
+
+      requireApiRoleMock.mockResolvedValue({
+        profile: { id: TECH_AUTH_USER_ID, email: "tech@example.com", company_id: COMPANY_ID, role: "technician" },
+        response: null,
+        supabase: racySupabase,
+      });
+
+      const response = await patchJob({ status: "en_route" });
+
+      expect(response.status).toBe(403);
+      // The write never landed -- state reflects the concurrent reassignment,
+      // not the now-former technician's status update.
+      expect(db.jobs[0].status).toBe("assigned");
+      expect(db.jobs[0].technician_id).toBe(OTHER_TECH_ID);
     });
 
     it("does not surface 'No changes provided' for a technician's repeated status update either", async () => {
