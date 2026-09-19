@@ -5,6 +5,7 @@ import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "
 import { Plus } from "lucide-react";
 import KanbanColumn from "@/components/KanbanColumn";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createJobRequest, moveJobStatus } from "@/lib/jobMutations";
 import type { JobStatus, JobWithTechnician, Technician } from "@/types/db";
 
 const statuses: JobStatus[] = [
@@ -183,7 +184,11 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
     requestMove(jobId, nextStatus);
   }
 
-  function handleAssigned(canonicalJob: JobWithTechnician) {
+  // Reconciles local job state with a canonical server-returned job.
+  // Shared by technician assignment (via onAssigned) and confirmMove()'s
+  // success path -- both prefer the server's response over the optimistic
+  // guess made before the request resolved.
+  function reconcileCanonicalJob(canonicalJob: JobWithTechnician) {
     setJobs((current) =>
       current.map((item) =>
         item.id === canonicalJob.id
@@ -205,42 +210,47 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
     const { jobId, fromStatus, toStatus } = pendingMove;
     setPendingMove(null);
     setJobs((current) => current.map((item) => (item.id === jobId ? { ...item, status: toStatus } : item)));
-    const response = await fetch(`/api/jobs/${jobId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: toStatus }),
-    });
-    if (!response.ok) {
+
+    const result = await moveJobStatus(jobId, toStatus);
+
+    if (!result.ok) {
+      // Rolls back on a non-2xx response AND a rejected fetch (offline,
+      // aborted request) alike -- moveJobStatus() never throws, so this
+      // branch always runs instead of leaving the card on the wrong column.
       setJobs((current) => current.map((item) => (item.id === jobId ? { ...item, status: fromStatus } : item)));
-      const data = await response.json().catch(() => ({})) as { error?: string };
-      showMoveError(data.error ?? "Couldn't move job. Please try again.");
+      showMoveError(result.message);
+      return;
     }
+
+    // Prefer canonical server state over the optimistic guess.
+    reconcileCanonicalJob(result.data);
   }
 
   async function createJob(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setSaving(true);
     setSaveError("");
-    const formData = new FormData(event.currentTarget);
-    const response = await fetch("/api/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer_name: formData.get("customer_name"),
-        phone: formData.get("phone"),
-        address: formData.get("address"),
-        issue: formData.get("issue"),
-      }),
+    const formData = new FormData(form);
+
+    const result = await createJobRequest({
+      customer_name: formData.get("customer_name"),
+      phone: formData.get("phone"),
+      address: formData.get("address"),
+      issue: formData.get("issue"),
     });
+
+    // Always clears -- createJobRequest() resolves rather than throws even
+    // when the transport itself fails, so "Saving…" can't get stuck.
     setSaving(false);
-    if (!response.ok) {
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
-      setSaveError(data.error ?? "Failed to create job. Please try again.");
+
+    if (!result.ok) {
+      setSaveError(result.message);
       return;
     }
-    const { job } = (await response.json()) as { job: JobWithTechnician };
-    setJobs((current) => [job, ...current]);
-    event.currentTarget.reset();
+
+    setJobs((current) => [result.data, ...current]);
+    form.reset();
     setSaveError("");
     setFormOpen(false);
   }
@@ -351,13 +361,13 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
                   </button>
                 ))}
               </div>
-              <KanbanColumn jobs={mobileJobs} onAssigned={handleAssigned} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={mobileStatus} technicians={technicians} compact />
+              <KanbanColumn jobs={mobileJobs} onAssigned={reconcileCanonicalJob} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={mobileStatus} technicians={technicians} compact />
             </div>
           </div>
 
           {/* Desktop: full board */}
           <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-            {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} onAssigned={handleAssigned} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={status} technicians={technicians} />)}
+            {statuses.map((status) => <KanbanColumn jobs={jobsByStatus[status]} key={status} onAssigned={reconcileCanonicalJob} onRequestMove={requestMove} readOnly={readOnly} smsFailedJobIds={smsFailedJobIds} status={status} technicians={technicians} />)}
           </div>
         </DndContext>
       )}

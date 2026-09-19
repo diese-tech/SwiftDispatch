@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Send, Trash2 } from "lucide-react";
 import { StatusDot } from "@/components/DesignSystem";
 import { money } from "@/lib/format";
+import { fetchMutation } from "@/lib/apiMutation";
+import { LineItemPatchQueue, restoreDeletedItem } from "@/lib/lineItemMutations";
 import type { QuoteLineItem, QuoteWithLineItems } from "@/types/db";
 
 type SendStatus = "idle" | "sending" | "success" | "error";
@@ -21,6 +23,7 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
   const [saveErrorIds, setSaveErrorIds] = useState<Set<string>>(new Set());
   const [generalError, setGeneralError] = useState("");
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const patchQueue = useRef(new LineItemPatchQueue<QuoteLineItem>());
 
   const total = useMemo(() => items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0), [items]);
   const isSaving = savingIds.size > 0;
@@ -30,88 +33,143 @@ export default function QuoteBuilder({ jobId, initialQuote }: Props) {
 
   async function ensureQuote() {
     if (quoteId) return quoteId;
-    const response = await fetch("/api/quotes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_id: jobId }),
-    });
-    if (!response.ok) {
+    const result = await fetchMutation(
+      "/api/quotes",
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_id: jobId }) },
+      (body) =>
+        body && typeof body === "object" && "quote_id" in body
+          ? (body as { quote_id: string; quote?: QuoteWithLineItems })
+          : undefined,
+    );
+    if (!result.ok) {
       setGeneralError("Quote could not be created.");
       return "";
     }
-    const data = (await response.json()) as { quote_id: string; quote?: QuoteWithLineItems };
-    setQuoteId(data.quote_id);
-    setItems(data.quote?.quote_line_items ?? []);
-    return data.quote_id;
+    setQuoteId(result.data.quote_id);
+    setItems(result.data.quote?.quote_line_items ?? []);
+    return result.data.quote_id;
   }
 
   async function addLineItem() {
     setGeneralError("");
     const id = await ensureQuote();
     if (!id) return;
-    const response = await fetch(`/api/quotes/${id}/line-items`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "", price: 0, quantity: 1 }),
-    });
-    if (!response.ok) {
+    const result = await fetchMutation(
+      `/api/quotes/${id}/line-items`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "", price: 0, quantity: 1 }),
+      },
+      (body) => (body && typeof body === "object" && "item" in body ? (body as { item: QuoteLineItem }) : undefined),
+    );
+    if (!result.ok) {
       setGeneralError("Line item could not be added.");
       return;
     }
-    const data = (await response.json()) as { item: QuoteLineItem };
-    setItems((current) => [...current, data.item]);
+    setItems((current) => [...current, result.data.item]);
   }
 
   function updateItem(itemId: string, patch: Partial<QuoteLineItem>) {
+    const currentItem = items.find((item) => item.id === itemId);
     setItems((current) => current.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
-    if (!quoteId) return;
+    if (!quoteId || !currentItem) return;
+    // Queue before overwriting the timer so a second edit inside the same
+    // debounce window (e.g. name, then price) accumulates into one merged
+    // patch instead of the later call silently dropping the earlier field.
+    patchQueue.current.queue(itemId, patch, currentItem);
     clearTimeout(debounceTimers.current[itemId]);
     setSavingIds((current) => new Set(current).add(itemId));
     debounceTimers.current[itemId] = setTimeout(async () => {
-      const response = await fetch(`/api/quotes/${quoteId}/line-items/${itemId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
+      const queued = patchQueue.current.take(itemId);
+      if (!queued) return;
+      const { patch: mergedPatch, rollbackTo } = queued;
+
+      const result = await fetchMutation(
+        `/api/quotes/${quoteId}/line-items/${itemId}`,
+        { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(mergedPatch) },
+        (body) =>
+          body && typeof body === "object" && "item" in body ? (body as { item: QuoteLineItem }) : undefined,
+      );
+
       setSavingIds((current) => {
         const next = new Set(current);
         next.delete(itemId);
         return next;
       });
-      if (response.ok) {
-        setSaveErrorIds((current) => {
-          const next = new Set(current);
-          next.delete(itemId);
-          return next;
-        });
-      } else {
+
+      if (!result.ok) {
+        // Roll back to before any of this window's batched edits -- on an
+        // HTTP rejection (e.g. a business-rule failure) or a rejected
+        // transport alike, previously this value was left applied forever
+        // with no way back.
+        setItems((current) => current.map((item) => (item.id === itemId ? rollbackTo : item)));
         setSaveErrorIds((current) => new Set(current).add(itemId));
+        return;
       }
+
+      setSaveErrorIds((current) => {
+        const next = new Set(current);
+        next.delete(itemId);
+        return next;
+      });
+      // Prefer canonical server state (e.g. normalized price) over the local edit.
+      setItems((current) => current.map((item) => (item.id === itemId ? result.data.item : item)));
     }, 500);
   }
 
   async function deleteItem(itemId: string) {
     if (!quoteId) return;
+    const deletedIndex = items.findIndex((item) => item.id === itemId);
+    const optimisticItem = items[deletedIndex];
+    if (!optimisticItem) return;
+
+    // A pending debounced edit for this row must not survive the delete --
+    // its patch was never sent, so the current optimistic value (e.g. an
+    // in-progress name edit) isn't server-known state. Resolve and discard
+    // the queued patch, and roll back to what the queue captured as the
+    // pre-edit snapshot (or the current item if nothing was pending) rather
+    // than the unsaved edit.
     clearTimeout(debounceTimers.current[itemId]);
+    const queued = patchQueue.current.take(itemId);
+    const deletedItem = queued?.rollbackTo ?? optimisticItem;
+
     setItems((current) => current.filter((item) => item.id !== itemId));
+    setSavingIds((current) => {
+      const next = new Set(current);
+      next.delete(itemId);
+      return next;
+    });
     setSaveErrorIds((current) => {
       const next = new Set(current);
       next.delete(itemId);
       return next;
     });
-    const response = await fetch(`/api/quotes/${quoteId}/line-items/${itemId}`, { method: "DELETE" });
-    if (!response.ok) setGeneralError("Line item could not be deleted.");
+
+    const result = await fetchMutation(
+      `/api/quotes/${quoteId}/line-items/${itemId}`,
+      { method: "DELETE" },
+      (body) => (body && typeof body === "object" && "ok" in body ? body : undefined),
+    );
+
+    if (!result.ok) {
+      // Re-insert into the CURRENT array rather than restoring a stale
+      // pre-delete snapshot -- previously this clobbered any unrelated
+      // edit/addition made to another row while the delete was in flight.
+      setItems((current) => restoreDeletedItem(current, deletedItem, deletedIndex));
+      setGeneralError("Line item could not be deleted.");
+    }
   }
 
   async function sendQuote() {
     if (!quoteId) return;
     setSendStatus("sending");
-    const response = await fetch("/api/send-sms", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ quote_id: quoteId }),
-    });
-    setSendStatus(response.ok ? "success" : "error");
+    const result = await fetchMutation(
+      "/api/send-sms",
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quote_id: quoteId }) },
+      (body) => (body && typeof body === "object" ? body : undefined),
+    );
+    setSendStatus(result.ok ? "success" : "error");
   }
 
   function saveStatusLabel() {
