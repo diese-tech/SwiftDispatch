@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { assertValidTransition, type JobStatus } from '@/lib/stateMachine'
 import { getPaymentProvider } from '@/lib/payments'
 import { verifyQuoteApprovalToken } from '@/lib/quoteTokens'
+import { resolveEffectiveTotal, sumLineItems } from '@/lib/quotePricing'
 import { requireApiRole } from '@/lib/auth'
 import { queueCustomerInvoiceSms, queueCustomerStatusSms } from '@/lib/jobNotifications'
 import type { SmsConsentType } from '@/lib/smsGate'
@@ -104,16 +105,12 @@ export async function PATCH(
     .select('*')
     .eq('quote_id', id)
 
-  const lineItemsTotal = (lineItems ?? []).reduce(
-    (sum, item) => sum + Number(item.price ?? 0) * Number(item.quantity ?? 0),
-    0,
-  )
-  const effectiveQuoteTotal =
-    lineItemsTotal > 0
-      ? lineItemsTotal
-      : Number(quote.total_amount ?? 0) > 0
-        ? Number(quote.total_amount)
-        : Number(quote.total ?? 0)
+  const lineItemsTotal = sumLineItems(lineItems ?? [])
+  const effectiveQuoteTotal = resolveEffectiveTotal({
+    lineItemsTotal,
+    totalAmount: quote.total_amount,
+    total: quote.total,
+  })
 
   if (
     Number(quote.total ?? 0) !== effectiveQuoteTotal ||

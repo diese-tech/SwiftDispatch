@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiRole } from "@/lib/auth";
+import { sumLineItems } from "@/lib/quotePricing";
 
 async function recomputeQuoteTotal(
   supabase: Awaited<ReturnType<typeof requireApiRole>>["supabase"],
@@ -12,10 +13,7 @@ async function recomputeQuoteTotal(
 
   if (error) return { error };
 
-  const total = (items ?? []).reduce(
-    (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
-    0,
-  );
+  const total = sumLineItems(items ?? []);
 
   const { error: updateError } = await supabase
     .from("quotes")
