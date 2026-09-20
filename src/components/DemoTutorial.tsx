@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Step = {
   target: string;
@@ -45,11 +45,17 @@ type Props = {
 
 export default function DemoTutorial({ storageKey, hasAdminNav }: Props) {
   const dismissKey = `swiftdispatch_tutorial_dismissed_${storageKey}`;
-  const steps = hasAdminNav ? ALL_STEPS : ALL_STEPS.filter((s) => s.target !== "nav-admin");
+  const steps = useMemo(
+    () => (hasAdminNav ? ALL_STEPS : ALL_STEPS.filter((s) => s.target !== "nav-admin")),
+    [hasAdminNav],
+  );
 
   const [visible, setVisible] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+
+  const cardRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     try {
@@ -75,12 +81,59 @@ export default function DemoTutorial({ storageKey, hasAdminNav }: Props) {
     return () => window.removeEventListener("resize", update);
   }, [visible, stepIndex, steps]);
 
+  // The anchored tour only makes sense at desktop widths (see the mount
+  // check above) -- if the viewport narrows while it's open (resize, device
+  // rotation), the sidebar it's pointing at can disappear entirely. Suspend
+  // rather than dismiss-and-remember, so it can still show next time they're
+  // back on desktop.
+  useEffect(() => {
+    if (!visible) return;
+    function onResize() {
+      if (window.innerWidth < DESKTOP_BREAKPOINT_PX) setVisible(false);
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+    cardRef.current?.focus();
+    return () => {
+      previouslyFocusedRef.current?.focus?.();
+    };
+  }, [visible]);
+
   function dismiss() {
     setVisible(false);
     try {
       localStorage.setItem(dismissKey, "1");
     } catch {
       // Private browsing / blocked storage: the tutorial just re-shows next launch.
+    }
+  }
+
+  function onCardKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      dismiss();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = cardRef.current?.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable || focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
     }
   }
 
@@ -118,13 +171,21 @@ export default function DemoTutorial({ storageKey, hasAdminNav }: Props) {
         />
       )}
       <div
-        className="fixed z-[72] rounded-lg border border-[var(--c-line)] bg-[var(--c-paper)] p-4 shadow-xl"
+        ref={cardRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="demo-tutorial-title"
+        tabIndex={-1}
+        onKeyDown={onCardKeyDown}
+        className="fixed z-[72] rounded-lg border border-[var(--c-line)] bg-[var(--c-paper)] p-4 shadow-xl outline-none"
         style={{ top: cardTop, left: cardLeft, width: cardWidth }}
       >
         <p className="font-mono text-[9.5px] uppercase tracking-[0.06em] text-teal-700">
           Step {stepIndex + 1} of {steps.length}
         </p>
-        <h3 className="mt-1 text-[14px] font-semibold text-[var(--c-text)]">{step.title}</h3>
+        <h3 id="demo-tutorial-title" className="mt-1 text-[14px] font-semibold text-[var(--c-text)]">
+          {step.title}
+        </h3>
         <p className="mt-1 text-[12.5px] leading-snug text-[var(--c-text-3)]">{step.body}</p>
         <div className="mt-3 flex items-center justify-between gap-2">
           <button

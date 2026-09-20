@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPublicSquareConnection } from '@/lib/square'
 import { requireApiRole } from '@/lib/auth'
+import { SANDBOX_DEMO_SLUGS } from '@/lib/demo'
 
 export async function GET() {
   const { profile, response, supabase } = await requireApiRole(['admin'])
@@ -54,6 +55,16 @@ export async function PATCH(request: Request) {
     const slug = body.slug.trim().toLowerCase().replace(/\s+/g, '-')
     if (!slug) {
       return NextResponse.json({ error: 'slug cannot be empty' }, { status: 400 })
+    }
+
+    // Reserved for purpose-built sandbox tenants (see SANDBOX_DEMO_SLUGS /
+    // resetDemoTenant()) -- resetDemoTenant() does a full destructive wipe of
+    // whatever company holds one of these slugs, resolved by slug alone with
+    // no ownership check. If self-service settings let any admin claim an
+    // unclaimed sandbox slug, a real company's data would be swept into the
+    // next nightly reset.
+    if ((SANDBOX_DEMO_SLUGS as readonly string[]).includes(slug)) {
+      return NextResponse.json({ error: 'That slug is reserved' }, { status: 409 })
     }
 
     // Check slug uniqueness — maybeSingle() returns null (not an error) when no conflict found
