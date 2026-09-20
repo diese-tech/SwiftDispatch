@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireApiRole } from '@/lib/auth'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { assertValidTransition, type JobStatus } from '@/lib/stateMachine'
 import { queueCustomerStatusSms, queueTechnicianAssignmentSms } from '@/lib/jobNotifications'
 import type { SmsConsentType } from '@/lib/smsGate'
@@ -231,16 +232,26 @@ export async function PATCH(
       : NextResponse.json({ error: 'Job not found' }, { status: 404 })
   }
 
-  // Write status event if status changed
+  // Write status event if status changed. status_events has no INSERT RLS
+  // policy for the authenticated role (only SELECT) -- confirmed against
+  // the live project for issue #66, so this must go through the admin
+  // client like intake/tech-action already do, or the row is silently
+  // dropped.
   if (patch.status) {
-    await supabase.from('status_events').insert({
-      job_id: id,
-      from_status: currentJob.status,
-      to_status: patch.status as string,
-      actor_id: profile.id,
-      actor_role: profile.role,
-      note: note ?? null,
-    })
+    const { error: statusEventError } = await createSupabaseAdminClient()
+      .from('status_events')
+      .insert({
+        job_id: id,
+        from_status: currentJob.status,
+        to_status: patch.status as string,
+        actor_id: profile.id,
+        actor_role: profile.role,
+        note: note ?? null,
+      })
+
+    if (statusEventError) {
+      console.error('Failed to record status-change status event:', statusEventError)
+    }
   }
 
   const finalStatus = (data.status ?? currentJob.status) as JobStatus

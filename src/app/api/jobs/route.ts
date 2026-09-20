@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireApiRole } from '@/lib/auth'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { queueCustomerStatusSms, queueTechnicianAssignmentSms } from '@/lib/jobNotifications'
 import type { SmsConsentType } from '@/lib/smsGate'
 
@@ -126,15 +127,26 @@ export async function POST(request: Request) {
       .eq('id', technician_id)
   }
 
-  // Write initial status event
-  await supabase.from('status_events').insert({
-    job_id: data.id,
-    from_status: null,
-    to_status: initialStatus,
-    actor_id: profile.id,
-    actor_role: profile.role,
-    note: technician_id ? `Job created and assigned via ${source}` : `Job created via ${source}`,
-  })
+  // status_events has no INSERT RLS policy for the authenticated role (only
+  // a SELECT policy exists -- confirmed against the live project for issue
+  // #66: session-scoped inserts here were being silently rejected, with
+  // zero status_events rows for any dispatcher/admin-created job). Route
+  // this through the admin client, the same way intake/tech-action already
+  // do for their own status_events writes.
+  const { error: statusEventError } = await createSupabaseAdminClient()
+    .from('status_events')
+    .insert({
+      job_id: data.id,
+      from_status: null,
+      to_status: initialStatus,
+      actor_id: profile.id,
+      actor_role: profile.role,
+      note: technician_id ? `Job created and assigned via ${source}` : `Job created via ${source}`,
+    })
+
+  if (statusEventError) {
+    console.error('Failed to record job-creation status event:', statusEventError)
+  }
 
   if (technician_id) {
     const [{ data: company }, { data: technician }] = await Promise.all([
