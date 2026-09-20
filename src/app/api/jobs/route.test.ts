@@ -12,6 +12,7 @@ type Row = Record<string, unknown>;
 const requireApiRoleMock = vi.fn();
 const queueTechnicianAssignmentSmsMock = vi.fn();
 const queueCustomerStatusSmsMock = vi.fn();
+const createSupabaseAdminClientMock = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   requireApiRole: requireApiRoleMock,
@@ -20,6 +21,10 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/jobNotifications", () => ({
   queueTechnicianAssignmentSms: queueTechnicianAssignmentSmsMock,
   queueCustomerStatusSms: queueCustomerStatusSmsMock,
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: () => createSupabaseAdminClientMock(),
 }));
 
 function matchesFilters(row: Row, filters: [string, unknown, unknown?][]) {
@@ -146,6 +151,19 @@ function createFakeSupabase(db: Db, actingCompanyId: string) {
       if (table === "companies") {
         return { select: () => makeReadBuilder(() => db.companies) };
       }
+      // status_events has no INSERT RLS policy for the authenticated role
+      // (issue #66) -- the route must write it through the admin client
+      // (see createFakeAdminSupabase below), never this session-scoped one.
+      // Deliberately no handler here, so a regression back to the session
+      // client throws instead of silently "working" in the test.
+      throw new Error(`Unexpected table in test double: ${table}`);
+    },
+  };
+}
+
+function createFakeAdminSupabase(db: Db) {
+  return {
+    from(table: string) {
       if (table === "status_events") {
         return {
           insert: async (row: Row) => {
@@ -154,7 +172,7 @@ function createFakeSupabase(db: Db, actingCompanyId: string) {
           },
         };
       }
-      throw new Error(`Unexpected table in test double: ${table}`);
+      throw new Error(`Unexpected table in admin test double: ${table}`);
     },
   };
 }
@@ -223,6 +241,8 @@ describe("POST /api/jobs", () => {
     requireApiRoleMock.mockReset();
     queueTechnicianAssignmentSmsMock.mockReset();
     queueCustomerStatusSmsMock.mockReset();
+    createSupabaseAdminClientMock.mockReset();
+    createSupabaseAdminClientMock.mockImplementation(() => createFakeAdminSupabase(db));
     requireApiRoleAs(db, "dispatcher");
   });
 
@@ -235,6 +255,34 @@ describe("POST /api/jobs", () => {
     expect(body.job.technician_id).toBeNull();
     expect(queueTechnicianAssignmentSmsMock).not.toHaveBeenCalled();
     expect(queueCustomerStatusSmsMock).not.toHaveBeenCalled();
+  });
+
+  it("records the job-creation status event through the admin client, not the session client (issue #66)", async () => {
+    const response = await createJob(validJobInput);
+    const body = (await response.json()) as { job: Row };
+
+    expect(response.status).toBe(200);
+    expect(db.status_events).toHaveLength(1);
+    expect(db.status_events[0]).toMatchObject({
+      job_id: body.job.id,
+      from_status: null,
+      to_status: "new",
+      actor_id: DISPATCHER_ID,
+      actor_role: "dispatcher",
+      note: "Job created via manual",
+    });
+  });
+
+  it("still creates the job when the admin-client status event insert fails (non-fatal)", async () => {
+    createSupabaseAdminClientMock.mockImplementation(() => ({
+      from: () => ({ insert: async () => ({ error: { message: "status_events insert failed" } }) }),
+    }));
+
+    const response = await createJob(validJobInput);
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { job: Row };
+    expect(body.job.status).toBe("new");
   });
 
   it("creates a job with a technician (status assigned, availability updated, both SMS functions called)", async () => {

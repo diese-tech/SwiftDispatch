@@ -127,18 +127,26 @@ out positively — its technician-availability update already pulls the
 technician id from the DB-fetched job row, never the request, i.e. it
 already implements this defense correctly.
 
-**Separately flagged, not fixed here:** `POST /api/jobs` and
-`PATCH /api/jobs/[id]` both insert `status_events` rows via the
-session-scoped Supabase client (from `requireApiRole`), not the admin
-client. `supabase/migrations/202506150001_sms_outbox_rls.sql`'s own comment
-states writes to `status_events` happen "exclusively via the service role,"
-but `status_events` has `force row level security` with only a `SELECT`
-policy — if that comment's assumption holds against the table's actual
-Postgres grants, these inserts would be silently rejected by RLS in
-production (neither call site checks the insert's `error`). This wasn't
-verifiable without live Supabase access and is a correctness question, not
-a cross-tenant one, so it's flagged here rather than guessed at or silently
-left undocumented.
+**Resolved (issue #66):** `POST /api/jobs` and `PATCH /api/jobs/[id]` used
+to insert `status_events` rows via the session-scoped Supabase client (from
+`requireApiRole`), not the admin client. Confirmed directly against the
+live Supabase project (`vfpodezcyufjnqkcpzcn`): `status_events` has exactly
+one RLS policy, a `SELECT`-only policy for company members — no `INSERT`
+policy exists, and `relforcerowsecurity` is `false` (so the finding wasn't
+even about the `FORCE` setting; RLS applies to the `authenticated` role
+regardless). The `authenticated` role does have a table-level `INSERT`
+grant, which is exactly the shape that makes this failure silent rather
+than a permission error: the insert simply matches zero rows for the
+`with_check` clause and is dropped. Confirmed the real-world impact
+directly: 654 non-demo `manual`/`call`-sourced jobs had **zero**
+`status_events` rows, and the only `dispatcher`-attributed rows that did
+exist all had `actor_id: null` — the exact signature of the demo-seed
+script's service-role inserts (`scripts/seed-live-qa.mjs`), not of a real
+API request (which always sets `actor_id: profile.id`). Fixed by routing
+both call sites through `createSupabaseAdminClient()`, matching how
+`intake`/`tech-action` already write `status_events`, and now checking
+(and logging) the insert's `error` at both call sites instead of ignoring
+it.
 
 ## `PATCH /api/jobs/[id]` — technician branch
 

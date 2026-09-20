@@ -18,6 +18,7 @@ type Row = Record<string, unknown>;
 const requireApiRoleMock = vi.fn();
 const queueTechnicianAssignmentSmsMock = vi.fn();
 const queueCustomerStatusSmsMock = vi.fn();
+const createSupabaseAdminClientMock = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   requireApiRole: requireApiRoleMock,
@@ -26,6 +27,10 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/jobNotifications", () => ({
   queueTechnicianAssignmentSms: queueTechnicianAssignmentSmsMock,
   queueCustomerStatusSms: queueCustomerStatusSmsMock,
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: () => createSupabaseAdminClientMock(),
 }));
 
 const COMPANY_ID = "11111111-1111-4111-8111-111111111111";
@@ -131,6 +136,19 @@ function createFakeSupabase(db: Db) {
           select: () => makeSelectBuilder(() => db.companies, (r) => ({ ...r })),
         };
       }
+      // status_events has no INSERT RLS policy for the authenticated role
+      // (issue #66) -- the route must write it through the admin client
+      // (see createFakeAdminSupabase below), never this session-scoped one.
+      // Deliberately no handler here, so a regression back to the session
+      // client throws instead of silently "working" in the test.
+      throw new Error(`Unexpected table in test double: ${table}`);
+    },
+  };
+}
+
+function createFakeAdminSupabase(db: Db) {
+  return {
+    from(table: string) {
       if (table === "status_events") {
         return {
           insert: async (row: Row) => {
@@ -139,7 +157,7 @@ function createFakeSupabase(db: Db) {
           },
         };
       }
-      throw new Error(`Unexpected table in test double: ${table}`);
+      throw new Error(`Unexpected table in admin test double: ${table}`);
     },
   };
 }
@@ -214,6 +232,8 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
     requireApiRoleMock.mockReset();
     queueTechnicianAssignmentSmsMock.mockReset();
     queueCustomerStatusSmsMock.mockReset();
+    createSupabaseAdminClientMock.mockReset();
+    createSupabaseAdminClientMock.mockImplementation(() => createFakeAdminSupabase(db));
     requireApiRoleMock.mockResolvedValue({
       profile: { id: DISPATCHER_ID, email: "dispatcher@example.com", company_id: COMPANY_ID, role: "dispatcher" },
       response: null,
@@ -267,6 +287,32 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
     expect(body.error).toBe("No changes provided");
   });
 
+  it("records the status-change event through the admin client, not the session client (issue #66)", async () => {
+    const response = await patchJob({ technician_id: TECH_ID, status: "assigned", note: "Assigned from board" });
+
+    expect(response.status).toBe(200);
+    expect(db.statusEvents).toHaveLength(1);
+    expect(db.statusEvents[0]).toMatchObject({
+      job_id: JOB_ID,
+      from_status: "new",
+      to_status: "assigned",
+      actor_id: DISPATCHER_ID,
+      actor_role: "dispatcher",
+      note: "Assigned from board",
+    });
+  });
+
+  it("still persists the job update when the admin-client status event insert fails (non-fatal)", async () => {
+    createSupabaseAdminClientMock.mockImplementation(() => ({
+      from: () => ({ insert: async () => ({ error: { message: "status_events insert failed" } }) }),
+    }));
+
+    const response = await patchJob({ technician_id: TECH_ID, status: "assigned" });
+
+    expect(response.status).toBe(200);
+    expect(db.jobs[0].status).toBe("assigned");
+  });
+
   describe("technician status updates (issue #49)", () => {
     beforeEach(() => {
       // The job is already assigned to TECH_ID before each technician-path test.
@@ -289,6 +335,22 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
 
       expect(response.status).toBe(200);
       expect(db.jobs[0].status).toBe("en_route");
+    });
+
+    it("records the technician's status-change event through the admin client too (issue #66)", async () => {
+      asTechnician(TECH_AUTH_USER_ID);
+
+      const response = await patchJob({ status: "en_route" });
+
+      expect(response.status).toBe(200);
+      expect(db.statusEvents).toHaveLength(1);
+      expect(db.statusEvents[0]).toMatchObject({
+        job_id: JOB_ID,
+        from_status: "assigned",
+        to_status: "en_route",
+        actor_id: TECH_AUTH_USER_ID,
+        actor_role: "technician",
+      });
     });
 
     it("denies a technician updating a job not assigned to them", async () => {
