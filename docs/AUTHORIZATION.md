@@ -141,9 +141,10 @@ than a permission error: the insert simply matches zero rows for the
 practice: 654 `manual`/`call`-sourced jobs had **zero** `status_events`
 rows. **Correction:** none of those 654 are real customer jobs — the
 product has no real customers yet. 653 are `scripts/load-multi-office-actions.mjs`
-output against the QA/fleet test companies (`customer_name`/`issue`
-literally read "Synthetic multi-company office load test"), and the
-remaining one is an obvious manual placeholder entry ("John Smith" /
+output against the QA/fleet test companies (`customer_name` reads "Office
+Fleet `<companySlug>` `<workerId>`-`<cycle>`" and `issue`/
+`problem_description` literally read "Synthetic multi-company office load
+test"), and the remaining one is an obvious manual placeholder entry ("John Smith" /
 "123-456-7890" / "Heater broke") in a company named "...Demo Co". None
 had `is_demo` set, since neither load scripts nor ad hoc manual testing
 bother setting that flag, which is what made them look like real traffic
