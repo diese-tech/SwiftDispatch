@@ -24,12 +24,12 @@ export function isDemoCompany(company: CompanyDemoShape | null | undefined): boo
 /**
  * Purpose-built sandbox tenants only -- entirely synthetic companies with no
  * real operational data, safe to fully wipe and reseed. `demo_mode_enabled`
- * alone is NOT sufficient for this: `seedDemoAction` (admin/actions.ts, gated
- * behind ENABLE_SEED_DEMO) lets a *real* customer flip that same flag on
- * their own company to additively try sample data, without ever wiping their
- * real jobs. `resetDemoTenant()` does a full destructive wipe of every job/
- * quote/status_event for whatever company it targets -- it must only ever be
- * pointed at a slug on this list, never resolved from the flag alone.
+ * alone is NOT sufficient for this: a real customer's company can carry that
+ * same flag (set by hand, via support tooling, etc.) without ever being
+ * safe to wipe. `resetDemoTenant()` does a full destructive wipe of every
+ * job/quote/status_event for whatever company it targets -- it must only
+ * ever be pointed at a slug on this list, never resolved from the flag
+ * alone.
  *
  * Add a new slug here when provisioning another purpose-built sandbox
  * tenant (e.g. a private one shared with trusted prospects).

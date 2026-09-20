@@ -27,7 +27,7 @@ describe("isSandboxDemoCompany", () => {
     }
   });
 
-  it("is false for a real company even with demo_mode_enabled true (issue: seedDemoAction lets a real customer set this flag on their own company)", () => {
+  it("is false for a real company even with demo_mode_enabled true (only a slug on SANDBOX_DEMO_SLUGS is safe to fully wipe)", () => {
     expect(isSandboxDemoCompany({ slug: "acme-hvac", demo_mode_enabled: true })).toBe(false);
   });
 

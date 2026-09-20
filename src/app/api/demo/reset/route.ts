@@ -21,8 +21,8 @@ export async function POST() {
   // resetDemoTenant() does a full destructive wipe (every job/quote/
   // status_event, not just is_demo=true rows) -- isSandboxDemoCompany()
   // (purpose-built sandbox slugs only) is required here, not the looser
-  // isDemoCompany() flag check, since a real customer can also have
-  // demo_mode_enabled=true via the additive, non-destructive seedDemoAction.
+  // isDemoCompany() flag check, since a real customer's company could also
+  // carry demo_mode_enabled=true without ever being safe to wipe.
   if (!isSandboxDemoCompany(company)) {
     return NextResponse.json({ error: "Not a demo account" }, { status: 403 });
   }

@@ -12,11 +12,10 @@ type AdminClient = ReturnType<typeof createSupabaseAdminClient>
  * quote, and status_event for the target company, not just is_demo=true
  * rows) -- it must only ever run against a purpose-built sandbox tenant on
  * SANDBOX_DEMO_SLUGS, never a company resolved from the `demo_mode_enabled`
- * flag alone. That flag is also used by the separate, additive-only
- * `seedDemoAction` (admin/actions.ts) to let a *real* customer try sample
- * data on their own company without wiping anything -- resolving this
- * function's target from the flag would let a nightly cron or a stray
- * "reset demo" click delete a real customer's job history.
+ * flag alone. A real customer's company could carry that same flag without
+ * ever being safe to wipe -- resolving this function's target from the flag
+ * would let a nightly cron or a stray "reset demo" click delete a real
+ * customer's job history.
  *
  * Pass `targetCompanyId` to reset one specific, already-authorized sandbox
  * company -- this is what the in-app "Reset data" button does. The slug is

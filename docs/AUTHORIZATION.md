@@ -72,11 +72,15 @@ Not role-gated by design (token/secret auth instead, unchanged by #49):
 
 **Reviewed, intentionally unchanged:** `POST /api/demo/reset` uses
 `requireApiProfile()` (any authenticated company member), not a role check.
-It only ever mutates `is_demo=true` tenant data, isn't in #49's priority
-list, and `ResetDemoButton` may be shown to any authenticated demo-tenant
-member via `DemoBanner`. Restricting it wasn't required and there's no
-evidence the current UX is wrong — flagged here rather than silently left
-inconsistent with everything else.
+It does a full destructive wipe of the caller's own company (every job,
+quote, and status_event, not just `is_demo=true` rows), but the route
+re-verifies `isSandboxDemoCompany()` before calling `resetDemoTenant()`, so
+it can only ever target a purpose-built sandbox tenant on
+`SANDBOX_DEMO_SLUGS` (see `src/lib/demo.ts`), never a real customer's data.
+It isn't in #49's priority list, and `ResetDemoButton` may be shown to any
+authenticated demo-tenant member via `DemoBanner`. Restricting it further
+wasn't required and there's no evidence the current UX is wrong — flagged
+here rather than silently left inconsistent with everything else.
 
 ## `POST /api/jobs` — technician tenant ownership
 
