@@ -137,16 +137,27 @@ even about the `FORCE` setting; RLS applies to the `authenticated` role
 regardless). The `authenticated` role does have a table-level `INSERT`
 grant, which is exactly the shape that makes this failure silent rather
 than a permission error: the insert simply matches zero rows for the
-`with_check` clause and is dropped. Confirmed the real-world impact
-directly: 654 non-demo `manual`/`call`-sourced jobs had **zero**
-`status_events` rows, and the only `dispatcher`-attributed rows that did
-exist all had `actor_id: null` — the exact signature of the demo-seed
-script's service-role inserts (`scripts/seed-live-qa.mjs`), not of a real
-API request (which always sets `actor_id: profile.id`). Fixed by routing
-both call sites through `createSupabaseAdminClient()`, matching how
-`intake`/`tech-action` already write `status_events`, and now checking
-(and logging) the insert's `error` at both call sites instead of ignoring
-it.
+`with_check` clause and is dropped. Confirmed the gap actually bites in
+practice: 654 `manual`/`call`-sourced jobs had **zero** `status_events`
+rows. **Correction:** none of those 654 are real customer jobs — the
+product has no real customers yet. 653 are `scripts/load-multi-office-actions.mjs`
+output against the QA/fleet test companies (`customer_name`/`issue`
+literally read "Synthetic multi-company office load test"), and the
+remaining one is an obvious manual placeholder entry ("John Smith" /
+"123-456-7890" / "Heater broke") in a company named "...Demo Co". None
+had `is_demo` set, since neither load scripts nor ad hoc manual testing
+bother setting that flag, which is what made them look like real traffic
+at a glance — they aren't. The only `dispatcher`-attributed rows that
+otherwise exist all had `actor_id: null` — the exact signature of the
+demo-seed script's service-role inserts (`scripts/seed-live-qa.mjs`), not
+of a real API request (which always sets `actor_id: profile.id`). The
+underlying bug is unaffected by this correction — it's still real and
+would have silently dropped the audit trail for the first genuine
+dispatcher-created/updated job — only the "confirmed production data
+loss" framing was overstated. Fixed by routing both call sites through
+`createSupabaseAdminClient()`, matching how `intake`/`tech-action` already
+write `status_events`, and now checking (and logging) the insert's `error`
+at both call sites instead of ignoring it.
 
 ## `PATCH /api/jobs/[id]` — technician branch
 
