@@ -40,3 +40,13 @@ export function isSandboxDemoCompany(company: CompanyDemoShape | null | undefine
   if (!company?.slug) return false;
   return (SANDBOX_DEMO_SLUGS as readonly string[]).includes(company.slug);
 }
+
+/**
+ * A purpose-built sandbox tenant that is NOT the public demo -- e.g. a
+ * private tenant shared with trusted prospects. Used to scope the
+ * first-launch guided tutorial to that private flow without also showing it
+ * on the public demo (which already has its own marketing-page framing).
+ */
+export function isPrivateSandboxDemoCompany(company: CompanyDemoShape | null | undefined): boolean {
+  return isSandboxDemoCompany(company) && company?.slug !== DEMO_COMPANY_SLUG;
+}

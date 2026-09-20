@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isDemoCompany } from "@/lib/demo";
+import { isDemoCompany, isPrivateSandboxDemoCompany } from "@/lib/demo";
 import DemoTabNav from "@/components/DemoTabNav";
+import DemoTutorial from "@/components/DemoTutorial";
 import ResetDemoButton from "@/components/ResetDemoButton";
 
 export default async function DemoBanner() {
@@ -23,7 +24,7 @@ export default async function DemoBanner() {
     .eq("id", profile.company_id)
     .single();
 
-  if (!isDemoCompany(company)) return null;
+  if (!company || !isDemoCompany(company)) return null;
 
   return (
     <div className="border-b border-[var(--c-line)] bg-[var(--c-paper)]">
@@ -46,6 +47,9 @@ export default async function DemoBanner() {
           <ResetDemoButton />
         </div>
       </div>
+      {isPrivateSandboxDemoCompany(company) && (
+        <DemoTutorial storageKey={company.slug} hasAdminNav={profile.role === "admin"} />
+      )}
     </div>
   );
 }
