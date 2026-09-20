@@ -168,6 +168,38 @@ though the DB's own check constraint already allows `'technician'`. Fixed to
 record `profile.role` directly, which `requireApiRole()` already validated
 against the DB's allowed values.
 
+## Matrix drift check (issue #63)
+
+`src/lib/__tests__/authorizationMatrix.test.ts` mechanically enforces that
+the matrix above stays true: it statically parses every
+`requireApiRole([...])` call site under `src/app/api/**` and cross-checks
+its allowed-roles list against a hand-maintained mirror of this file's
+table kept in that test. A route's role list changing without this file
+being updated to match (or vice versa) fails CI, naming the specific route
+— this is the "systematic, not incidental" guarantee the per-route
+`route.test.ts` files can't provide on their own, since each of those only
+proves its own author's chosen test cases behave as expected.
+
+**Whoever changes a route's `requireApiRole([...])` call must update both
+this table and `EXPECTED_MATRIX` in that test file in the same PR.**
+
+Coverage audit performed alongside adding that test: every matrix cell
+above has at least one allow-or-deny test in its route's `route.test.ts`,
+with one exception found and fixed — `PATCH /api/company` had no test file
+at all despite being in this matrix; added
+`src/app/api/company/route.test.ts`. For routes where multiple roles are
+listed `✓` (e.g. `dispatcher` and `admin` both allowed), a single
+representative allow-test is treated as sufficient coverage rather than one
+test per allowed role, confirmed by checking that route's code never
+branches on `profile.role` after the `requireApiRole()` gate (grep across
+`src/app/api/**` shows only `PATCH /api/jobs/[id]` does this, for the
+technician own-job-only restriction described above — already covered by
+that route's dedicated technician tests). Denial coverage similarly doesn't
+need one test per disallowed role: `requireApiRole()`'s rejection
+(`!allowedRoles.includes(data.role)`) is a single generic boolean check
+with no role-specific branching, so one representative denied-role test
+proves the boundary for every other disallowed role too.
+
 ## RLS
 
 Reviewed (not redesigned, per issue #49 scope): every RLS policy on `jobs`,
