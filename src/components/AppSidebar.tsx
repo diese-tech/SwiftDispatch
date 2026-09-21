@@ -11,6 +11,12 @@ type Section = "admin" | "superadmin" | "dispatch" | "dashboard";
 type NavItem = { href: string; label: string };
 type NavGroup = { label: string; items: NavItem[] };
 
+const NAV_TUTORIAL_TARGETS: Record<string, string> = {
+  Dispatch: "nav-dispatch",
+  Analytics: "nav-analytics",
+  Overview: "nav-admin",
+};
+
 function getNavGroups(section: Section, role: string): NavGroup[] {
   const dispatchHref = role === "super_admin" ? "/superadmin/dispatch" : "/dispatch";
 
@@ -88,6 +94,7 @@ export default function AppSidebar({ section, user }: Props) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
+                  data-tutorial={NAV_TUTORIAL_TARGETS[item.label]}
                   className={`flex items-center rounded-md px-2 py-1.5 text-[13px] transition-colors ${
                     isActive
                       ? "bg-[var(--c-paper-3)] font-medium text-[var(--c-text)]"
@@ -125,7 +132,7 @@ export default function AppSidebar({ section, user }: Props) {
         className="no-print hidden w-[216px] shrink-0 flex-col border-r border-[var(--c-line)] bg-[var(--c-paper-2)] lg:flex"
         style={{ position: "sticky", top: 0, height: "100vh", overflowY: "auto" }}
       >
-        <div className="border-b border-[var(--c-line)] px-4 py-3.5">
+        <div className="border-b border-[var(--c-line)] px-4 py-3.5" data-tutorial="brand">
           <BrandMark href={homeHref} size="sm" variant="mark" />
         </div>
         {navContent}

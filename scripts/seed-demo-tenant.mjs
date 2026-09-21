@@ -1,13 +1,33 @@
 /**
- * One-time setup for the public demo tenant.
+ * One-time setup for a sandbox demo tenant.
  *
- * Creates the demo company, public login user (demo / demo), technicians,
- * and quote template — then seeds the initial job set.
+ * Creates the demo company, login user, technicians, and quote template —
+ * then seeds the initial job set.
  *
  * Safe to re-run: all operations are idempotent.
  *
  * After initial setup, daily resets are handled automatically by the
- * Vercel cron job calling POST /api/internal/reset-demo (05:00 UTC = 00:00 EST).
+ * Vercel cron job calling POST /api/internal/reset-demo (05:00 UTC = 00:00 EST)
+ * for every company whose slug is on SANDBOX_DEMO_SLUGS (src/lib/demo.ts) --
+ * add the new slug there too, or the nightly reset will silently skip it.
+ *
+ * Defaults to the public demo tenant (swiftdispatch-demo, demo@swiftdispatch.app
+ * / demo) for back-compat with existing usage. Override via env vars to
+ * provision a second, separately-credentialed sandbox tenant -- e.g. a
+ * private one shared directly with trusted prospects rather than linked from
+ * the public site:
+ *
+ *   DEMO_SLUG=swiftdispatch-preview \
+ *   DEMO_COMPANY_NAME="SwiftDispatch Preview" \
+ *   DEMO_USER_EMAIL=preview@swiftdispatch.app \
+ *   DEMO_USER_PASSWORD=<a real generated password, not "demo"> \
+ *   DEMO_HANDLE_SUFFIX=preview \
+ *   node scripts/seed-demo-tenant.mjs
+ *
+ * DEMO_HANDLE_SUFFIX must be unique per tenant -- technician logins are
+ * shared Supabase Auth users keyed by handle@internal.swiftdispatch.app, so
+ * reusing a handle across tenants reassigns that technician's login to
+ * whichever company was seeded last instead of creating a separate one.
  *
  * Usage:
  *   node scripts/seed-demo-tenant.mjs
@@ -17,6 +37,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import { validateSeedConfig } from "./lib/seedDemoGuard.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,31 +67,45 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-const DEMO_COMPANY_SLUG = "swiftdispatch-demo";
+const DEMO_COMPANY_SLUG = process.env.DEMO_SLUG ?? "swiftdispatch-demo";
+const HANDLE_SUFFIX = process.env.DEMO_HANDLE_SUFFIX ?? "";
 
 const COMPANY = {
-  name: "SwiftDispatch Demo",
+  name: process.env.DEMO_COMPANY_NAME ?? "SwiftDispatch Demo",
   slug: DEMO_COMPANY_SLUG,
-  email: "demo@swiftdispatch.app",
+  email: process.env.DEMO_COMPANY_EMAIL ?? "demo@swiftdispatch.app",
   phone: "555-0100",
   timezone: "America/New_York",
-  sms_sender_name: "SwiftDispatch",
+  sms_sender_name: process.env.DEMO_SMS_SENDER_NAME ?? "SwiftDispatch",
   payment_provider: "manual",
   demo_mode_enabled: true,
 };
 
-// Public demo credentials — safe to display on marketing pages
+// Public demo credentials (defaults) — safe to display on marketing pages.
+// A tenant seeded with DEMO_USER_EMAIL/DEMO_USER_PASSWORD overrides should
+// NOT reuse a memorable password like "demo" -- these are meant to be
+// shared privately with named people, not published.
 const DEMO_USER = {
-  email: "demo@swiftdispatch.app",
-  password: "demo",
+  email: process.env.DEMO_USER_EMAIL ?? "demo@swiftdispatch.app",
+  password: process.env.DEMO_USER_PASSWORD ?? "demo",
   role: "dispatcher",
 };
 
 const TECHNICIANS = [
-  { name: "Mia Torres",   phone: "+15551234567", handle: "miatorres",  pin: "1234", authPassword: "123456" },
-  { name: "Leo Grant",    phone: "+15557654321", handle: "leogrant",   pin: "5678", authPassword: "567890" },
-  { name: "Avery Brooks", phone: "+15553459876", handle: "averybrooks", pin: "9012", authPassword: "901234" },
+  { name: "Mia Torres",   phone: "+15551234567", handle: `miatorres${HANDLE_SUFFIX}`,   pin: "1234", authPassword: "123456" },
+  { name: "Leo Grant",    phone: "+15557654321", handle: `leogrant${HANDLE_SUFFIX}`,    pin: "5678", authPassword: "567890" },
+  { name: "Avery Brooks", phone: "+15553459876", handle: `averybrooks${HANDLE_SUFFIX}`, pin: "9012", authPassword: "901234" },
 ];
+
+// Runs before any Supabase call below -- refuses to start rather than
+// silently hijacking the public demo's auth users or wiping the wrong
+// company. See scripts/lib/seedDemoGuard.mjs for what it checks and why.
+validateSeedConfig({
+  slug: DEMO_COMPANY_SLUG,
+  userEmail: DEMO_USER.email,
+  userPassword: DEMO_USER.password,
+  handleSuffix: HANDLE_SUFFIX,
+});
 
 const TEMPLATE = {
   name: "Standard Diagnostic + Repair",
@@ -259,9 +294,9 @@ async function seedJobs(companyId, techIds) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("Setting up demo tenant…");
+  console.log(`Setting up demo tenant (slug: ${DEMO_COMPANY_SLUG})…`);
   const companyId = await ensureCompany();
-  console.log(`  Company: ${companyId}`);
+  console.log(`  Company: ${COMPANY.name} (${companyId})`);
 
   const demoAuthUser = await ensureAuthUser(DEMO_USER.email, DEMO_USER.password);
   await ensureUserProfile(demoAuthUser, companyId, DEMO_USER.role);
@@ -280,9 +315,12 @@ async function main() {
   console.log(`  Jobs seeded: ${seeded}`);
 
   console.log("\nDemo tenant ready.");
+  console.log(`  Slug: ${DEMO_COMPANY_SLUG}`);
   console.log(`  Login: ${DEMO_USER.email} / ${DEMO_USER.password}`);
   console.log(`  Daily reset: POST /api/internal/reset-demo (05:00 UTC = 00:00 EST)`);
   console.log(`  Vercel cron: set CRON_SECRET env var — already configured in vercel.json`);
+  console.log(`  Make sure "${DEMO_COMPANY_SLUG}" is listed in SANDBOX_DEMO_SLUGS (src/lib/demo.ts),`);
+  console.log(`  or the nightly reset will silently skip this tenant.`);
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

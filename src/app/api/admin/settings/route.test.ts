@@ -217,6 +217,21 @@ describe("PATCH /api/admin/settings", () => {
     expect(response.status).toBe(400);
   });
 
+  it("rejects a reserved sandbox slug, even when it's currently unclaimed by any company", async () => {
+    requireApiRoleMock.mockResolvedValue({
+      profile: adminProfile(),
+      response: null,
+      // No company holds "swiftdispatch-preview" yet -- proves this is
+      // blocked by the reserved-slug check itself, not the uniqueness
+      // conflict lookup (which would find no conflict and let it through).
+      supabase: supabaseWithCompanies(freshCompanies()),
+    });
+
+    const response = await patchSettings({ slug: "swiftdispatch-preview" });
+
+    expect(response.status).toBe(409);
+  });
+
   it("rejects a slug already taken by a real other-company row", async () => {
     requireApiRoleMock.mockResolvedValue({
       profile: adminProfile(),

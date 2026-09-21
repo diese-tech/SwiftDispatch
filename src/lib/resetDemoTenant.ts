@@ -1,48 +1,65 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { demoJobs, demoTechnicians } from '@/lib/demo-data'
-import { DEMO_COMPANY_SLUG } from '@/lib/demo'
+import { DEMO_COMPANY_SLUG, SANDBOX_DEMO_SLUGS, isSandboxDemoCompany } from '@/lib/demo'
 
 // Re-exported for back-compat with existing import sites.
 export { DEMO_COMPANY_SLUG }
 
+type AdminClient = ReturnType<typeof createSupabaseAdminClient>
+
 /**
- * Reset the demo tenant's job data.
+ * Reset demo tenant job data. This is a FULL DESTRUCTIVE WIPE (every job,
+ * quote, and status_event for the target company, not just is_demo=true
+ * rows) -- it must only ever run against a purpose-built sandbox tenant on
+ * SANDBOX_DEMO_SLUGS, never a company resolved from the `demo_mode_enabled`
+ * flag alone. A real customer's company could carry that same flag without
+ * ever being safe to wipe -- resolving this function's target from the flag
+ * would let a nightly cron or a stray "reset demo" click delete a real
+ * customer's job history.
  *
- * Pass `targetCompanyId` to reset a specific (already-authorized) company —
- * this is what the in-app "Reset data" button does, so a slug-less demo
- * tenant resets ITS OWN board rather than some other flagged company. When
- * omitted (e.g. the nightly cron), the canonical demo company is resolved by
- * slug, falling back to the demo_mode_enabled flag.
+ * Pass `targetCompanyId` to reset one specific, already-authorized sandbox
+ * company -- this is what the in-app "Reset data" button does. The slug is
+ * re-verified here (not just by the caller) since a full wipe is too
+ * dangerous to trust a single call site to gate correctly.
+ *
+ * When omitted (the nightly cron), every company whose slug is on
+ * SANDBOX_DEMO_SLUGS is reset in turn and the seeded counts are summed.
  */
 export async function resetDemoTenant(targetCompanyId?: string): Promise<{ jobsSeeded: number }> {
   const admin = createSupabaseAdminClient()
 
-  let companyId = targetCompanyId
-
-  if (!companyId) {
-    let { data: company } = await admin
+  if (targetCompanyId) {
+    const { data: company } = await admin
       .from('companies')
-      .select('id')
-      .eq('slug', DEMO_COMPANY_SLUG)
+      .select('id, slug')
+      .eq('id', targetCompanyId)
       .maybeSingle()
 
-    if (!company) {
-      const { data: flagged } = await admin
-        .from('companies')
-        .select('id')
-        .eq('demo_mode_enabled', true)
-        .limit(1)
-        .maybeSingle()
-      company = flagged
+    if (!isSandboxDemoCompany(company)) {
+      throw new Error(`Refusing to reset non-sandbox company ${targetCompanyId}`)
     }
 
-    if (!company) {
-      throw new Error(`Demo company not found (slug: ${DEMO_COMPANY_SLUG} or demo_mode_enabled)`)
-    }
-
-    companyId = company.id
+    return resetOneCompany(admin, targetCompanyId)
   }
 
+  const { data: companies } = await admin
+    .from('companies')
+    .select('id')
+    .in('slug', SANDBOX_DEMO_SLUGS)
+
+  if (!companies || companies.length === 0) {
+    throw new Error(`No sandbox demo companies found (slugs: ${SANDBOX_DEMO_SLUGS.join(', ')})`)
+  }
+
+  let jobsSeeded = 0
+  for (const company of companies) {
+    const result = await resetOneCompany(admin, company.id)
+    jobsSeeded += result.jobsSeeded
+  }
+  return { jobsSeeded }
+}
+
+async function resetOneCompany(admin: AdminClient, companyId: string): Promise<{ jobsSeeded: number }> {
   const { data: technicians } = await admin
     .from('technicians')
     .select('id, name')

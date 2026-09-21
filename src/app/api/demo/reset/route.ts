@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/auth";
 import { resetDemoTenant } from "@/lib/resetDemoTenant";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isDemoCompany } from "@/lib/demo";
+import { isSandboxDemoCompany } from "@/lib/demo";
 
 export async function POST() {
   const { profile, response } = await requireApiProfile();
@@ -18,7 +18,12 @@ export async function POST() {
     .eq("id", profile.company_id)
     .single();
 
-  if (!isDemoCompany(company)) {
+  // resetDemoTenant() does a full destructive wipe (every job/quote/
+  // status_event, not just is_demo=true rows) -- isSandboxDemoCompany()
+  // (purpose-built sandbox slugs only) is required here, not the looser
+  // isDemoCompany() flag check, since a real customer's company could also
+  // carry demo_mode_enabled=true without ever being safe to wipe.
+  if (!isSandboxDemoCompany(company)) {
     return NextResponse.json({ error: "Not a demo account" }, { status: 403 });
   }
 

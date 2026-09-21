@@ -22,6 +22,7 @@ export default function ResetDemoButton() {
       type="button"
       onClick={handleReset}
       disabled={resetting}
+      data-tutorial="reset-demo"
       className="rounded-full border border-[var(--c-line)] px-3 py-1 font-mono text-[10px] text-[var(--c-text-4)] transition hover:border-[var(--c-line-2)] hover:text-[var(--c-text-3)] disabled:opacity-50"
     >
       {resetting ? "Resetting…" : "Reset data"}
