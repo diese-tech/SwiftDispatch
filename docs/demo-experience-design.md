@@ -178,11 +178,18 @@ revisited.
 
 ## Open follow-ups (tracked under issue #75)
 
-- A dedicated end-to-end regression suite driving a full sandbox quote
-  lifecycle (create → line items → preview → send → accept/decline →
-  resulting job/technician state) through the real route handlers, the
-  way `src/app/api/jobs/[id]/route.test.ts` already does for job mutations.
 - Whether to eventually give `TechPhoneModal` a real shared-component or
   impersonation-based connection to the production technician UI/rules,
   instead of its current parallel (now rule-matched, but still separate)
-  implementation.
+  implementation. This is a larger refactor than the audit's other fixes
+  and is left as a product/architecture decision rather than done
+  unprompted; `src/lib/__tests__/demoTenantQuoteLifecycle.test.ts` and the
+  per-route regression tests already guard the rule-matching in the
+  meantime.
+- Automated coverage for the two things this repo has no test harness
+  for: rendering `/quote/[id]` and `/intake/quote/[token]` themselves
+  (vs. the data they'd render, which the E2E suite does cover), and any
+  component-level check of `KanbanBoard`, `DemoBanner`, or
+  `TechPhoneModal`'s actual DOM output. Both would need a React
+  Testing Library / jsdom render harness that doesn't exist anywhere in
+  this codebase yet.
