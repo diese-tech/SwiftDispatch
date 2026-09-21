@@ -261,9 +261,30 @@ export async function PATCH(
   }
 
   if (shouldReleaseTerminalTechnician) {
+    // The technician can hold multiple simultaneous nonterminal jobs (the
+    // demo seed/reset logic assumes this too). If another one is still
+    // active, promote it -- oldest first, the same deterministic
+    // convention seed-demo-tenant.mjs/resetDemoTenant.ts use -- rather
+    // than reporting the technician available while real work remains
+    // assigned to them (Half-Shell review, PR #76).
+    const { data: nextActiveJob } = await supabase
+      .from('jobs')
+      .select('id')
+      .eq('technician_id', currentJob.technician_id as string)
+      .eq('company_id', profile.company_id)
+      .not('status', 'in', '("completed","cancelled","no_access")')
+      .neq('id', id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
     await supabase
       .from('technicians')
-      .update({ availability_status: 'available', current_job_id: null })
+      .update(
+        nextActiveJob
+          ? { availability_status: 'on_job', current_job_id: nextActiveJob.id }
+          : { availability_status: 'available', current_job_id: null },
+      )
       .eq('id', currentJob.technician_id as string)
       .eq('current_job_id', id)
   }
