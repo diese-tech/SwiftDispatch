@@ -215,3 +215,49 @@ describe("DELETE /api/quotes/[id]/line-items/[itemId]", () => {
     expect(db.quote_line_items).toHaveLength(2);
   });
 });
+
+// Half-Shell review on this PR (echoing the Codex finding on GET /api/jobs):
+// a sandbox tenant's is_demo=true quotes must stay editable here, while an
+// ordinary company's is_demo=true rows (load-test/live-QA traffic -- see
+// scripts/load-tech-actions.mjs) must stay hidden/unfindable.
+describe("is_demo visibility", () => {
+  const SANDBOX_COMPANY_ID = "99999999-9999-4999-8999-999999999999";
+
+  beforeEach(() => {
+    requireApiRoleMock.mockReset();
+  });
+
+  function requireApiRoleWith(companyId: string, testDb: Db) {
+    requireApiRoleMock.mockResolvedValue({
+      profile: { id: DISPATCHER_ID, email: "dispatcher@example.com", company_id: companyId, role: "dispatcher" },
+      response: null,
+      supabase: createFakeSupabase(testDb),
+    });
+  }
+
+  it("sandbox tenant: can edit a line item on an is_demo=true quote", async () => {
+    db = {
+      quotes: [{ id: QUOTE_ID, is_demo: true, jobs: { company_id: SANDBOX_COMPANY_ID } }],
+      quote_line_items: [{ id: ITEM_ID, quote_id: QUOTE_ID, name: "Compressor", price: 200, quantity: 1 }],
+      companies: [{ id: SANDBOX_COMPANY_ID, slug: "swiftdispatch-preview" }],
+    };
+    requireApiRoleWith(SANDBOX_COMPANY_ID, db);
+
+    const response = await patchLineItem(ITEM_ID, { price: 300 });
+
+    expect(response.status).toBe(200);
+  });
+
+  it("ordinary tenant: an is_demo=true quote (load-test traffic) is not found for editing", async () => {
+    db = {
+      quotes: [{ id: QUOTE_ID, is_demo: true, jobs: { company_id: COMPANY_ID } }],
+      quote_line_items: [{ id: ITEM_ID, quote_id: QUOTE_ID, name: "Compressor", price: 200, quantity: 1 }],
+      companies: [{ id: COMPANY_ID, slug: "acme-hvac" }],
+    };
+    requireApiRoleWith(COMPANY_ID, db);
+
+    const response = await patchLineItem(ITEM_ID, { price: 300 });
+
+    expect(response.status).toBe(404);
+  });
+});
