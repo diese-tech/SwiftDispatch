@@ -45,6 +45,10 @@ function makeSelectBuilder(getRows: () => Row[]) {
       const row = getRows().find((r) => matchesFilters(r, filters));
       return row ? { data: row, error: null } : { data: null, error: { message: "Row not found" } };
     },
+    maybeSingle: async () => {
+      const row = getRows().find((r) => matchesFilters(r, filters));
+      return { data: row ?? null, error: null };
+    },
   };
   return builder;
 }
@@ -65,7 +69,7 @@ function makeUpdateBuilder(getRows: () => Row[], patch: Row) {
   return builder;
 }
 
-type Db = { quotes: Row[] };
+type Db = { quotes: Row[]; companies: Row[] };
 
 function createFakeSupabase(db: Db) {
   return {
@@ -75,6 +79,9 @@ function createFakeSupabase(db: Db) {
           select: () => makeSelectBuilder(() => db.quotes),
           update: (patch: Row) => makeUpdateBuilder(() => db.quotes, patch),
         };
+      }
+      if (table === "companies") {
+        return { select: () => makeSelectBuilder(() => db.companies) };
       }
       throw new Error(`Unexpected table in test double: ${table}`);
     },
@@ -97,6 +104,7 @@ function freshDb(): Db {
         jobs: { id: JOB_ID, phone: "+15550000002", company_id: COMPANY_ID, sms_consent_type: "intake_form" },
       },
     ],
+    companies: [{ id: COMPANY_ID, slug: "acme-hvac" }],
   };
 }
 
