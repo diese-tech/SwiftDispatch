@@ -263,11 +263,11 @@ export default function TechPhoneModal({ demoTechId, demoTechName, companyId }: 
                               </button>
                               <button
                                 type="button"
-                                className={canTransition(job.status, "quote_pending") ? primaryBtn : ghostBtn}
-                                disabled={!canTransition(job.status, "quote_pending") || !!actionLoading}
-                                onClick={() => void postStatus("quote_pending")}
+                                className={ghostBtn}
+                                disabled
+                                title="Dispatch builds and sends the quote from the job's detail page -- a technician can't trigger this themselves."
                               >
-                                {actionLoading === "quote_pending" ? "…" : "Build Quote"}
+                                Build Quote
                               </button>
                               <button
                                 type="button"

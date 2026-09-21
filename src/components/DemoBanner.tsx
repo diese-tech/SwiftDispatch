@@ -38,12 +38,14 @@ export default async function DemoBanner() {
         </div>
         {/* Right: reset */}
         <div className="flex items-center gap-3">
-          <Link
-            href="/admin"
-            className="hidden font-mono text-[10px] text-[var(--c-text-4)] underline-offset-2 hover:underline sm:block"
-          >
-            Admin settings
-          </Link>
+          {profile.role === "admin" && (
+            <Link
+              href="/admin"
+              className="hidden font-mono text-[10px] text-[var(--c-text-4)] underline-offset-2 hover:underline sm:block"
+            >
+              Admin settings
+            </Link>
+          )}
           <ResetDemoButton />
         </div>
       </div>
