@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { demoJobs, demoTechnicians } from '@/lib/demo-data'
+import { demoJobs, demoTechnicians, demoTemplate } from '@/lib/demo-data'
 import { DEMO_COMPANY_SLUG, SANDBOX_DEMO_SLUGS, isSandboxDemoCompany } from '@/lib/demo'
 
 // Re-exported for back-compat with existing import sites.
@@ -60,15 +60,47 @@ export async function resetDemoTenant(targetCompanyId?: string): Promise<{ jobsS
 }
 
 async function resetOneCompany(admin: AdminClient, companyId: string): Promise<{ jobsSeeded: number }> {
+  // Ordered by created_at, matching the original seed script's insertion
+  // order (TECHNICIANS in scripts/seed-demo-tenant.mjs), so this lines up
+  // positionally with demoTechnicians regardless of whether a technician's
+  // name/phone has since drifted -- the old name-keyed lookup broke
+  // silently the moment a technician was renamed (that row would then be
+  // orphaned from every future reseed's assignments). Only name/phone are
+  // restored here, never handle/pin/auth_user_id -- those are the actual
+  // Supabase Auth login identity and resetting them would break the
+  // technician's own credentials.
   const { data: technicians } = await admin
     .from('technicians')
-    .select('id, name')
+    .select('id, name, phone')
     .eq('company_id', companyId)
+    .order('created_at', { ascending: true })
 
-  const techByName = new Map(
-    (technicians ?? []).map((t: { id: string; name: string }) => [t.name, t.id]),
-  )
-  const techIds = demoTechnicians.map((dt) => techByName.get(dt.name) ?? null)
+  const techRows = technicians ?? []
+  const techIds = demoTechnicians.map((_, i) => techRows[i]?.id ?? null)
+
+  for (let i = 0; i < demoTechnicians.length; i += 1) {
+    const row = techRows[i]
+    const canonical = demoTechnicians[i]
+    if (row && (row.name !== canonical.name || row.phone !== canonical.phone)) {
+      await admin.from('technicians').update({ name: canonical.name, phone: canonical.phone }).eq('id', row.id)
+    }
+  }
+
+  // Restore the canonical quote template baseline (name, duration, line
+  // items) -- an admin could otherwise drift it via /admin/templates and
+  // every future demo walkthrough would build quotes against stale copy.
+  const { data: existingTemplate } = await admin
+    .from('quote_templates')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('name', demoTemplate.name)
+    .maybeSingle()
+
+  if (existingTemplate) {
+    await admin.from('quote_templates').update(demoTemplate).eq('id', existingTemplate.id)
+  } else {
+    await admin.from('quote_templates').insert({ company_id: companyId, ...demoTemplate })
+  }
 
   // Unlink technician current_job references before deleting jobs
   await admin
