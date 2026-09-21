@@ -1,145 +1,195 @@
-# Live Demo Experience — Design Plan
+# Demo & Sandbox Tenant Architecture
 
-## Problem
+> Supersedes the original "Live Demo Experience — Design Plan" that used to
+> live in this file. That plan (a `/demo/tech` route reusing `/tech/page.tsx`
+> JSX, `company.slug === 'demo'` detection, an admin-role demo login) was
+> never built. What actually shipped (PRs #72, #74, #75/#76) took a
+> different shape, described below. If you're looking for the old proposal,
+> it's in git history; treat it as superseded, not as a roadmap.
 
-The current live demo (`demo@swiftdispatch.app / demo`) only drops prospects into the dispatcher view. The tech portal (`/tech`) runs a completely separate auth flow (`/tech/login`) with its own session, so there is no way to switch between personas without logging out and logging in again with different credentials. Prospects never see the admin or analytics pages unless they find the nav links. The demo experience therefore only demonstrates one-third of the product.
+## Two sandbox tenants, one mechanism
 
-## Goal
+There are two purpose-built, fully-synthetic company tenants:
 
-A prospect who lands on the live sandbox should be able to experience all three personas — dispatcher, technician, and admin — in one continuous session without re-authentication, friction, or any "please log in as a different user" interruptions.
+| Tenant | Slug | Audience | Login role |
+|---|---|---|---|
+| Public demo | `swiftdispatch-demo` | Anyone (linked from marketing pages) | dispatcher |
+| Private preview | `swiftdispatch-preview` | Trusted prospects (credentials shared directly) | dispatcher |
 
----
+Both are provisioned by `scripts/seed-demo-tenant.mjs` (one-time, env-var
+driven — see the file's own header comment for usage) and reset nightly (and
+on-demand via the in-app button) by `resetDemoTenant()`
+(`src/lib/resetDemoTenant.ts`). Adding a third sandbox tenant means adding
+its slug to `SANDBOX_DEMO_SLUGS` in **both** `src/lib/demo.ts` and
+`scripts/lib/seedDemoGuard.mjs` (they can't share an import — the seed
+script is a bundler-less `.mjs` — so they're kept in sync by hand; tracked
+separately as issue #73).
 
-## Personas & pages
+## Demo detection: two different questions, two different functions
 
-| Persona | Real URL | Auth requirement |
-|---|---|---|
-| Dispatcher | `/dispatch` | Supabase session, role `admin` or `dispatcher` |
-| Admin | `/admin`, `/analytics`, `/admin/technicians`, `/admin/templates` | Supabase session, role `admin` |
-| Technician | `/tech` | Separate Supabase session, role `technician` |
+`src/lib/demo.ts` exports three predicates, each answering a distinct
+question. Using the wrong one for a given purpose has caused real bugs
+(PRs #72 and #74/#76 both had to fix exactly this):
 
-The tech portal is the hard case: it uses an independent auth guard (`redirect('/tech/login')`) and renders a mobile-optimised layout. Solving it without a second login is the core design problem.
+- **`isDemoCompany(company)`** — "should demo-only *UI chrome* show?" True
+  if `demo_mode_enabled` is set OR the slug is the public demo's. Loose on
+  purpose: a real customer's company could carry `demo_mode_enabled` by
+  accident (support tooling, a stray flag flip) without that making it safe
+  to wipe. Used to gate `DemoBanner` itself.
+- **`isSandboxDemoCompany(company)`** — "is every row this company owns
+  synthetic, safe to fully wipe, and safe to show regardless of the
+  `is_demo` flag on individual rows?" A strict allowlist check against
+  `SANDBOX_DEMO_SLUGS`. This is the one that must gate anything destructive
+  (`resetDemoTenant()`) or anything that decides whether `is_demo=true` rows
+  should be visible.
+- **`isPrivateSandboxDemoCompany(company)`** — "is this the *private*
+  preview tenant specifically (not the public demo)?" Scopes the
+  first-launch tutorial to the private flow, which already has its own
+  framing (a direct prospect handoff) that would be redundant with the
+  public demo's marketing-page framing.
 
----
+`isCompanySandboxDemo(supabase, companyId)` (also in `demo.ts`) is the
+async, one-query-away version of `isSandboxDemoCompany` for routes/pages
+that only have a `companyId`, not an already-loaded company row.
 
-## Proposed solution: Demo persona switcher + tech preview route
+## Why `is_demo` visibility needed per-route scoping
 
-### 1. Demo detection
+A sandbox tenant's jobs/quotes are **all** `is_demo=true` — that data *is*
+the product being demoed. But `scripts/load-tech-actions.mjs` and its
+siblings also seed `is_demo=true` rows into ordinary, non-sandbox company
+slugs, specifically to keep synthetic load-test traffic out of real
+operators' views (grep those scripts for "reduce operational noise").
 
-Identify the demo session by checking `company.slug === 'demo'` (or a dedicated `is_demo` boolean on the company row). All demo-specific UI gates behind this check so it has zero effect on real tenants.
+So no single blanket rule works: a sandbox tenant needs `is_demo` rows
+**visible**, an ordinary tenant needs them **hidden**. Every read/write path
+that used to filter `.eq("is_demo", false)` unconditionally now does it
+conditionally, keyed off `isCompanySandboxDemo`/`isSandboxDemoCompany`:
+quote build/preview/line-items/send-sms, the admin stats page, the
+analytics page, `GET /api/jobs`, `KanbanBoard`'s realtime refetch, and
+`DispatchPage`'s initial SSR load (SSR and realtime must agree — that
+mismatch was its own bug, fixed in PR #76). RLS itself has no `is_demo`
+predicate anywhere; this is purely an app-layer concern, not a security
+boundary.
 
-### 2. Persistent demo banner
+## The demo banner and its pieces
 
-A fixed bar pinned to the top of every `(app)` layout page when the session is detected as demo. It sits above the existing nav.
+`DemoBanner` (`src/components/DemoBanner.tsx`) renders when `isDemoCompany`
+is true, across every `(app)` page via the shared layout. It contains:
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│  DEMO SANDBOX  ·  Viewing as Dispatcher            [Tech view →]  │
-│                                         [Analytics]  [Admin]      │
-└────────────────────────────────────────────────────────────────────┘
-```
+- **`DemoTabNav`** — quick links to `/dispatch` and `/analytics`.
+- **An "Admin settings" link** — only for an `admin`-role profile. The
+  private preview's login is `dispatcher` (see below), so it doesn't see
+  this.
+- **`ResetDemoButton`** — POSTs `/api/demo/reset`, which re-verifies
+  `isSandboxDemoCompany` server-side before calling `resetDemoTenant()`
+  (never trusts the button's own gating alone). Surfaces the server's error
+  message on failure instead of failing silently.
+- **`DemoTutorial`** — only for `isPrivateSandboxDemoCompany`. A four-step
+  anchored walkthrough (brand → dispatch → analytics → reset), desktop-only,
+  dismissal remembered in `localStorage`.
 
-- Eyebrow label shows which persona is active
-- One-click links to `/dispatch`, `/demo/tech`, `/analytics`, `/admin`
-- Resets demo data button (calls existing `resetDemoTenant` logic)
-- Small, unobtrusive — maybe 32px tall, navy background, mono font
+## Why the demo login is `dispatcher`, not `admin`
 
-### 3. New route: `/demo/tech`
+Considered and decided against making the private preview's login `admin`
+(which would unlock `/admin`, `/admin/technicians`, `/admin/templates`,
+`/admin/users`, `/admin/settings` in the same session). Staying
+`dispatcher` and hiding the admin CTA was the smaller, lower-risk change,
+and keeps the reset baseline's scope small — an admin-capable demo login
+would put company settings, technician identities, and templates within a
+prospect's reach, all of which `resetDemoTenant()` deliberately does not
+restore (see below). If this decision changes, revisit that reset scope
+too.
 
-A new page inside the `(app)` route group that:
-- Requires a normal dispatcher/admin session (no tech re-auth)
-- Reads one of the demo technicians' current job from the database (e.g., whichever tech has `current_job_id` set)
-- Renders the **exact same JSX** as `/tech/page.tsx` but without the `redirect('/tech/login')` guard
-- Wraps the content in an iPhone-style viewport frame on desktop (so it's obvious this is a mobile-first view) — the same frame idea as the `DemoPreview` marketing mockup, but real and interactive
+## Tech preview: a floating widget, not a separate route
 
-The page header should say: **"Tech view — Jason K."** with a note that this is the mobile experience dispatchers' field techs see on their phones.
+There is no `/demo/tech` route. Instead, `TechPhoneModal`
+(`src/components/TechPhoneModal.tsx`) is a floating "Tech view" button on
+`/dispatch` itself, opening an iPhone-chrome mockup. Important
+architectural fact: **it runs under the viewer's own dispatcher/admin
+session**, not a real technician session — there's no auth-impersonation
+layer. That has real consequences:
 
-Because it uses the same real data (live jobs, real status transitions), the prospect can:
-- See Jason K.'s current active job
-- Tap "Mark Arrived" and watch the dispatch board update in real time (Supabase realtime)
-- See the status change reflected in the `/dispatch` kanban if they open it in another tab
+- Its actions call the same `PATCH /api/jobs/[id]` a dispatcher would use,
+  so it's bound by `requireApiRole`'s dispatcher/admin rules, not the
+  narrower `TECHNICIAN_ALLOWED_STATUSES` a real technician session is
+  restricted to.
+- "Complete" is gated on an accepted quote existing (`hasAcceptedQuote`,
+  fetched the same way `tech/page.tsx` computes it server-side), matching
+  the real technician UI's rule — it used to only check the generic
+  state-machine transition, which let a demo tech complete a job with no
+  quote at all.
+- "Build Quote" is disabled (non-mutating) once a job reaches `in_progress`,
+  with an explanatory `title`. It used to PATCH the job straight to
+  `quote_pending`, which no real technician session can do either — in the
+  real product that transition is dispatcher-driven, via `QuoteBuilder` on
+  the job detail page; a real technician's own "Build Quote" link is
+  read-only (`/tech/job/[id]` has no mutation UI at all).
+- Address/phone are real `https://maps.google.com/?q=...` and `tel:` links,
+  copied from `/tech/job/[id]`'s markup, not decorative text.
+- "Sign out" is inert on purpose: there is no separate technician session
+  to sign out of. Making it functional would sign the *dispatcher* out of
+  their own account mid-demo.
 
-This is the demo's killer moment: show the realtime feedback loop between dispatcher and tech.
+Reusing the real technician UI wholesale (a shared `TechJobView` component,
+or a technician-session impersonation adapter) was considered and
+explicitly deferred — it's a larger, security-relevant architectural
+decision (issue #75), not a bug fix.
 
-### 4. Admin & analytics
+## External side effects: SMS is suppressed centrally, payment is a non-issue
 
-These already work for the demo account (role is `admin`). The banner just makes them discoverable. Add a brief "Demo company" callout on the admin page when in demo mode so prospects understand this is their company's data.
+Every SMS this app sends — intake, tech-action, quote-approval, invoice,
+status updates — funnels through one worker, `processSmsOutboxBatch()`
+(`src/lib/smsOutbox.ts`). That's the single place sandbox suppression is
+decided: a sandbox tenant's queued messages are marked sent with a
+`demo-simulated-*` id instead of ever calling Twilio. This is deliberately
+**not** decided per-route via `is_demo` filters — that conflates a
+data-visibility concern with an external-side-effect concern, which is
+exactly the mistake PR #74 made and had to walk back.
 
----
+Payment needed no equivalent suppression: sandbox companies are seeded with
+`payment_provider: "manual"`, and `ManualPaymentProvider`
+(`src/lib/payments/manual.ts`) never makes an external call — it only
+writes to this app's own `invoices` table.
 
-## Tech view page spec
+## What "Reset data" actually restores
 
-**Route:** `/app/(app)/demo/tech/page.tsx`
+`resetDemoTenant()` does a full destructive wipe and reseed of job-centric
+state: jobs, quotes, quote line items, status events, the SMS outbox, and
+technician `availability_status`/`current_job_id`. It also restores two
+things beyond job state to a canonical baseline:
 
-**Auth:** `getCurrentProfile()` (dispatcher session). If not demo company, redirect to `/dispatch`.
+- **Technician name/phone**, matched *positionally* (ordered by
+  `created_at`, mirroring the original seed script's insertion order) —
+  not by name, which broke silently the moment a technician was renamed.
+  `handle`/`pin`/`auth_user_id` are never touched; those are the
+  technician's actual Supabase Auth login identity.
+- **The canonical quote template** (`demoTemplate` in
+  `src/lib/demo-data.ts`), created if missing or restored if drifted.
 
-**Data fetch:**
-```ts
-// Pick the first demo tech with an active job, fallback to any tech
-const tech = await supabase
-  .from('technicians')
-  .select('id, name, current_job_id')
-  .eq('company_id', profile.company_id)
-  .not('current_job_id', 'is', null)
-  .limit(1)
-  .maybeSingle()
-```
+Deliberately **not** restored: company-level settings (name, email, phone,
+timezone, `sms_sender_name`, `payment_provider`) and user roles. There's no
+canonical source of truth for a given tenant's company settings without new
+config infrastructure (the private preview's name/email were one-time CLI
+args to the seed script, never persisted anywhere reset can read back), and
+blanket-resetting user roles risks undoing a legitimate internal admin
+account someone set up on purpose. If the demo login ever becomes
+`admin`-capable, this gap becomes more load-bearing and should be
+revisited.
 
-**Rendering:**
-- Desktop: center a `max-w-[390px]` container inside a phone-chrome frame (same rounded-[2.5rem] border-8 border-slate-800 style from the marketing mockup). Add a label above: "Field technician view · Jason K. · iPhone"
-- Mobile: render without the phone frame (the actual screen IS a phone)
-- Reuse the existing tech page JSX (extract to a shared `TechJobView` server component that both `/tech/page.tsx` and `/demo/tech/page.tsx` consume)
+## Open follow-ups (tracked under issue #75)
 
-**Interactivity:** The `TechJobActionsClient` buttons work as-is — they POST to `/api/jobs/[id]` which only checks `company_id`, not tech auth. So status transitions work live in the demo.
-
----
-
-## Demo banner component spec
-
-**File:** `src/components/DemoBanner.tsx` (server component, reads profile)
-
-**Placement:** Top of `src/app/(app)/layout.tsx` (the shared app shell), conditionally rendered:
-
-```tsx
-{profile.company?.slug === 'demo' && <DemoBanner currentPath={pathname} />}
-```
-
-**Links:**
-- Dispatcher → `/dispatch`
-- Tech view → `/demo/tech`
-- Analytics → `/analytics`
-- Admin → `/admin`
-- Reset data → server action calling `resetDemoTenant()`
-
-**Active state:** Highlights the current persona based on route prefix.
-
----
-
-## Data state for the demo
-
-For the demo to work across all three views, the seed data needs to be structured so:
-
-1. At least one technician (`Jason K.`) has `current_job_id` pointing to an active job (status `assigned` or `en_route`)
-2. Quote data exists so analytics page shows real numbers (not all dashes)
-3. `status_events` rows exist so the timeline on job detail pages is populated
-4. The nightly reset (already in place) returns to this baseline state
-
-The seed script (`scripts/seed-demo-tenant.mjs`) already creates jobs; it needs a small addition to set `current_job_id` on one technician after seeding.
-
----
-
-## Implementation order
-
-1. **Extract `TechJobView`** — pull the rendering logic out of `/tech/page.tsx` into a shared server component so both routes can use it without duplication
-2. **Add `/demo/tech` route** — demo-gated, dispatcher-authed, renders `TechJobView` in phone frame
-3. **Add `DemoBanner`** — server component, conditionally shown in `(app)` layout
-4. **Seed fix** — ensure `current_job_id` is set on a technician after seeding
-5. **Analytics data** — ensure seed creates enough accepted quotes and status events for the analytics page to show real numbers
-
----
-
-## Open questions
-
-- **Should the tech view demo buttons (En Route, Arrived, etc.) be live or blocked?** Live is more impressive but means the demo state drifts. Since the nightly reset restores it, live is probably the right call.
-- **Should we show a second demo persona credential** (`tech@swiftdispatch.app / demo`) on the marketing page as a fallback for prospects who want a real mobile test on their phone? Low engineering cost, worth considering alongside the `/demo/tech` route.
-- **Should the demo banner show a countdown to next reset?** ("Resets in 6h 22m") — adds trust, shows the sandbox is managed.
+- Whether to eventually give `TechPhoneModal` a real shared-component or
+  impersonation-based connection to the production technician UI/rules,
+  instead of its current parallel (now rule-matched, but still separate)
+  implementation. This is a larger refactor than the audit's other fixes
+  and is left as a product/architecture decision rather than done
+  unprompted; `src/lib/__tests__/demoTenantQuoteLifecycle.test.ts` and the
+  per-route regression tests already guard the rule-matching in the
+  meantime.
+- Automated coverage for the two things this repo has no test harness
+  for: rendering `/quote/[id]` and `/intake/quote/[token]` themselves
+  (vs. the data they'd render, which the E2E suite does cover), and any
+  component-level check of `KanbanBoard`, `DemoBanner`, or
+  `TechPhoneModal`'s actual DOM output. Both would need a React
+  Testing Library / jsdom render harness that doesn't exist anywhere in
+  this codebase yet.

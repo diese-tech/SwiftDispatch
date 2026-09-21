@@ -37,20 +37,60 @@ vi.mock("@/lib/jobNotifications", () => ({
   queueCustomerInvoiceSms: queueCustomerInvoiceSmsMock,
 }));
 
-function matchesFilters(row: Row, filters: [string, unknown][]) {
-  return filters.every(([column, value]) => row[column] === value);
+type Filter =
+  | { type: "eq"; column: string; value: unknown }
+  | { type: "neq"; column: string; value: unknown }
+  | { type: "not_in"; column: string; values: unknown[] };
+
+function parseNotInList(raw: string): unknown[] {
+  return raw.replace(/^\(|\)$/g, "").split(",").map((s) => s.replace(/^"|"$/g, ""));
+}
+
+function matchesFilters(row: Row, filters: Filter[]) {
+  return filters.every((f) => {
+    if (f.type === "eq") return row[f.column] === f.value;
+    if (f.type === "neq") return row[f.column] !== f.value;
+    return !f.values.includes(row[f.column]);
+  });
 }
 
 function makeSelectBuilder(getRows: () => Row[]) {
-  const filters: [string, unknown][] = [];
+  const filters: Filter[] = [];
+  let orderColumn: string | null = null;
+  let limitN: number | null = null;
   const builder = {
     eq(column: string, value: unknown) {
-      filters.push([column, value]);
+      filters.push({ type: "eq", column, value });
+      return builder;
+    },
+    neq(column: string, value: unknown) {
+      filters.push({ type: "neq", column, value });
+      return builder;
+    },
+    not(column: string, _op: string, raw: string) {
+      filters.push({ type: "not_in", column, values: parseNotInList(raw) });
+      return builder;
+    },
+    order(column: string) {
+      orderColumn = column;
+      return builder;
+    },
+    limit(n: number) {
+      limitN = n;
       return builder;
     },
     single: async () => {
       const row = getRows().find((r) => matchesFilters(r, filters));
       return row ? { data: row, error: null } : { data: null, error: { message: "Row not found" } };
+    },
+    maybeSingle: async () => {
+      let rows = getRows().filter((r) => matchesFilters(r, filters));
+      if (orderColumn) {
+        const column = orderColumn;
+        rows = [...rows].sort((a, b) => String(a[column]).localeCompare(String(b[column])));
+      }
+      if (limitN !== null) rows = rows.slice(0, limitN);
+      return { data: rows[0] ?? null, error: null };
     },
     then(resolve: (value: { data: Row[]; error: null }) => void) {
       resolve({ data: getRows().filter((r) => matchesFilters(r, filters)), error: null });
@@ -60,7 +100,7 @@ function makeSelectBuilder(getRows: () => Row[]) {
 }
 
 function makeUpdateBuilder(getRows: () => Row[], patch: Row) {
-  const filters: [string, unknown][] = [];
+  const filters: Filter[] = [];
   function applyAndFind() {
     const row = getRows().find((r) => matchesFilters(r, filters));
     if (!row) return null;
@@ -69,7 +109,7 @@ function makeUpdateBuilder(getRows: () => Row[], patch: Row) {
   }
   const builder = {
     eq(column: string, value: unknown) {
-      filters.push([column, value]);
+      filters.push({ type: "eq", column, value });
       return builder;
     },
     then(resolve: (value: { data: null; error: null }) => void) {
@@ -85,6 +125,7 @@ type Db = {
   jobs: Row[];
   quote_line_items: Row[];
   technicians: Row[];
+  companies: Row[];
 };
 
 function createFakeSupabase(db: Db) {
@@ -115,6 +156,11 @@ function createFakeSupabase(db: Db) {
       if (table === "status_events") {
         return {
           insert: async () => ({ error: null }),
+        };
+      }
+      if (table === "companies") {
+        return {
+          select: () => makeSelectBuilder(() => db.companies),
         };
       }
       throw new Error(`Unexpected table in test double: ${table}`);
@@ -148,6 +194,7 @@ function freshDb(): Db {
     ],
     quote_line_items: [{ quote_id: QUOTE_ID, price: 250, quantity: 2 }],
     technicians: [{ id: TECH_ID, company_id: COMPANY_ID, availability_status: "on_job", current_job_id: JOB_ID }],
+    companies: [{ id: COMPANY_ID, slug: "acme-hvac" }],
   };
 }
 
@@ -200,6 +247,26 @@ describe("PATCH /api/quotes/[id]/accept", () => {
     expect(queueCustomerInvoiceSmsMock).toHaveBeenCalledTimes(1);
     // requireApiRole should never be consulted on the token path
     expect(requireApiRoleMock).not.toHaveBeenCalled();
+  });
+
+  it("promotes another active job instead of releasing the technician, if one remains (issue #75)", async () => {
+    const OTHER_JOB_ID = "77777777-7777-4777-8777-777777777777";
+    db.jobs.push({
+      id: OTHER_JOB_ID,
+      status: "en_route",
+      company_id: COMPANY_ID,
+      technician_id: TECH_ID,
+      created_at: "2024-01-01T00:00:00.000Z",
+      customer_name: "Carmichael Home",
+      is_demo: false,
+    });
+
+    const token = generateQuoteApprovalToken(QUOTE_ID);
+    const response = await acceptQuote({ token });
+
+    expect(response.status).toBe(200);
+    expect(db.jobs[0].status).toBe("completed");
+    expect(db.technicians[0]).toMatchObject({ availability_status: "on_job", current_job_id: OTHER_JOB_ID });
   });
 
   it("accepts via an authenticated dispatcher (no token)", async () => {

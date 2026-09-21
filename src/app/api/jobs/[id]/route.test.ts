@@ -543,6 +543,7 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
         status: "en_route",
         technician_id: TECH_ID,
         created_at: "2024-01-01T00:00:00.000Z",
+        is_demo: false,
       });
       db.technicians[0].availability_status = "on_job";
       db.technicians[0].current_job_id = JOB_ID;
