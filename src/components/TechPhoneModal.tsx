@@ -42,6 +42,7 @@ function canTransition(current: string, target: JobStatus) {
 export default function TechPhoneModal({ demoTechId, demoTechName, companyId }: Props) {
   const [open, setOpen] = useState(false);
   const [job, setJob] = useState<ActiveJob | null>(null);
+  const [hasAcceptedQuote, setHasAcceptedQuote] = useState(false);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -57,6 +58,21 @@ export default function TechPhoneModal({ demoTechId, demoTechName, companyId }: 
       .limit(1)
       .maybeSingle();
     setJob(data as ActiveJob | null);
+
+    // Mirrors tech/page.tsx's hasAcceptedQuote check -- the real technician
+    // UI only allows "Mark Complete" once a quote has actually been
+    // accepted, not just because the state machine permits the transition.
+    if (data) {
+      const { data: quotes } = await supabase
+        .from("quotes")
+        .select("id")
+        .eq("job_id", (data as ActiveJob).id)
+        .eq("status", "accepted")
+        .limit(1);
+      setHasAcceptedQuote((quotes?.length ?? 0) > 0);
+    } else {
+      setHasAcceptedQuote(false);
+    }
   }, [demoTechId]);
 
   useEffect(() => {
@@ -201,20 +217,25 @@ export default function TechPhoneModal({ demoTechId, demoTechName, companyId }: 
                           </div>
 
                           <div className="divide-y divide-slate-100">
-                            <div className="flex items-center gap-2 px-4 py-2.5">
+                            <a
+                              className="flex items-center gap-2 px-4 py-2.5 transition hover:bg-slate-50"
+                              href={`https://maps.google.com/?q=${encodeURIComponent(job.address)}`}
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            >
                               <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                               <div>
                                 <p className="font-mono text-[8.5px] uppercase tracking-[0.06em] text-slate-400">Address</p>
                                 <p className="text-[11px] font-medium text-slate-950">{job.address}</p>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2 px-4 py-2.5">
+                            </a>
+                            <a className="flex items-center gap-2 px-4 py-2.5 transition hover:bg-slate-50" href={`tel:${job.phone}`}>
                               <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                               <div>
                                 <p className="font-mono text-[8.5px] uppercase tracking-[0.06em] text-slate-400">Customer</p>
                                 <p className="text-[11px] font-medium text-teal-700">{job.phone}</p>
                               </div>
-                            </div>
+                            </a>
                             <div className="px-4 py-2.5">
                               <p className="font-mono text-[8.5px] uppercase tracking-[0.06em] text-slate-400">Issue</p>
                               <p className="mt-0.5 text-[11px] leading-[1.5] text-slate-700">{job.issue}</p>
@@ -242,16 +263,16 @@ export default function TechPhoneModal({ demoTechId, demoTechName, companyId }: 
                               </button>
                               <button
                                 type="button"
-                                className={canTransition(job.status, "quote_pending") ? primaryBtn : ghostBtn}
-                                disabled={!canTransition(job.status, "quote_pending") || !!actionLoading}
-                                onClick={() => void postStatus("quote_pending")}
+                                className={ghostBtn}
+                                disabled
+                                title="Dispatch builds and sends the quote from the job's detail page -- a technician can't trigger this themselves."
                               >
-                                {actionLoading === "quote_pending" ? "…" : "Build Quote"}
+                                Build Quote
                               </button>
                               <button
                                 type="button"
-                                className={canTransition(job.status, "completed") ? primaryBtn : ghostBtn}
-                                disabled={!canTransition(job.status, "completed") || !!actionLoading}
+                                className={canTransition(job.status, "completed") && hasAcceptedQuote ? primaryBtn : ghostBtn}
+                                disabled={!canTransition(job.status, "completed") || !hasAcceptedQuote || !!actionLoading}
                                 onClick={() => void postStatus("completed")}
                               >
                                 {actionLoading === "completed" ? "…" : "Complete"}

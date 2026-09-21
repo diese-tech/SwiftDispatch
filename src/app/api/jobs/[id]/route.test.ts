@@ -43,15 +43,49 @@ const DISPATCHER_ID = "44444444-4444-4444-8444-444444444444";
 const TECH_AUTH_USER_ID = "66666666-6666-4666-8666-666666666666";
 const OTHER_TECH_AUTH_USER_ID = "77777777-7777-4777-8777-777777777777";
 
-function matchesFilters(row: Row, filters: [string, unknown][]) {
-  return filters.every(([column, value]) => row[column] === value);
+type Filter =
+  | { type: "eq"; column: string; value: unknown }
+  | { type: "neq"; column: string; value: unknown }
+  | { type: "not_in"; column: string; values: unknown[] };
+
+function parseNotInList(raw: string): unknown[] {
+  return raw
+    .replace(/^\(|\)$/g, "")
+    .split(",")
+    .map((s) => s.replace(/^"|"$/g, ""));
+}
+
+function matchesFilters(row: Row, filters: Filter[]) {
+  return filters.every((f) => {
+    if (f.type === "eq") return row[f.column] === f.value;
+    if (f.type === "neq") return row[f.column] !== f.value;
+    return !f.values.includes(row[f.column]);
+  });
 }
 
 function makeSelectBuilder(getRows: () => Row[], project: (row: Row) => Row) {
-  const filters: [string, unknown][] = [];
+  const filters: Filter[] = [];
+  let orderColumn: string | null = null;
+  let limitN: number | null = null;
   const builder = {
     eq(column: string, value: unknown) {
-      filters.push([column, value]);
+      filters.push({ type: "eq", column, value });
+      return builder;
+    },
+    neq(column: string, value: unknown) {
+      filters.push({ type: "neq", column, value });
+      return builder;
+    },
+    not(column: string, _op: string, raw: string) {
+      filters.push({ type: "not_in", column, values: parseNotInList(raw) });
+      return builder;
+    },
+    order(column: string) {
+      orderColumn = column;
+      return builder;
+    },
+    limit(n: number) {
+      limitN = n;
       return builder;
     },
     single: async () => {
@@ -59,15 +93,20 @@ function makeSelectBuilder(getRows: () => Row[], project: (row: Row) => Row) {
       return row ? { data: project(row), error: null } : { data: null, error: { message: "Row not found" } };
     },
     maybeSingle: async () => {
-      const row = getRows().find((r) => matchesFilters(r, filters));
-      return { data: row ? project(row) : null, error: null };
+      let rows = getRows().filter((r) => matchesFilters(r, filters));
+      if (orderColumn) {
+        const column = orderColumn;
+        rows = [...rows].sort((a, b) => String(a[column]).localeCompare(String(b[column])));
+      }
+      if (limitN !== null) rows = rows.slice(0, limitN);
+      return { data: rows[0] ? project(rows[0]) : null, error: null };
     },
   };
   return builder;
 }
 
 function makeUpdateBuilder(getRows: () => Row[], project: (row: Row) => Row, patch: Row) {
-  const filters: [string, unknown][] = [];
+  const filters: Filter[] = [];
   function applyAndFind() {
     const row = getRows().find((r) => matchesFilters(r, filters));
     if (!row) return null;
@@ -76,7 +115,7 @@ function makeUpdateBuilder(getRows: () => Row[], project: (row: Row) => Row, pat
   }
   const builder = {
     eq(column: string, value: unknown) {
-      filters.push([column, value]);
+      filters.push({ type: "eq", column, value });
       return builder;
     },
     select() {
@@ -434,6 +473,155 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
       expect(repeat.status).toBe(200);
       const repeatBody = (await repeat.json()) as { job: Row; error?: string };
       expect(repeatBody.error).toBeUndefined();
+    });
+
+    it("releases the technician back to available when a status-only transition completes their job (issue #75)", async () => {
+      // The real technician "Complete" button sends {status: 'completed'}
+      // alone -- same shape as TECHNICIAN_ALLOWED_STATUSES enforces -- so
+      // the technician_id branch never runs. Before this fix, the tech
+      // stayed on_job against a now-finished job indefinitely.
+      // quote_pending -> completed is the only valid transition into
+      // 'completed' per VALID_TRANSITIONS.
+      db.jobs[0].status = "quote_pending";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = JOB_ID;
+      asTechnician(TECH_AUTH_USER_ID);
+
+      const response = await patchJob({ status: "completed" });
+
+      expect(response.status).toBe(200);
+      expect(db.jobs[0].status).toBe("completed");
+      expect(db.technicians[0].availability_status).toBe("available");
+      expect(db.technicians[0].current_job_id).toBeNull();
+    });
+  });
+
+  describe("technician release on terminal status (issue #75)", () => {
+    it("releases the technician when a dispatcher status-only move (e.g. kanban drag) cancels the job", async () => {
+      // KanbanBoard's moveJobStatus sends {status} alone, same as the
+      // technician path above -- covers the dispatcher-driven route to the
+      // same bug.
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "assigned";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = JOB_ID;
+
+      const response = await patchJob({ status: "cancelled" });
+
+      expect(response.status).toBe(200);
+      expect(db.jobs[0].status).toBe("cancelled");
+      expect(db.technicians[0].availability_status).toBe("available");
+      expect(db.technicians[0].current_job_id).toBeNull();
+    });
+
+    it("does not touch a different technician's availability", async () => {
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "en_route";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = JOB_ID;
+      db.technicians[1].availability_status = "on_job";
+      db.technicians[1].current_job_id = "some-other-job";
+
+      const response = await patchJob({ status: "no_access" });
+
+      expect(response.status).toBe(200);
+      expect(db.technicians[1]).toMatchObject({ availability_status: "on_job", current_job_id: "some-other-job" });
+    });
+
+    it("promotes another active assignment instead of releasing, when the terminated job was the current pointer (Half-Shell review, PR #76)", async () => {
+      // Tech holds two active jobs simultaneously; current_job_id points at
+      // JOB_ID specifically. Terminating JOB_ID must not report the tech
+      // available while OTHER_JOB_ID is still open work assigned to them --
+      // it should repoint current_job_id at that remaining active job.
+      const OTHER_JOB_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "assigned";
+      db.jobs[0].created_at = "2024-01-02T00:00:00.000Z";
+      db.jobs.push({
+        id: OTHER_JOB_ID,
+        company_id: COMPANY_ID,
+        status: "en_route",
+        technician_id: TECH_ID,
+        created_at: "2024-01-01T00:00:00.000Z",
+      });
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = JOB_ID;
+
+      const response = await patchJob({ status: "cancelled" });
+
+      expect(response.status).toBe(200);
+      expect(db.jobs[0].status).toBe("cancelled");
+      expect(db.technicians[0]).toMatchObject({
+        availability_status: "on_job",
+        current_job_id: OTHER_JOB_ID,
+      });
+    });
+
+    it("does not release a technician whose current_job_id points to a different active assignment (Codex review, PR #76)", async () => {
+      // The demo seed (and the real assignment API) let one technician hold
+      // multiple simultaneous nonterminal jobs. current_job_id tracks only
+      // ONE of them -- cancelling a job that isn't the one it currently
+      // points to must not clear that other, still-active assignment.
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "assigned";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = "some-other-active-job";
+
+      const response = await patchJob({ status: "cancelled" });
+
+      expect(response.status).toBe(200);
+      expect(db.jobs[0].status).toBe("cancelled");
+      expect(db.technicians[0]).toMatchObject({
+        availability_status: "on_job",
+        current_job_id: "some-other-active-job",
+      });
+    });
+
+    it("does not release the technician if the job write itself is rejected (Codex review, PR #76)", async () => {
+      // TOCTOU: a technician's ownership changed between this route's read
+      // and its write (simulated the same way the existing TOCTOU test
+      // above does, by mutating technician_id as a side effect of the
+      // ownership-check read). The job update then matches zero rows and
+      // 403s -- the technician must not have already been released before
+      // that write was known to fail.
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "quote_pending";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = JOB_ID;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const racySupabase: any = createFakeSupabase(db);
+      const originalFrom = racySupabase.from.bind(racySupabase);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      racySupabase.from = (table: string): any => {
+        const real = originalFrom(table);
+        if (table !== "technicians") return real;
+        return {
+          ...real,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          select: (...args: unknown[]): any => {
+            const builder = real.select(...args);
+            const originalMaybeSingle = builder.maybeSingle.bind(builder);
+            builder.maybeSingle = async () => {
+              const result = await originalMaybeSingle();
+              db.jobs[0].technician_id = OTHER_TECH_ID;
+              return result;
+            };
+            return builder;
+          },
+        };
+      };
+
+      requireApiRoleMock.mockResolvedValue({
+        profile: { id: TECH_AUTH_USER_ID, email: "tech@example.com", company_id: COMPANY_ID, role: "technician" },
+        response: null,
+        supabase: racySupabase,
+      });
+
+      const response = await patchJob({ status: "completed" });
+
+      expect(response.status).toBe(403);
+      expect(db.technicians[0]).toMatchObject({ availability_status: "on_job", current_job_id: JOB_ID });
     });
   });
 

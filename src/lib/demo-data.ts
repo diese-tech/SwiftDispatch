@@ -36,6 +36,34 @@ export const demoTechnicians: DemoTechnician[] = [
   { name: "Avery Brooks", phone: "+15553459876" },
 ];
 
+export type DemoTemplateLineItem = {
+  description: string;
+  unit_price: number;
+  qty: number;
+  optional: boolean;
+};
+
+export type DemoTemplate = {
+  name: string;
+  estimated_duration_minutes: number;
+  is_active: boolean;
+  line_items: DemoTemplateLineItem[];
+};
+
+// Mirrors TEMPLATE in scripts/seed-demo-tenant.mjs (that script is a plain
+// .mjs with no bundler, so it can't import this TS module -- kept in sync
+// by hand, same pattern as SANDBOX_DEMO_SLUGS/seedDemoGuard.mjs, issue #73).
+export const demoTemplate: DemoTemplate = {
+  name: "Standard Diagnostic + Repair",
+  estimated_duration_minutes: 90,
+  is_active: true,
+  line_items: [
+    { description: "Diagnostic visit", unit_price: 89, qty: 1, optional: false },
+    { description: "Standard repair labor", unit_price: 110, qty: 1, optional: false },
+    { description: "Parts allowance", unit_price: 75, qty: 1, optional: true },
+  ],
+};
+
 export const demoJobs: DemoJob[] = [
   // new — unassigned, just came in
   {

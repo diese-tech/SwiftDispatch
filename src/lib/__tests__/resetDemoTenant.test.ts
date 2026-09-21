@@ -14,7 +14,7 @@
  * the pattern established by smsOutbox.test.ts.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { demoJobs } from "@/lib/demo-data";
+import { demoJobs, demoTechnicians, demoTemplate } from "@/lib/demo-data";
 import { resetDemoTenant } from "../resetDemoTenant";
 
 type Row = Record<string, unknown>;
@@ -234,5 +234,88 @@ describe("resetDemoTenant", () => {
     store.set("companies", [{ id: REAL_COMPANY_ID, slug: "acme-hvac", demo_mode_enabled: true }]);
 
     await expect(resetDemoTenant()).rejects.toThrow(/No sandbox demo companies found/);
+  });
+
+  describe("full baseline restoration (issue #75)", () => {
+    it("restores a technician's drifted name/phone by position, without touching their login identity", async () => {
+      // created_at establishes the same insertion order the original seed
+      // script used (Mia, Leo, Avery) -- positional matching, not name
+      // matching, is what makes restoration work even after a rename.
+      store.set("technicians", [
+        {
+          id: "tech-1",
+          company_id: PREVIEW_DEMO_ID,
+          name: "Renamed Tech",
+          phone: "+15559999999",
+          handle: "miatorrespreview",
+          pin: "1234",
+          created_at: "2024-01-01T00:00:00.000Z",
+        },
+        {
+          id: "tech-2",
+          company_id: PREVIEW_DEMO_ID,
+          name: "Leo Grant",
+          phone: "+15557654321",
+          handle: "leograntpreview",
+          pin: "5678",
+          created_at: "2024-01-01T00:00:01.000Z",
+        },
+        {
+          id: "tech-3",
+          company_id: PREVIEW_DEMO_ID,
+          name: "Avery Brooks",
+          phone: "+15553459876",
+          handle: "averybrookspreview",
+          pin: "9012",
+          created_at: "2024-01-01T00:00:02.000Z",
+        },
+      ]);
+
+      await resetDemoTenant(PREVIEW_DEMO_ID);
+
+      const restored = (store.get("technicians") ?? []).find((t) => t.id === "tech-1");
+      expect(restored).toMatchObject({
+        name: demoTechnicians[0].name,
+        phone: demoTechnicians[0].phone,
+        // Login identity is untouched by the restore.
+        handle: "miatorrespreview",
+        pin: "1234",
+      });
+    });
+
+    it("creates the canonical quote template when missing", async () => {
+      await resetDemoTenant(PREVIEW_DEMO_ID);
+
+      const templates = (store.get("quote_templates") ?? []).filter((t) => t.company_id === PREVIEW_DEMO_ID);
+      expect(templates).toHaveLength(1);
+      expect(templates[0]).toMatchObject({
+        name: demoTemplate.name,
+        estimated_duration_minutes: demoTemplate.estimated_duration_minutes,
+        is_active: true,
+      });
+    });
+
+    it("restores a drifted quote template back to the canonical baseline", async () => {
+      store.set("quote_templates", [
+        {
+          id: "tmpl-1",
+          company_id: PREVIEW_DEMO_ID,
+          name: demoTemplate.name,
+          estimated_duration_minutes: 30,
+          is_active: false,
+          line_items: [{ description: "Custom line", unit_price: 1, qty: 1, optional: false }],
+        },
+      ]);
+
+      await resetDemoTenant(PREVIEW_DEMO_ID);
+
+      const templates = (store.get("quote_templates") ?? []).filter((t) => t.company_id === PREVIEW_DEMO_ID);
+      expect(templates).toHaveLength(1);
+      expect(templates[0]).toMatchObject({
+        estimated_duration_minutes: demoTemplate.estimated_duration_minutes,
+        is_active: true,
+        line_items: demoTemplate.line_items,
+      });
+    });
   });
 });

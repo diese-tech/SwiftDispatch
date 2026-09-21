@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { isSandboxDemoCompany } from '@/lib/demo'
 import { sendSms } from '@/lib/twilio'
 
 export type SmsOutboxStatus = 'pending' | 'processing' | 'sent' | 'retrying' | 'failed'
@@ -173,6 +174,24 @@ async function loadStaleProcessingCandidates(limit: number): Promise<SmsOutboxRo
   return data as SmsOutboxRow[]
 }
 
+// Centralized sandbox suppression (issue #75, Casey Jones/Splinter): every
+// SMS this app sends -- intake, tech-action, quote-approval, invoice,
+// status updates -- funnels through this one worker, so this is the single
+// place to decide whether a sandbox tenant's messages should really reach
+// Twilio. Intentionally NOT decided per-route via is_demo filters (that
+// conflates a visibility concern with an external-side-effect concern --
+// see PR #74/#76). Batched into one query rather than a per-row lookup
+// since a batch can contain many rows for the same handful of companies.
+async function sandboxCompanyIds(companyIds: string[]): Promise<Set<string>> {
+  const uniqueIds = Array.from(new Set(companyIds))
+  if (uniqueIds.length === 0) return new Set()
+
+  const supabase = createSupabaseAdminClient()
+  const { data } = await supabase.from('companies').select('id, slug').in('id', uniqueIds)
+
+  return new Set((data ?? []).filter((c) => isSandboxDemoCompany(c)).map((c) => c.id as string))
+}
+
 // Two plain queries merged in JS, rather than one combined `.or(...)`
 // PostgREST filter string -- hand-building that string with ISO timestamps
 // (which contain '.' and ':', structurally significant in the filter DSL)
@@ -238,6 +257,7 @@ async function markRetry(message: SmsOutboxRow, errorMessage: string) {
 // documented residual risk rather than solved outright.
 export async function processSmsOutboxBatch(limit = 25) {
   const candidates = await loadCandidates(limit)
+  const sandboxIds = await sandboxCompanyIds(candidates.map((c) => c.company_id))
   let processed = 0
   let staleReclaimed = 0
   let sent = 0
@@ -253,7 +273,12 @@ export async function processSmsOutboxBatch(limit = 25) {
     if (wasStale) staleReclaimed += 1
 
     try {
-      const providerMessageId = await sendSms(claimed.to_phone, claimed.body)
+      // Sandbox tenants simulate delivery instead of reaching Twilio -- the
+      // seeded phone numbers are NANP-invalid anyway (see PR #74), but this
+      // makes that a deliberate policy rather than an accident of fake data.
+      const providerMessageId = sandboxIds.has(claimed.company_id)
+        ? `demo-simulated-${claimed.id}`
+        : await sendSms(claimed.to_phone, claimed.body)
       await markSent(claimed, providerMessageId)
       sent += 1
     } catch (error) {

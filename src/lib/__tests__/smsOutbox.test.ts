@@ -116,19 +116,44 @@ function makeUpdateBuilder(getRows: () => Row[], patch: Row) {
   return builder;
 }
 
-function createFakeSupabase(rows: Row[]) {
+function makeCompaniesSelectBuilder(getRows: () => Row[]) {
+  const filters: Filter[] = [];
+  const builder = {
+    in(column: string, values: unknown[]) {
+      filters.push({ type: "in", column, values });
+      return builder;
+    },
+    then(resolve: (value: { data: Row[]; error: null }) => void) {
+      resolve({ data: getRows().filter((r) => matchesFilters(r, filters)), error: null });
+    },
+  };
+  return builder;
+}
+
+function createFakeSupabase(rows: Row[], companies: Row[] = [{ id: COMPANY_ID, slug: "acme-hvac" }]) {
   return {
     from(table: string) {
-      if (table !== "sms_outbox") throw new Error(`Unexpected table in test double: ${table}`);
-      return {
-        select: () => makeSelectBuilder(() => rows),
-        update: (patch: Row) => makeUpdateBuilder(() => rows, patch),
-      };
+      if (table === "sms_outbox") {
+        return {
+          select: () => makeSelectBuilder(() => rows),
+          update: (patch: Row) => makeUpdateBuilder(() => rows, patch),
+        };
+      }
+      if (table === "companies") {
+        return {
+          select: () => makeCompaniesSelectBuilder(() => companies),
+          update: () => {
+            throw new Error("Unexpected update() on companies test double");
+          },
+        };
+      }
+      throw new Error(`Unexpected table in test double: ${table}`);
     },
   };
 }
 
 const COMPANY_ID = "11111111-1111-4111-8111-111111111111";
+const SANDBOX_COMPANY_ID = "99999999-9999-4999-8999-999999999999";
 
 let idCounter = 0;
 
@@ -163,12 +188,14 @@ function minutesAgo(n: number) {
 
 describe("processSmsOutboxBatch", () => {
   let rows: Row[];
+  let companies: Row[];
 
   beforeEach(() => {
     rows = [];
+    companies = [{ id: COMPANY_ID, slug: "acme-hvac" }];
     sendSmsMock.mockReset();
     createSupabaseAdminClientMock.mockReset();
-    createSupabaseAdminClientMock.mockImplementation(() => createFakeSupabase(rows));
+    createSupabaseAdminClientMock.mockImplementation(() => createFakeSupabase(rows, companies));
   });
 
   it("sends a pending message and marks it sent", async () => {
@@ -181,6 +208,33 @@ describe("processSmsOutboxBatch", () => {
     expect(rows[0].status).toBe("sent");
     expect(rows[0].provider_message_id).toBe("SM123");
     expect(rows[0].locked_at).toBeNull();
+  });
+
+  it("simulates delivery for a sandbox tenant without calling Twilio (issue #75)", async () => {
+    companies.push({ id: SANDBOX_COMPANY_ID, slug: "swiftdispatch-preview" });
+    rows.push(freshRow({ status: "pending", company_id: SANDBOX_COMPANY_ID }));
+
+    const summary = await processSmsOutboxBatch();
+
+    expect(summary).toMatchObject({ processed: 1, sent: 1, retried: 0, failed: 0 });
+    expect(sendSmsMock).not.toHaveBeenCalled();
+    expect(rows[0].status).toBe("sent");
+    expect(rows[0].provider_message_id).toContain("demo-simulated");
+  });
+
+  it("still calls Twilio for an ordinary company's message in the same batch as a sandbox one", async () => {
+    companies.push({ id: SANDBOX_COMPANY_ID, slug: "swiftdispatch-preview" });
+    rows.push(freshRow({ status: "pending", company_id: SANDBOX_COMPANY_ID, id: "sandbox-msg" }));
+    rows.push(freshRow({ status: "pending", company_id: COMPANY_ID, id: "real-msg" }));
+    sendSmsMock.mockResolvedValue("SM123");
+
+    const summary = await processSmsOutboxBatch();
+
+    expect(summary).toMatchObject({ processed: 2, sent: 2 });
+    expect(sendSmsMock).toHaveBeenCalledTimes(1);
+    expect(sendSmsMock).toHaveBeenCalledWith(rows[1].to_phone, rows[1].body);
+    expect(rows.find((r) => r.id === "sandbox-msg")?.provider_message_id).toContain("demo-simulated");
+    expect(rows.find((r) => r.id === "real-msg")?.provider_message_id).toBe("SM123");
   });
 
   it("moves a message to retrying on provider failure, advancing attempt_count and backoff", async () => {
