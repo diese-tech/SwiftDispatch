@@ -488,6 +488,73 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
       expect(response.status).toBe(200);
       expect(db.technicians[1]).toMatchObject({ availability_status: "on_job", current_job_id: "some-other-job" });
     });
+
+    it("does not release a technician whose current_job_id points to a different active assignment (Codex review, PR #76)", async () => {
+      // The demo seed (and the real assignment API) let one technician hold
+      // multiple simultaneous nonterminal jobs. current_job_id tracks only
+      // ONE of them -- cancelling a job that isn't the one it currently
+      // points to must not clear that other, still-active assignment.
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "assigned";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = "some-other-active-job";
+
+      const response = await patchJob({ status: "cancelled" });
+
+      expect(response.status).toBe(200);
+      expect(db.jobs[0].status).toBe("cancelled");
+      expect(db.technicians[0]).toMatchObject({
+        availability_status: "on_job",
+        current_job_id: "some-other-active-job",
+      });
+    });
+
+    it("does not release the technician if the job write itself is rejected (Codex review, PR #76)", async () => {
+      // TOCTOU: a technician's ownership changed between this route's read
+      // and its write (simulated the same way the existing TOCTOU test
+      // above does, by mutating technician_id as a side effect of the
+      // ownership-check read). The job update then matches zero rows and
+      // 403s -- the technician must not have already been released before
+      // that write was known to fail.
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "quote_pending";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = JOB_ID;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const racySupabase: any = createFakeSupabase(db);
+      const originalFrom = racySupabase.from.bind(racySupabase);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      racySupabase.from = (table: string): any => {
+        const real = originalFrom(table);
+        if (table !== "technicians") return real;
+        return {
+          ...real,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          select: (...args: unknown[]): any => {
+            const builder = real.select(...args);
+            const originalMaybeSingle = builder.maybeSingle.bind(builder);
+            builder.maybeSingle = async () => {
+              const result = await originalMaybeSingle();
+              db.jobs[0].technician_id = OTHER_TECH_ID;
+              return result;
+            };
+            return builder;
+          },
+        };
+      };
+
+      requireApiRoleMock.mockResolvedValue({
+        profile: { id: TECH_AUTH_USER_ID, email: "tech@example.com", company_id: COMPANY_ID, role: "technician" },
+        response: null,
+        supabase: racySupabase,
+      });
+
+      const response = await patchJob({ status: "completed" });
+
+      expect(response.status).toBe(403);
+      expect(db.technicians[0]).toMatchObject({ availability_status: "on_job", current_job_id: JOB_ID });
+    });
   });
 
   describe("cross-tenant isolation (issue #49)", () => {

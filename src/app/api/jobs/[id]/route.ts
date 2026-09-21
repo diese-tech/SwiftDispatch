@@ -181,24 +181,31 @@ export async function PATCH(
         .update({ availability_status: 'available', current_job_id: null })
         .eq('id', currentJob.technician_id)
     }
-  } else if (
-    currentJob.technician_id &&
+  }
+
+  // A status-only transition to a terminal status (e.g. the real technician
+  // "Complete" button, which sends {status: 'completed'} alone -- see
+  // TECHNICIAN_ALLOWED_STATUSES above) never touches the technician_id
+  // branch above, so without this the technician stayed on_job against a
+  // job that had already finished. Quote acceptance (/api/quotes/[id]/
+  // accept) already releases the technician on its own completed
+  // transition; this mirrors that for every other path a job reaches a
+  // terminal status through this route.
+  //
+  // Deferred and scoped per Codex review on PR #76:
+  // - deferred until after the job write below succeeds, so a failed or
+  //   ownership-rejected update (technicianOwnerId mismatch) never leaves
+  //   the technician released against a job that's still actually theirs.
+  // - scoped to current_job_id = id at write time (not just at technician_id)
+  //   because the demo seed (and the real assignment API) allow a
+  //   technician to hold multiple simultaneous nonterminal jobs; releasing
+  //   them unconditionally could clear a *different*, still-active
+  //   assignment their current_job_id had since moved to.
+  const shouldReleaseTerminalTechnician =
+    !('technician_id' in parsed.data) &&
+    !!currentJob.technician_id &&
     typeof patch.status === 'string' &&
     TERMINAL_STATUSES.includes(patch.status as JobStatus)
-  ) {
-    // A status-only transition to a terminal status (e.g. the real
-    // technician "Complete" button, which sends {status: 'completed'}
-    // alone -- see TECHNICIAN_ALLOWED_STATUSES above) never touches the
-    // technician_id branch, so without this the technician stayed on_job
-    // against a job that had already finished. Quote acceptance
-    // (/api/quotes/[id]/accept) already releases the technician on its own
-    // completed transition; this mirrors that for every other path a job
-    // reaches a terminal status through this route.
-    await supabase
-      .from('technicians')
-      .update({ availability_status: 'available', current_job_id: null })
-      .eq('id', currentJob.technician_id)
-  }
 
   if (Object.keys(patch).length === 0) {
     // A requested status that already matches persisted state is a legitimate
@@ -251,6 +258,14 @@ export async function PATCH(
     return technicianOwnerId
       ? NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       : NextResponse.json({ error: 'Job not found' }, { status: 404 })
+  }
+
+  if (shouldReleaseTerminalTechnician) {
+    await supabase
+      .from('technicians')
+      .update({ availability_status: 'available', current_job_id: null })
+      .eq('id', currentJob.technician_id as string)
+      .eq('current_job_id', id)
   }
 
   // Write status event if status changed. status_events has no INSERT RLS
