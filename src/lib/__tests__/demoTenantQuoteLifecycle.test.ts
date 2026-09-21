@@ -2,12 +2,18 @@
  * End-to-end sandbox-tenant quote lifecycle (issue #75, Phase 1/4): drives
  * the real route handlers in sequence -- POST /api/quotes -> POST .../line-
  * items -> POST /api/send-sms -> PATCH .../accept (or POST .../decline) --
- * against one shared in-memory fake Supabase, the way a prospect's actual
- * click-through would exercise them. Per-route unit coverage for the
- * sandbox-vs-ordinary is_demo visibility contract already exists (see
+ * against one shared in-memory fake Supabase. Per-route unit coverage for
+ * the sandbox-vs-ordinary is_demo visibility contract already exists (see
  * src/app/api/quotes/route.test.ts and its siblings); this file's job is
  * proving the *sequence* works end to end and that technician state comes
  * out correct at the finish line, not re-litigating that contract.
+ *
+ * Deliberately NOT covered: rendering /quote/[id] or /intake/quote/[token]
+ * themselves. This repo has no page-component test infrastructure (no
+ * React Testing Library / jsdom render harness is set up anywhere), so a
+ * regression that breaks either preview page while the underlying data is
+ * correct would not be caught here -- only by manual or e2e-browser testing.
+ * Building that harness is out of scope for this file.
  *
  * Same "call the exported handler directly" pattern used throughout this
  * repo (src/app/api/jobs/[id]/route.test.ts, resetDemoTenant.test.ts) --

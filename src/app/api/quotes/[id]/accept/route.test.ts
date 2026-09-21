@@ -125,6 +125,7 @@ type Db = {
   jobs: Row[];
   quote_line_items: Row[];
   technicians: Row[];
+  companies: Row[];
 };
 
 function createFakeSupabase(db: Db) {
@@ -155,6 +156,11 @@ function createFakeSupabase(db: Db) {
       if (table === "status_events") {
         return {
           insert: async () => ({ error: null }),
+        };
+      }
+      if (table === "companies") {
+        return {
+          select: () => makeSelectBuilder(() => db.companies),
         };
       }
       throw new Error(`Unexpected table in test double: ${table}`);
@@ -188,6 +194,7 @@ function freshDb(): Db {
     ],
     quote_line_items: [{ quote_id: QUOTE_ID, price: 250, quantity: 2 }],
     technicians: [{ id: TECH_ID, company_id: COMPANY_ID, availability_status: "on_job", current_job_id: JOB_ID }],
+    companies: [{ id: COMPANY_ID, slug: "acme-hvac" }],
   };
 }
 
@@ -251,6 +258,7 @@ describe("PATCH /api/quotes/[id]/accept", () => {
       technician_id: TECH_ID,
       created_at: "2024-01-01T00:00:00.000Z",
       customer_name: "Carmichael Home",
+      is_demo: false,
     });
 
     const token = generateQuoteApprovalToken(QUOTE_ID);
