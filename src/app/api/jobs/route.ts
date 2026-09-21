@@ -26,7 +26,6 @@ export async function GET() {
     .from('jobs')
     .select('*, technicians!jobs_technician_id_fkey(id,name,phone)')
     .eq('company_id', profile.company_id)
-    .eq('is_demo', false)
     .not('status', 'in', '("completed","cancelled")')
     .order('created_at', { ascending: false })
 

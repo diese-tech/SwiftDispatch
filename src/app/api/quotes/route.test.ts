@@ -33,9 +33,7 @@ function allowedDispatcherContext() {
         if (table === "quotes") {
           return {
             select: () => ({
-              eq: () => ({
-                eq: () => ({ order: () => ({ limit: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
-              }),
+              eq: () => ({ order: () => ({ limit: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
             }),
             insert: () => ({ select: () => ({ single: async () => ({ data: { id: "quote-1" }, error: null }) }) }),
           };

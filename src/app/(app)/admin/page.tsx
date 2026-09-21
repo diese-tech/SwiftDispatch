@@ -32,7 +32,7 @@ export default async function AdminPage() {
   const supabase = await createSupabaseServerClient();
   const [companyResult, jobsResult, techsResult, usersResult] = await Promise.all([
     supabase.from("companies").select("id,name,email,phone,slug,timezone,sms_sender_name,payment_provider").eq("id", profile.company_id).single(),
-    supabase.from("jobs").select("id,status").eq("company_id", profile.company_id).eq("is_demo", false).order("created_at", { ascending: false }),
+    supabase.from("jobs").select("id,status").eq("company_id", profile.company_id).order("created_at", { ascending: false }),
     supabase.from("technicians").select("id,name,availability_status").eq("company_id", profile.company_id).order("name"),
     supabase.from("users").select("id,email,role").eq("company_id", profile.company_id).order("email"),
   ]);

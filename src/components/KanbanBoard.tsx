@@ -87,7 +87,6 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
         .from("jobs")
         .select("*, technicians!jobs_technician_id_fkey(id,name,phone)")
         .eq("company_id", companyId)
-        .eq("is_demo", false)
         .order("created_at", { ascending: false });
       if (data) {
         startTransition(() => {

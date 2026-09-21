@@ -232,6 +232,11 @@ async function seedJobs(companyId, techIds) {
 
   const now = Date.now();
   let seeded = 0;
+  const TERMINAL_STATUSES = ["completed", "cancelled", "no_access"];
+  // Oldest active job per technician wins -- matches the (technician_id, status)
+  // semantics PATCH /api/jobs/[id] uses for real assignments, so the tech rail's
+  // "on job" state agrees with what the kanban cards show for this tech.
+  const techActiveJobs = new Map();
 
   for (const demoJob of DEMO_JOBS) {
     const createdAt = new Date(now - demoJob.ageMinutes * 60_000);
@@ -268,6 +273,13 @@ async function seedJobs(companyId, techIds) {
     const { data: job, error: jobError } = await supabase.from("jobs").insert(jobPayload).select("id").single();
     if (jobError || !job) { console.error(`Failed to insert ${demoJob.customerName}:`, jobError?.message); continue; }
 
+    if (isAssigned && techId && !TERMINAL_STATUSES.includes(demoJob.status)) {
+      const existing = techActiveJobs.get(techId);
+      if (!existing || createdAt.getTime() < existing.createdAt) {
+        techActiveJobs.set(techId, { jobId: job.id, createdAt: createdAt.getTime() });
+      }
+    }
+
     const events = [{ from: null, to: "new", offsetMs: 0, role: demoJob.source === "intake" ? "customer" : "dispatcher" }];
     if (isAssigned) events.push({ from: "new", to: "assigned", offsetMs: 8 * 60_000, role: "dispatcher" });
     if (["en_route", "in_progress", "quote_pending", "completed"].includes(demoJob.status)) events.push({ from: "assigned", to: "en_route", offsetMs: 18 * 60_000, role: "technician" });
@@ -286,6 +298,12 @@ async function seedJobs(companyId, techIds) {
     }
 
     seeded++;
+  }
+
+  // Reflect each technician's active job in their availability, so the tech
+  // rail (available/on job) agrees with what the kanban cards show them doing.
+  for (const [techId, { jobId }] of techActiveJobs) {
+    await supabase.from("technicians").update({ availability_status: "on_job", current_job_id: jobId }).eq("id", techId);
   }
 
   return seeded;

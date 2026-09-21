@@ -360,16 +360,19 @@ describe("GET /api/jobs", () => {
     requireApiRoleAs(db, "dispatcher");
   });
 
-  it("returns only company-scoped, non-demo, non-terminal jobs", async () => {
+  it("returns only company-scoped, non-terminal jobs, including demo ones", async () => {
     const response = await listJobs();
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as { jobs: Row[] };
     const ids = body.jobs.map((j) => j.id);
+    // job-existing-demo proves a sandbox tenant (whose jobs are all
+    // is_demo=true) isn't filtered down to nothing -- company_id is the only
+    // tenant boundary here, matching every other read path in the app.
     // job-other-company proves the company_id filter is actually doing
-    // something, not just the demo/status filters (which alone wouldn't
-    // exclude it -- it's neither demo nor terminal).
-    expect(ids).toEqual(["job-existing-active"]);
+    // something, not just the status filter (which alone wouldn't exclude it
+    // -- it's not terminal).
+    expect(ids.sort()).toEqual(["job-existing-active", "job-existing-demo"]);
     expect(ids).not.toContain("job-other-company");
   });
 });
