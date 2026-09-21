@@ -45,6 +45,10 @@ function makeSelectBuilder(getRows: () => Row[]) {
       const row = getRows().find((r) => matchesFilters(r, filters));
       return row ? { data: row, error: null } : { data: null, error: { message: "Row not found" } };
     },
+    maybeSingle: async () => {
+      const row = getRows().find((r) => matchesFilters(r, filters));
+      return { data: row ?? null, error: null };
+    },
   };
   return builder;
 }
@@ -65,7 +69,7 @@ function makeUpdateBuilder(getRows: () => Row[], patch: Row) {
   return builder;
 }
 
-type Db = { quotes: Row[] };
+type Db = { quotes: Row[]; companies: Row[] };
 
 function createFakeSupabase(db: Db) {
   return {
@@ -75,6 +79,9 @@ function createFakeSupabase(db: Db) {
           select: () => makeSelectBuilder(() => db.quotes),
           update: (patch: Row) => makeUpdateBuilder(() => db.quotes, patch),
         };
+      }
+      if (table === "companies") {
+        return { select: () => makeSelectBuilder(() => db.companies) };
       }
       throw new Error(`Unexpected table in test double: ${table}`);
     },
@@ -97,6 +104,7 @@ function freshDb(): Db {
         jobs: { id: JOB_ID, phone: "+15550000002", company_id: COMPANY_ID, sms_consent_type: "intake_form" },
       },
     ],
+    companies: [{ id: COMPANY_ID, slug: "acme-hvac" }],
   };
 }
 
@@ -168,5 +176,59 @@ describe("POST /api/send-sms", () => {
     const body = (await response.json()) as { ok: boolean; warning?: string };
     expect(body.warning).toBeTruthy();
     expect(db.quotes[0].status).toBe("sent");
+  });
+});
+
+// Half-Shell review on this PR (echoing the Codex finding on GET /api/jobs):
+// a sandbox tenant's is_demo=true quotes must stay sendable here, while an
+// ordinary company's is_demo=true rows (load-test/live-QA traffic -- see
+// scripts/load-tech-actions.mjs) must stay hidden/unfindable.
+describe("POST /api/send-sms - is_demo visibility", () => {
+  const SANDBOX_COMPANY_ID = "22222222-2222-4222-8222-222222222222";
+
+  beforeEach(() => {
+    requireApiRoleMock.mockReset();
+    enqueueSmsMock.mockReset();
+    enqueueSmsMock.mockResolvedValue(undefined);
+  });
+
+  it("sandbox tenant: can send an is_demo=true quote", async () => {
+    const db: Db = {
+      quotes: [
+        {
+          id: QUOTE_ID,
+          is_demo: true,
+          status: "draft",
+          jobs: { id: JOB_ID, phone: "+15550000002", company_id: SANDBOX_COMPANY_ID, sms_consent_type: "intake_form" },
+        },
+      ],
+      companies: [{ id: SANDBOX_COMPANY_ID, slug: "swiftdispatch-preview" }],
+    };
+    requireApiRoleAs(db, SANDBOX_COMPANY_ID);
+
+    const response = await sendSms({ quote_id: QUOTE_ID });
+
+    expect(response.status).toBe(200);
+    expect(db.quotes[0].status).toBe("sent");
+  });
+
+  it("ordinary tenant: an is_demo=true quote (load-test traffic) is not found for sending", async () => {
+    const db: Db = {
+      quotes: [
+        {
+          id: QUOTE_ID,
+          is_demo: true,
+          status: "draft",
+          jobs: { id: JOB_ID, phone: "+15550000002", company_id: COMPANY_ID, sms_consent_type: "intake_form" },
+        },
+      ],
+      companies: [{ id: COMPANY_ID, slug: "acme-hvac" }],
+    };
+    requireApiRoleAs(db, COMPANY_ID);
+
+    const response = await sendSms({ quote_id: QUOTE_ID });
+
+    expect(response.status).toBe(404);
+    expect(enqueueSmsMock).not.toHaveBeenCalled();
   });
 });

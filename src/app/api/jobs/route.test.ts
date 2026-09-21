@@ -372,4 +372,15 @@ describe("GET /api/jobs", () => {
     expect(ids).toEqual(["job-existing-active"]);
     expect(ids).not.toContain("job-other-company");
   });
+
+  it("includes demo jobs for a sandbox tenant (whose jobs are all is_demo=true)", async () => {
+    db.companies[0].slug = "swiftdispatch-preview";
+    const response = await listJobs();
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { jobs: Row[] };
+    const ids = body.jobs.map((j) => j.id).sort();
+    expect(ids).toEqual(["job-existing-active", "job-existing-demo"]);
+    expect(ids).not.toContain("job-other-company");
+  });
 });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireApiRole } from '@/lib/auth'
+import { isCompanySandboxDemo } from '@/lib/demo'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { queueCustomerStatusSms, queueTechnicianAssignmentSms } from '@/lib/jobNotifications'
 import type { SmsConsentType } from '@/lib/smsGate'
@@ -22,13 +23,14 @@ export async function GET() {
   const { profile, response, supabase } = await requireApiRole(['dispatcher', 'admin'])
   if (response || !profile) return response
 
-  const { data, error } = await supabase
+  const isSandbox = await isCompanySandboxDemo(supabase, profile.company_id)
+  let query = supabase
     .from('jobs')
     .select('*, technicians!jobs_technician_id_fkey(id,name,phone)')
     .eq('company_id', profile.company_id)
-    .eq('is_demo', false)
     .not('status', 'in', '("completed","cancelled")')
-    .order('created_at', { ascending: false })
+  if (!isSandbox) query = query.eq('is_demo', false)
+  const { data, error } = await query.order('created_at', { ascending: false })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 })

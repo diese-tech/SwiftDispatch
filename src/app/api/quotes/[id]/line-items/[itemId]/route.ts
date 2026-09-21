@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiRole } from "@/lib/auth";
+import { isCompanySandboxDemo } from "@/lib/demo";
 import { sumLineItems } from "@/lib/quotePricing";
 
 async function assertQuoteOwnership(
@@ -7,13 +8,14 @@ async function assertQuoteOwnership(
   quoteId: string,
   companyId: string,
 ) {
-  return supabase
+  const isSandbox = await isCompanySandboxDemo(supabase, companyId);
+  let query = supabase
     .from("quotes")
     .select("id,jobs!inner(company_id)")
     .eq("id", quoteId)
-    .eq("is_demo", false)
-    .eq("jobs.company_id", companyId)
-    .single();
+    .eq("jobs.company_id", companyId);
+  if (!isSandbox) query = query.eq("is_demo", false);
+  return query.single();
 }
 
 async function recomputeQuoteTotal(

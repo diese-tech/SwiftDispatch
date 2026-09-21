@@ -35,6 +35,10 @@ function makeSelectBuilder(getRows: () => Row[]) {
       const row = getRows().find((r) => matchesFilters(r, filters));
       return row ? { data: row, error: null } : { data: null, error: { message: "Row not found" } };
     },
+    maybeSingle: async () => {
+      const row = getRows().find((r) => matchesFilters(r, filters));
+      return { data: row ?? null, error: null };
+    },
     then(resolve: (value: { data: Row[]; error: null }) => void) {
       resolve({ data: getRows().filter((r) => matchesFilters(r, filters)), error: null });
     },
@@ -72,7 +76,7 @@ function makeUpdateBuilder(getRows: () => Row[], patch: Row) {
   return builder;
 }
 
-type Db = { quotes: Row[]; quote_line_items: Row[] };
+type Db = { quotes: Row[]; quote_line_items: Row[]; companies: Row[] };
 
 function createFakeSupabase(db: Db) {
   return {
@@ -89,6 +93,9 @@ function createFakeSupabase(db: Db) {
           insert: (row: Row) => makeInsertBuilder(() => db.quote_line_items, row),
         };
       }
+      if (table === "companies") {
+        return { select: () => makeSelectBuilder(() => db.companies) };
+      }
       throw new Error(`Unexpected table in test double: ${table}`);
     },
   };
@@ -103,6 +110,7 @@ function freshDb(): Db {
   return {
     quotes: [{ id: QUOTE_ID, is_demo: false, jobs: { company_id: COMPANY_ID } }],
     quote_line_items: [{ id: "item-existing", quote_id: QUOTE_ID, name: "Filter", price: 50, quantity: 1 }],
+    companies: [{ id: COMPANY_ID, slug: "acme-hvac" }],
   };
 }
 
@@ -167,5 +175,53 @@ describe("POST /api/quotes/[id]/line-items", () => {
 
     expect(response.status).toBe(403);
     expect(requireApiRoleMock).toHaveBeenCalledWith(["dispatcher", "admin"]);
+  });
+});
+
+// Half-Shell review on this PR (echoing the Codex finding on GET /api/jobs):
+// a sandbox tenant's is_demo=true quotes must stay mutable here, while an
+// ordinary company's is_demo=true rows (load-test/live-QA traffic -- see
+// scripts/load-tech-actions.mjs) must stay hidden/unfindable.
+describe("POST /api/quotes/[id]/line-items - is_demo visibility", () => {
+  const SANDBOX_COMPANY_ID = "88888888-8888-4888-8888-888888888888";
+
+  beforeEach(() => {
+    requireApiRoleMock.mockReset();
+  });
+
+  it("sandbox tenant: can add a line item to an is_demo=true quote", async () => {
+    const db: Db = {
+      quotes: [{ id: QUOTE_ID, is_demo: true, jobs: { company_id: SANDBOX_COMPANY_ID } }],
+      quote_line_items: [],
+      companies: [{ id: SANDBOX_COMPANY_ID, slug: "swiftdispatch-preview" }],
+    };
+    requireApiRoleMock.mockResolvedValue({
+      profile: { id: DISPATCHER_ID, email: "dispatcher@example.com", company_id: SANDBOX_COMPANY_ID, role: "dispatcher" },
+      response: null,
+      supabase: createFakeSupabase(db),
+    });
+
+    const response = await addLineItem({ name: "Diagnostic", price: 89, quantity: 1 });
+
+    expect(response.status).toBe(200);
+    expect(db.quote_line_items).toHaveLength(1);
+  });
+
+  it("ordinary tenant: an is_demo=true quote (load-test traffic) is not found", async () => {
+    const db: Db = {
+      quotes: [{ id: QUOTE_ID, is_demo: true, jobs: { company_id: COMPANY_ID } }],
+      quote_line_items: [],
+      companies: [{ id: COMPANY_ID, slug: "acme-hvac" }],
+    };
+    requireApiRoleMock.mockResolvedValue({
+      profile: { id: DISPATCHER_ID, email: "dispatcher@example.com", company_id: COMPANY_ID, role: "dispatcher" },
+      response: null,
+      supabase: createFakeSupabase(db),
+    });
+
+    const response = await addLineItem({ name: "Diagnostic", price: 89, quantity: 1 });
+
+    expect(response.status).toBe(404);
+    expect(db.quote_line_items).toHaveLength(0);
   });
 });

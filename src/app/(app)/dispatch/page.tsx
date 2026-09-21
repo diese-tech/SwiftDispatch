@@ -5,7 +5,7 @@ import TechPhoneModal from "@/components/TechPhoneModal";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isDemoCompany } from "@/lib/demo";
+import { isDemoCompany, isSandboxDemoCompany } from "@/lib/demo";
 import { demoTechnicians } from "@/lib/demo-data";
 import type { JobWithTechnician, Technician } from "@/types/db";
 
@@ -67,11 +67,19 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
     supabase.from("sms_outbox").select("job_id").eq("company_id", companyId).eq("status", "failed"),
   ]);
 
-  const allJobs = (jobs ?? []) as JobWithTechnician[];
   const techList = (technicians ?? []) as Technician[];
   const companyData = (companyRes as { data: { name: string; slug: string | null; demo_mode_enabled: boolean } | null }).data;
   const companyName = companyData?.name ?? companyId;
+  // Independent of `impersonating` -- this reflects whether the COMPANY's own
+  // rows are all synthetic, not who's currently viewing them. A load-tested
+  // ordinary company must hide its is_demo=true rows here the same way its
+  // own dispatcher's board (and KanbanBoard's realtime refetch) does; a
+  // sandbox tenant must show them even when a super_admin is impersonating
+  // it, or platform support would see an empty board for it.
+  const companyIsSandbox = isSandboxDemoCompany(companyData);
+  const allJobs = ((jobs ?? []) as JobWithTechnician[]).filter((j) => companyIsSandbox || !j.is_demo);
   const isDemo = !impersonating && isDemoCompany(companyData);
+  const isSandboxDemo = !impersonating && companyIsSandbox;
   const smsFailedJobIds = (failedSms ?? []).map((r: { job_id: string | null }) => r.job_id).filter(Boolean) as string[];
   const activeCount = allJobs.filter((j) => !["completed", "cancelled"].includes(j.status)).length;
 
@@ -116,7 +124,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_260px]">
-        <KanbanBoard companyId={companyId} initialJobs={allJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} />
+        <KanbanBoard companyId={companyId} initialJobs={allJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} isSandboxDemo={isSandboxDemo} />
         {!impersonating && <TechRail companyId={companyId} initialTechnicians={techList} />}
       </div>
 

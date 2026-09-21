@@ -105,6 +105,11 @@ async function resetOneCompany(admin: AdminClient, companyId: string): Promise<{
   // Re-seed fresh jobs
   const now = Date.now()
   let seeded = 0
+  const TERMINAL_STATUSES = ['completed', 'cancelled', 'no_access']
+  // Oldest active job per technician wins -- matches the (technician_id, status)
+  // semantics PATCH /api/jobs/[id] uses for real assignments, so the tech rail's
+  // "on job" state agrees with what the kanban cards show for this tech.
+  const techActiveJobs = new Map<string, { jobId: string; createdAt: number }>()
 
   for (const demoJob of demoJobs) {
     const createdAt = new Date(now - demoJob.ageMinutes * 60_000)
@@ -150,6 +155,13 @@ async function resetOneCompany(admin: AdminClient, companyId: string): Promise<{
 
     const { data: job } = await admin.from('jobs').insert(jobPayload).select('id').single()
     if (!job) continue
+
+    if (isAssigned && techId && !TERMINAL_STATUSES.includes(demoJob.status)) {
+      const existing = techActiveJobs.get(techId)
+      if (!existing || createdAt.getTime() < existing.createdAt) {
+        techActiveJobs.set(techId, { jobId: job.id, createdAt: createdAt.getTime() })
+      }
+    }
 
     // Status event history
     const events: Array<{ from: string | null; to: string; offsetMs: number; role: string }> = [
@@ -215,22 +227,10 @@ async function resetOneCompany(admin: AdminClient, companyId: string): Promise<{
     seeded++
   }
 
-  // Set current_job_id on Mia Torres (demo tech 0) to her most active job
-  const miaId = techIds[0]
-  if (miaId) {
-    const { data: miaJob } = await admin
-      .from('jobs')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('technician_id', miaId)
-      .not('status', 'in', '("completed","cancelled","no_access")')
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-
-    if (miaJob) {
-      await admin.from('technicians').update({ current_job_id: miaJob.id }).eq('id', miaId)
-    }
+  // Reflect each technician's active job in their availability, so the tech
+  // rail (available/on job) agrees with what the kanban cards show them doing.
+  for (const [techId, { jobId }] of techActiveJobs) {
+    await admin.from('technicians').update({ availability_status: 'on_job', current_job_id: jobId }).eq('id', techId)
   }
 
   return { jobsSeeded: seeded }

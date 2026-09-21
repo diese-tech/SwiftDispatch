@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiRole } from "@/lib/auth";
+import { isCompanySandboxDemo } from "@/lib/demo";
 import { generateQuoteApprovalToken } from "@/lib/quoteTokens";
 import { assertSmsConsent } from "@/lib/smsGate";
 import { firstSms } from "@/lib/twilio";
@@ -21,13 +22,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'quote_id is required' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const isSandbox = await isCompanySandboxDemo(supabase, profile.company_id);
+  let quoteQuery = supabase
     .from("quotes")
     .select("id, jobs!inner(id,phone,company_id,sms_consent_type)")
     .eq("id", quote_id)
-    .eq("is_demo", false)
-    .eq("jobs.company_id", profile.company_id)
-    .single();
+    .eq("jobs.company_id", profile.company_id);
+  if (!isSandbox) quoteQuery = quoteQuery.eq("is_demo", false);
+  const { data, error } = await quoteQuery.single();
 
   if (error || !data || !data.jobs) {
     return NextResponse.json({ error: "Quote not found" }, { status: 404 });
