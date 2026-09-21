@@ -37,6 +37,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import { validateSeedConfig } from "./lib/seedDemoGuard.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -95,6 +96,16 @@ const TECHNICIANS = [
   { name: "Leo Grant",    phone: "+15557654321", handle: `leogrant${HANDLE_SUFFIX}`,    pin: "5678", authPassword: "567890" },
   { name: "Avery Brooks", phone: "+15553459876", handle: `averybrooks${HANDLE_SUFFIX}`, pin: "9012", authPassword: "901234" },
 ];
+
+// Runs before any Supabase call below -- refuses to start rather than
+// silently hijacking the public demo's auth users or wiping the wrong
+// company. See scripts/lib/seedDemoGuard.mjs for what it checks and why.
+validateSeedConfig({
+  slug: DEMO_COMPANY_SLUG,
+  userEmail: DEMO_USER.email,
+  userPassword: DEMO_USER.password,
+  handleSuffix: HANDLE_SUFFIX,
+});
 
 const TEMPLATE = {
   name: "Standard Diagnostic + Repair",
