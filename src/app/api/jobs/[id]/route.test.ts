@@ -435,6 +435,59 @@ describe("PATCH /api/jobs/[id] - dispatcher assignment", () => {
       const repeatBody = (await repeat.json()) as { job: Row; error?: string };
       expect(repeatBody.error).toBeUndefined();
     });
+
+    it("releases the technician back to available when a status-only transition completes their job (issue #75)", async () => {
+      // The real technician "Complete" button sends {status: 'completed'}
+      // alone -- same shape as TECHNICIAN_ALLOWED_STATUSES enforces -- so
+      // the technician_id branch never runs. Before this fix, the tech
+      // stayed on_job against a now-finished job indefinitely.
+      // quote_pending -> completed is the only valid transition into
+      // 'completed' per VALID_TRANSITIONS.
+      db.jobs[0].status = "quote_pending";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = JOB_ID;
+      asTechnician(TECH_AUTH_USER_ID);
+
+      const response = await patchJob({ status: "completed" });
+
+      expect(response.status).toBe(200);
+      expect(db.jobs[0].status).toBe("completed");
+      expect(db.technicians[0].availability_status).toBe("available");
+      expect(db.technicians[0].current_job_id).toBeNull();
+    });
+  });
+
+  describe("technician release on terminal status (issue #75)", () => {
+    it("releases the technician when a dispatcher status-only move (e.g. kanban drag) cancels the job", async () => {
+      // KanbanBoard's moveJobStatus sends {status} alone, same as the
+      // technician path above -- covers the dispatcher-driven route to the
+      // same bug.
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "assigned";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = JOB_ID;
+
+      const response = await patchJob({ status: "cancelled" });
+
+      expect(response.status).toBe(200);
+      expect(db.jobs[0].status).toBe("cancelled");
+      expect(db.technicians[0].availability_status).toBe("available");
+      expect(db.technicians[0].current_job_id).toBeNull();
+    });
+
+    it("does not touch a different technician's availability", async () => {
+      db.jobs[0].technician_id = TECH_ID;
+      db.jobs[0].status = "en_route";
+      db.technicians[0].availability_status = "on_job";
+      db.technicians[0].current_job_id = JOB_ID;
+      db.technicians[1].availability_status = "on_job";
+      db.technicians[1].current_job_id = "some-other-job";
+
+      const response = await patchJob({ status: "no_access" });
+
+      expect(response.status).toBe(200);
+      expect(db.technicians[1]).toMatchObject({ availability_status: "on_job", current_job_id: "some-other-job" });
+    });
   });
 
   describe("cross-tenant isolation (issue #49)", () => {

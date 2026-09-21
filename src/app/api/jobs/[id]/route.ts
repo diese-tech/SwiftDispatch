@@ -13,6 +13,10 @@ const PatchJobSchema = z.object({
   cancellation_reason: z.string().optional(),
 })
 
+// Mirrors dispatch/page.tsx's own TERMINAL_STATUSES -- a job in one of these
+// is no longer active work for whichever technician was on it.
+const TERMINAL_STATUSES: JobStatus[] = ['completed', 'cancelled', 'no_access']
+
 const TIMESTAMP_COLUMNS: Partial<Record<JobStatus, string>> = {
   assigned:      'assigned_at',
   en_route:      'en_route_at',
@@ -177,6 +181,23 @@ export async function PATCH(
         .update({ availability_status: 'available', current_job_id: null })
         .eq('id', currentJob.technician_id)
     }
+  } else if (
+    currentJob.technician_id &&
+    typeof patch.status === 'string' &&
+    TERMINAL_STATUSES.includes(patch.status as JobStatus)
+  ) {
+    // A status-only transition to a terminal status (e.g. the real
+    // technician "Complete" button, which sends {status: 'completed'}
+    // alone -- see TECHNICIAN_ALLOWED_STATUSES above) never touches the
+    // technician_id branch, so without this the technician stayed on_job
+    // against a job that had already finished. Quote acceptance
+    // (/api/quotes/[id]/accept) already releases the technician on its own
+    // completed transition; this mirrors that for every other path a job
+    // reaches a terminal status through this route.
+    await supabase
+      .from('technicians')
+      .update({ availability_status: 'available', current_job_id: null })
+      .eq('id', currentJob.technician_id)
   }
 
   if (Object.keys(patch).length === 0) {

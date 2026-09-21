@@ -1,13 +1,22 @@
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
+import { isCompanySandboxDemo } from "@/lib/demo";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function AnalyticsPage() {
   const profile = await getCurrentProfile();
+  if (!profile.company_id) redirect("/login");
   const supabase = await createSupabaseServerClient();
   const companyId = profile.company_id;
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  // A sandbox tenant's rows are all is_demo=true (that data IS the demo); an
+  // ordinary company's is_demo=true rows are load-test/live-QA traffic (see
+  // scripts/load-tech-actions.mjs) that must stay out of these metrics.
+  const isSandbox = await isCompanySandboxDemo(supabase, companyId);
 
-  const { data: responseTimes } = await supabase.from("jobs").select("created_at, en_route_at").eq("company_id", companyId).not("en_route_at", "is", null).gte("created_at", thirtyDaysAgo);
+  let responseTimesQuery = supabase.from("jobs").select("created_at, en_route_at").eq("company_id", companyId).not("en_route_at", "is", null).gte("created_at", thirtyDaysAgo);
+  if (!isSandbox) responseTimesQuery = responseTimesQuery.eq("is_demo", false);
+  const { data: responseTimes } = await responseTimesQuery;
   const avgResponseMinutes = (() => {
     const valid = (responseTimes ?? []).filter((j) => j.en_route_at);
     if (!valid.length) return null;
@@ -15,15 +24,22 @@ export default async function AnalyticsPage() {
     return Math.round(sum / valid.length);
   })();
 
-  const { count: completedCount } = await supabase.from("jobs").select("*", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "completed").gte("completed_at", thirtyDaysAgo);
-  const { data: quotesForRate } = await supabase.from("quotes").select("status, jobs!inner(company_id)").eq("jobs.company_id", companyId).gte("created_at", thirtyDaysAgo);
+  let completedCountQuery = supabase.from("jobs").select("*", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "completed").gte("completed_at", thirtyDaysAgo);
+  if (!isSandbox) completedCountQuery = completedCountQuery.eq("is_demo", false);
+  const { count: completedCount } = await completedCountQuery;
+
+  let quotesForRateQuery = supabase.from("quotes").select("status, jobs!inner(company_id)").eq("jobs.company_id", companyId).gte("created_at", thirtyDaysAgo);
+  if (!isSandbox) quotesForRateQuery = quotesForRateQuery.eq("is_demo", false);
+  const { data: quotesForRate } = await quotesForRateQuery;
   const acceptanceRate = (() => {
     const all = (quotesForRate ?? []).filter((q) => q.status !== "draft");
     if (!all.length) return null;
     return Math.round((all.filter((q) => q.status === "accepted").length / all.length) * 100);
   })();
 
-  const { data: durations } = await supabase.from("jobs").select("arrived_at, completed_at").eq("company_id", companyId).not("arrived_at", "is", null).not("completed_at", "is", null).gte("completed_at", thirtyDaysAgo);
+  let durationsQuery = supabase.from("jobs").select("arrived_at, completed_at").eq("company_id", companyId).not("arrived_at", "is", null).not("completed_at", "is", null).gte("completed_at", thirtyDaysAgo);
+  if (!isSandbox) durationsQuery = durationsQuery.eq("is_demo", false);
+  const { data: durations } = await durationsQuery;
   const avgDurationMinutes = (() => {
     const valid = (durations ?? []).filter((j) => j.arrived_at && j.completed_at);
     if (!valid.length) return null;
@@ -31,7 +47,9 @@ export default async function AnalyticsPage() {
     return Math.round(sum / valid.length);
   })();
 
-  const { data: revenueData } = await supabase.from("jobs").select("technician_id, quotes!inner(total_amount, total, status), technicians(name)").eq("company_id", companyId).gte("completed_at", thirtyDaysAgo);
+  let revenueDataQuery = supabase.from("jobs").select("technician_id, quotes!inner(total_amount, total, status), technicians(name)").eq("company_id", companyId).gte("completed_at", thirtyDaysAgo);
+  if (!isSandbox) revenueDataQuery = revenueDataQuery.eq("is_demo", false);
+  const { data: revenueData } = await revenueDataQuery;
   const revenueByTech: Record<string, { name: string; revenue: number }> = {};
   (revenueData ?? []).forEach((job) => {
     if (!job.technician_id) return;
@@ -44,8 +62,12 @@ export default async function AnalyticsPage() {
   });
 
   const topTechs = Object.values(revenueByTech).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
-  const { count: totalJobs } = await supabase.from("jobs").select("*", { count: "exact", head: true }).eq("company_id", companyId).gte("created_at", thirtyDaysAgo);
-  const { count: noAccessCount } = await supabase.from("jobs").select("*", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "no_access").gte("created_at", thirtyDaysAgo);
+  let totalJobsQuery = supabase.from("jobs").select("*", { count: "exact", head: true }).eq("company_id", companyId).gte("created_at", thirtyDaysAgo);
+  if (!isSandbox) totalJobsQuery = totalJobsQuery.eq("is_demo", false);
+  const { count: totalJobs } = await totalJobsQuery;
+  let noAccessCountQuery = supabase.from("jobs").select("*", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "no_access").gte("created_at", thirtyDaysAgo);
+  if (!isSandbox) noAccessCountQuery = noAccessCountQuery.eq("is_demo", false);
+  const { count: noAccessCount } = await noAccessCountQuery;
   const noAccessRate = totalJobs ? Math.round(((noAccessCount ?? 0) / totalJobs) * 100) : null;
   const fmt = (v: number | null | undefined, suffix = "") => (v != null ? `${v}${suffix}` : "—");
 
