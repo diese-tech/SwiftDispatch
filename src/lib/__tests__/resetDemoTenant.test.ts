@@ -193,6 +193,25 @@ describe("resetDemoTenant", () => {
     expect(jobs).toHaveLength(demoJobs.length);
   });
 
+  it("is repeatable: running it twice in a row lands on the same baseline both times (issue #75)", async () => {
+    const first = await resetDemoTenant(PREVIEW_DEMO_ID);
+    const firstJobs = (store.get("jobs") ?? []).filter((j) => j.company_id === PREVIEW_DEMO_ID);
+    const firstJobIds = new Set(firstJobs.map((j) => j.id));
+
+    const second = await resetDemoTenant(PREVIEW_DEMO_ID);
+    const secondJobs = (store.get("jobs") ?? []).filter((j) => j.company_id === PREVIEW_DEMO_ID);
+    const secondJobIds = new Set(secondJobs.map((j) => j.id));
+
+    expect(second.jobsSeeded).toBe(first.jobsSeeded);
+    expect(secondJobs).toHaveLength(demoJobs.length);
+    // The second reset's wipe fully replaced the first run's rows -- no
+    // leftover/duplicated jobs from run one still present after run two.
+    expect([...secondJobIds].some((id) => firstJobIds.has(id))).toBe(false);
+
+    const templates = (store.get("quote_templates") ?? []).filter((t) => t.company_id === PREVIEW_DEMO_ID);
+    expect(templates).toHaveLength(1);
+  });
+
   it("refuses an explicit targetCompanyId on a non-sandbox company and performs no wipe", async () => {
     store.set("jobs", [
       { id: "existing-job-1", company_id: REAL_COMPANY_ID, customer_name: "Real Customer" },
