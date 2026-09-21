@@ -35,6 +35,10 @@ function makeSelectBuilder(getRows: () => Row[]) {
       const row = getRows().find((r) => matchesFilters(r, filters));
       return row ? { data: row, error: null } : { data: null, error: { message: "Row not found" } };
     },
+    maybeSingle: async () => {
+      const row = getRows().find((r) => matchesFilters(r, filters));
+      return { data: row ?? null, error: null };
+    },
     then(resolve: (value: { data: Row[]; error: null }) => void) {
       resolve({ data: getRows().filter((r) => matchesFilters(r, filters)), error: null });
     },
@@ -72,7 +76,7 @@ function makeUpdateBuilder(getRows: () => Row[], patch: Row) {
   return builder;
 }
 
-type Db = { quotes: Row[]; quote_line_items: Row[] };
+type Db = { quotes: Row[]; quote_line_items: Row[]; companies: Row[] };
 
 function createFakeSupabase(db: Db) {
   return {
@@ -89,6 +93,9 @@ function createFakeSupabase(db: Db) {
           insert: (row: Row) => makeInsertBuilder(() => db.quote_line_items, row),
         };
       }
+      if (table === "companies") {
+        return { select: () => makeSelectBuilder(() => db.companies) };
+      }
       throw new Error(`Unexpected table in test double: ${table}`);
     },
   };
@@ -103,6 +110,7 @@ function freshDb(): Db {
   return {
     quotes: [{ id: QUOTE_ID, is_demo: false, jobs: { company_id: COMPANY_ID } }],
     quote_line_items: [{ id: "item-existing", quote_id: QUOTE_ID, name: "Filter", price: 50, quantity: 1 }],
+    companies: [{ id: COMPANY_ID, slug: "acme-hvac" }],
   };
 }
 

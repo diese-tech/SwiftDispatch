@@ -50,3 +50,22 @@ export function isSandboxDemoCompany(company: CompanyDemoShape | null | undefine
 export function isPrivateSandboxDemoCompany(company: CompanyDemoShape | null | undefined): boolean {
   return isSandboxDemoCompany(company) && company?.slug !== DEMO_COMPANY_SLUG;
 }
+
+/**
+ * Server-side helper for read paths that otherwise filter out `is_demo`
+ * rows (quote preview/build, admin stats, the jobs list). A sandbox tenant's
+ * jobs/quotes are ALL is_demo=true, so that filter must be skipped there or
+ * every read comes back empty -- but load-testing/live-QA scripts also seed
+ * is_demo=true rows into ordinary (non-sandbox) companies specifically to
+ * keep them out of real operator views, so the filter must stay everywhere
+ * else. One extra `companies` lookup per request; callers that already have
+ * the company row on hand should call isSandboxDemoCompany() directly
+ * instead of paying for a second query.
+ */
+export async function isCompanySandboxDemo(
+  supabase: Awaited<ReturnType<typeof import("./supabase/server").createSupabaseServerClient>>,
+  companyId: string,
+): Promise<boolean> {
+  const { data } = await supabase.from("companies").select("slug").eq("id", companyId).maybeSingle();
+  return isSandboxDemoCompany(data);
+}

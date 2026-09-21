@@ -30,10 +30,14 @@ function allowedDispatcherContext() {
         if (table === "jobs") {
           return { select: () => ({ eq: () => ({ eq: () => ({ single: async () => ({ data: { id: JOB_ID }, error: null }) }) }) }) };
         }
+        if (table === "companies") {
+          return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { slug: "acme-hvac" }, error: null }) }) }) };
+        }
         if (table === "quotes") {
+          const terminal = { order: () => ({ limit: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) };
           return {
             select: () => ({
-              eq: () => ({ order: () => ({ limit: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
+              eq: () => ({ ...terminal, eq: () => terminal }),
             }),
             insert: () => ({ select: () => ({ single: async () => ({ data: { id: "quote-1" }, error: null }) }) }),
           };

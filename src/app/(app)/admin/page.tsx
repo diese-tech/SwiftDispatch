@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { addTechniciansAction, createDispatcherAction } from "./actions";
 import { requireAdminProfile } from "@/lib/auth";
+import { isSandboxDemoCompany } from "@/lib/demo";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type CompanyRow = {
@@ -32,7 +33,7 @@ export default async function AdminPage() {
   const supabase = await createSupabaseServerClient();
   const [companyResult, jobsResult, techsResult, usersResult] = await Promise.all([
     supabase.from("companies").select("id,name,email,phone,slug,timezone,sms_sender_name,payment_provider").eq("id", profile.company_id).single(),
-    supabase.from("jobs").select("id,status").eq("company_id", profile.company_id).order("created_at", { ascending: false }),
+    supabase.from("jobs").select("id,status,is_demo").eq("company_id", profile.company_id).order("created_at", { ascending: false }),
     supabase.from("technicians").select("id,name,availability_status").eq("company_id", profile.company_id).order("name"),
     supabase.from("users").select("id,email,role").eq("company_id", profile.company_id).order("email"),
   ]);
@@ -43,7 +44,8 @@ export default async function AdminPage() {
   if (usersResult.error) throw new Error(usersResult.error.message);
 
   const company = companyResult.data as CompanyRow;
-  const jobs = jobsResult.data ?? [];
+  const isSandbox = isSandboxDemoCompany(company);
+  const jobs = (jobsResult.data ?? []).filter((job) => isSandbox || !job.is_demo);
   const techs = techsResult.data ?? [];
   const users = (usersResult.data ?? []) as UserRow[];
   const activeJobs = jobs.filter((job) => !["completed", "cancelled"].includes(job.status)).length;

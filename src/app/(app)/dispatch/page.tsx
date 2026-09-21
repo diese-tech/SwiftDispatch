@@ -5,7 +5,7 @@ import TechPhoneModal from "@/components/TechPhoneModal";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isDemoCompany } from "@/lib/demo";
+import { isDemoCompany, isSandboxDemoCompany } from "@/lib/demo";
 import { demoTechnicians } from "@/lib/demo-data";
 import type { JobWithTechnician, Technician } from "@/types/db";
 
@@ -72,6 +72,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   const companyData = (companyRes as { data: { name: string; slug: string | null; demo_mode_enabled: boolean } | null }).data;
   const companyName = companyData?.name ?? companyId;
   const isDemo = !impersonating && isDemoCompany(companyData);
+  const isSandboxDemo = !impersonating && isSandboxDemoCompany(companyData);
   const smsFailedJobIds = (failedSms ?? []).map((r: { job_id: string | null }) => r.job_id).filter(Boolean) as string[];
   const activeCount = allJobs.filter((j) => !["completed", "cancelled"].includes(j.status)).length;
 
@@ -116,7 +117,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_260px]">
-        <KanbanBoard companyId={companyId} initialJobs={allJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} />
+        <KanbanBoard companyId={companyId} initialJobs={allJobs} readOnly={impersonating} smsFailedJobIds={smsFailedJobIds} technicians={techList} isSandboxDemo={isSandboxDemo} />
         {!impersonating && <TechRail companyId={companyId} initialTechnicians={techList} />}
       </div>
 

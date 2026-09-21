@@ -45,9 +45,10 @@ type Props = {
   readOnly?: boolean;
   smsFailedJobIds?: string[];
   technicians: Technician[];
+  isSandboxDemo?: boolean;
 };
 
-export default function KanbanBoard({ companyId, initialJobs, readOnly = false, smsFailedJobIds = [], technicians }: Props) {
+export default function KanbanBoard({ companyId, initialJobs, readOnly = false, smsFailedJobIds = [], technicians, isSandboxDemo = false }: Props) {
   const [jobs, setJobs] = useState(
     initialJobs.map((job) => ({ ...job, status: normalizeStatus(job.status) })),
   );
@@ -83,11 +84,12 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
     const supabase = createSupabaseBrowserClient();
 
     async function refetchAll() {
-      const { data } = await supabase
+      let query = supabase
         .from("jobs")
         .select("*, technicians!jobs_technician_id_fkey(id,name,phone)")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false });
+        .eq("company_id", companyId);
+      if (!isSandboxDemo) query = query.eq("is_demo", false);
+      const { data } = await query.order("created_at", { ascending: false });
       if (data) {
         startTransition(() => {
           setJobs((data as JobWithTechnician[]).map((job) => ({ ...job, status: normalizeStatus(job.status) })));
@@ -145,7 +147,7 @@ export default function KanbanBoard({ companyId, initialJobs, readOnly = false, 
       void supabase.removeChannel(channel);
       if (moveErrorTimer.current) clearTimeout(moveErrorTimer.current);
     };
-  }, [companyId, readOnly]);
+  }, [companyId, readOnly, isSandboxDemo]);
 
   const activeJobs = useMemo(
     () => jobs.filter((job) => statuses.includes(normalizeStatus(job.status))),

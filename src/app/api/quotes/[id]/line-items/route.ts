@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiRole } from "@/lib/auth";
+import { isCompanySandboxDemo } from "@/lib/demo";
 import { sumLineItems } from "@/lib/quotePricing";
 
 async function recomputeQuoteTotal(
@@ -32,12 +33,14 @@ export async function POST(
   if (response || !profile) return response;
   const body = await request.json().catch(() => ({}));
 
-  const { data: quote, error: quoteError } = await supabase
+  const isSandbox = await isCompanySandboxDemo(supabase, profile.company_id);
+  let quoteQuery = supabase
     .from("quotes")
     .select("id,jobs!inner(company_id)")
     .eq("id", id)
-    .eq("jobs.company_id", profile.company_id)
-    .single();
+    .eq("jobs.company_id", profile.company_id);
+  if (!isSandbox) quoteQuery = quoteQuery.eq("is_demo", false);
+  const { data: quote, error: quoteError } = await quoteQuery.single();
 
   if (quoteError || !quote) {
     return NextResponse.json({ error: "Quote not found" }, { status: 404 });

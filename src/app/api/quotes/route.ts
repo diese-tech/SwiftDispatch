@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiRole } from "@/lib/auth";
+import { isCompanySandboxDemo } from "@/lib/demo";
 
 type LineItemInput = {
   name: string;
@@ -23,10 +24,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
 
-  const { data: existingQuote } = await supabase
+  const isSandbox = await isCompanySandboxDemo(supabase, profile.company_id);
+  let existingQuoteQuery = supabase
     .from("quotes")
     .select("id,total,status,created_at,quote_sent_at,accepted_at,rejected_at,quote_line_items(id,quote_id,name,price,quantity)")
-    .eq("job_id", body.job_id)
+    .eq("job_id", body.job_id);
+  if (!isSandbox) existingQuoteQuery = existingQuoteQuery.eq("is_demo", false);
+  const { data: existingQuote } = await existingQuoteQuery
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
