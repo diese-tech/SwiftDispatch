@@ -6,6 +6,7 @@ import { verifyQuoteApprovalToken } from '@/lib/quoteTokens'
 import { resolveEffectiveTotal, sumLineItems } from '@/lib/quotePricing'
 import { requireApiRole } from '@/lib/auth'
 import { queueCustomerInvoiceSms, queueCustomerStatusSms } from '@/lib/jobNotifications'
+import { reconcileTechnicianAfterTerminalJob } from '@/lib/technicianReconciliation'
 import type { SmsConsentType } from '@/lib/smsGate'
 
 // Accepts PATCH (authenticated dispatcher) or token-gated customer accept
@@ -91,10 +92,11 @@ export async function PATCH(
   })
 
   if (job.technician_id) {
-    await supabase
-      .from('technicians')
-      .update({ availability_status: 'available', current_job_id: null })
-      .eq('id', job.technician_id)
+    await reconcileTechnicianAfterTerminalJob(supabase, {
+      technicianId: job.technician_id,
+      companyId: job.company_id,
+      completedJobId: job.id,
+    })
   }
 
   const companyData = Array.isArray(job.companies) ? job.companies[0] : job.companies
