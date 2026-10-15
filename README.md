@@ -86,6 +86,7 @@ The application is designed for Vercel deployment.
 - [`ROADMAP.md`](./ROADMAP.md) — launch scope and planned product work
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution workflow
 - [`docs/AI_WORKFLOW_GUARDRAILS.md`](./docs/AI_WORKFLOW_GUARDRAILS.md) — required guardrails for AI-assisted implementation
+- [`docs/production-readiness-checklist.md`](./docs/production-readiness-checklist.md) — 146-item readiness inventory and SwiftDispatch audit priorities
 
 ## Engineering Principles
 
